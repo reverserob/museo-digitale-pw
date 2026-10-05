@@ -110,10 +110,10 @@ export default function AdminDashboard() {
                                         </Typography>
                                     </Box>
                                     <Box display="flex" gap={2}>
-                                        <Button component={Link} to={`/admin/modifica/${m.id}`} variant="outlined" color="primary" size="small">
+                                        <Button component={Link} to={`/admin/modifica/${m.id}`} variant="outlined" color="primary" size="small" sx={{ margin: '10px'}}>
                                             Modifica
                                         </Button>
-                                        <Button variant="outlined" color="error" size="small" onClick={() => eliminaMostra(m.id)}>
+                                        <Button variant="outlined" color="error" size="small" onClick={() => eliminaMostra(m.id)} sx={{ margin: '10px'}}>
                                             Elimina
                                         </Button>
                                     </Box>
