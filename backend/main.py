@@ -1,17 +1,21 @@
 import shutil
 import os
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import logging
 
 import models
 import schemas
 from database import SessionLocal, engine
+
+# Configurazione del logger per tracciare gli errori sul terminale
+logger = logging.getLogger("uvicorn.error")
 
 # 1. Crea le tabelle nel database SQLite se non esistono
 models.Base.metadata.create_all(bind=engine)
@@ -73,9 +77,7 @@ def inserisci_dati_iniziali():
                 # Dalí
                 models.Mostra(
                     titolo="DALÍ E LA MODA",
-                    descrizione="""Un viaggio tra arte e moda, dove immaginazione, identità e desiderio si fondono in un unico linguaggio visivo. Con oltre 200 opere e documenti — dipinti, disegni, fotografie, abiti, filmati, gioielli e oggetti — la mostra esplora il legame tra l’artista catalano e il mondo della moda, rivelando una dimensione meno nota ma straordinariamente fertile della sua ricerca.
-Nell'opera di Dalí ricorre un ricco immaginario simbolico legato all’universo: scarpe, abiti, giacche, guanti e gioielli diventano elementi chiave del suo linguaggio surrealista. Protagonista nella creazione di nuovi codici estetici, l'artista ha collaborato con stilisti, fotografi e maison, ridefinendo i confini tra arte e moda e dimostrando una straordinaria capacità di intuire e sfruttare in anticipo le dinamiche di questo mondo.
-Il percorso espositivo spazia dalla pittura alla scultura e al design, dal manichino al corpo, restituendo l'impatto di Dalí sull'immaginario della moda e documentando la tensione costante verso l'innovazione e la libertà creativa che ha guidato tutta la sua ricerca.""",
+                    descrizione="Un viaggio tra arte e moda, dove immaginazione, identità e desiderio si fondono in un unico linguaggio visivo.",
                     immagini="http://127.0.0.1:8000/static/uploads/salvador-dali-.webp",
                     data_inizio="2026-12-01",
                     data_fine="2027-04-30"
@@ -83,25 +85,39 @@ Il percorso espositivo spazia dalla pittura alla scultura e al design, dal manic
             ]
             db.add_all(mostre_di_prova)
             db.commit()
+    except Exception as e:
+        logger.error(f"Errore durante il seeding iniziale: {e}")
     finally:
         db.close()
 
 inserisci_dati_iniziali()
 
-# --- ROTTE API ---
+# --- ROTTE API GESTIONE ERRORI ---
 
+# API GET
 @app.get("/api/mostre", response_model=list[schemas.MostraResponse])
 def leggi_mostre(db: Session = Depends(get_db)):
-    return db.query(models.Mostra).all()
+    try:
+        return db.query(models.Mostra).all()
+    except Exception as e:
+        logger.error(f"Errore nel recupero delle mostre: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore nel recupero delle mostre dal database.")
 
 @app.get("/api/mostre/{mostra_id}", response_model=schemas.MostraResponse)
 def leggi_singola_mostra(mostra_id: int, db: Session = Depends(get_db)):
-    mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
-    if mostra is None:
-        raise HTTPException(status_code=404, detail="Mostra non trovata")
-    return mostra
+    try:
+        mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
+        if mostra is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mostra non trovata")
+        return mostra
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Errore nel recupero della mostra {mostra_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore interno del server.")
 
-@app.post("/api/mostre", response_model=schemas.MostraResponse)
+# API POST
+@app.post("/api/mostre", response_model=schemas.MostraResponse, status_code=status.HTTP_201_CREATED)
 async def crea_mostra(
     titolo: str = Form(...),
     descrizione: str = Form(...),
@@ -110,27 +126,33 @@ async def crea_mostra(
     immagini: list[UploadFile] = File(...),
     db: Session = Depends(get_db)
 ):
-    percorsi_salvati = []
-    for file in immagini:
-        file_path = UPLOAD_DIR / file.filename
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        percorsi_salvati.append(f"http://127.0.0.1:8000/static/uploads/{file.filename}")
+    try:
+        percorsi_salvati = []
+        for file in immagini:
+            file_path = UPLOAD_DIR / file.filename
+            with file_path.open("wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            percorsi_salvati.append(f"http://127.0.0.1:8000/static/uploads/{file.filename}")
 
-    immagini_str = ",".join(percorsi_salvati)
+        immagini_str = ",".join(percorsi_salvati)
 
-    nuova_mostra = models.Mostra(
-        titolo=titolo,
-        descrizione=descrizione,
-        data_inizio=data_inizio,
-        data_fine=data_fine,
-        immagini=immagini_str
-    )
-    db.add(nuova_mostra)
-    db.commit()
-    db.refresh(nuova_mostra)
-    return nuova_mostra
+        nuova_mostra = models.Mostra(
+            titolo=titolo,
+            descrizione=descrizione,
+            data_inizio=data_inizio,
+            data_fine=data_fine,
+            immagini=immagini_str
+        )
+        db.add(nuova_mostra)
+        db.commit()
+        db.refresh(nuova_mostra)
+        return nuova_mostra
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Errore durante la creazione della mostra: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile pubblicare la nuova mostra.")
 
+# API PUT/EDIT
 @app.put("/api/mostre/{mostra_id}", response_model=schemas.MostraResponse)
 async def aggiorna_mostra(
     mostra_id: int,
@@ -141,40 +163,55 @@ async def aggiorna_mostra(
     immagini: list[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
-    if mostra is None:
-        raise HTTPException(status_code=404, detail="Mostra non trovata")
+    try:
+        mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
+        if mostra is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mostra non trovata")
 
-    mostra.titolo = titolo
-    mostra.descrizione = descrizione
-    mostra.data_inizio = data_inizio
-    mostra.data_fine = data_fine
+        mostra.titolo = titolo
+        mostra.descrizione = descrizione
+        mostra.data_inizio = data_inizio
+        mostra.data_fine = data_fine
 
-    if immagini and len(immagini) > 0 and immagini[0].filename != "":
-        percorsi_salvati = []
-        for file in immagini:
-            file_path = UPLOAD_DIR / file.filename
-            with file_path.open("wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            percorsi_salvati.append(f"http://127.0.0.1:8000/static/uploads/{file.filename}")
-        mostra.immagini = ",".join(percorsi_salvati)
+        if immagini and len(immagini) > 0 and immagini[0].filename != "":
+            percorsi_salvati = []
+            for file in immagini:
+                file_path = UPLOAD_DIR / file.filename
+                with file_path.open("wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+                percorsi_salvati.append(f"http://127.0.0.1:8000/static/uploads/{file.filename}")
+            mostra.immagini = ",".join(percorsi_salvati)
 
-    db.commit()
-    db.refresh(mostra)
-    return mostra
+        db.commit()
+        db.refresh(mostra)
+        return mostra
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Errore durante l'aggiornamento della mostra {mostra_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile aggiornare la mostra.")
 
+# API DELETE
 @app.delete("/api/mostre/{mostra_id}")
 def elimina_mostra(mostra_id: int, db: Session = Depends(get_db)):
-    mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
-    if mostra is None:
-        raise HTTPException(status_code=404, detail="Mostra non trovata")
+    try:
+        mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
+        if mostra is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mostra non trovata")
 
-    db.delete(mostra)
-    db.commit()
-    return {"message": "Mostra eliminata con successo"}
+        db.delete(mostra)
+        db.commit()
+        return {"message": "Mostra eliminata con successo"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Errore durante l'eliminazione della mostra {mostra_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile eliminare la mostra.")
 
 
-# Funzione di invio email in background (non blocca la risposta HTTP)
+# Funzione di invio email in background
 def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, data_inizio: str, data_fine: str):
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
@@ -212,52 +249,30 @@ def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, dat
     except Exception as e:
         print(f"\n[ERRORE INVIO EMAIL BACKGROUND]: {e}\n")
 
-@app.post("/api/prenota")
+@app.post("/api/prenota", status_code=status.HTTP_201_CREATED)
 async def crea_prenotazione(
     dati: schemas.PrenotazioneCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
-    mostra = db.query(models.Mostra).filter(models.Mostra.id == dati.mostra_id).first()
-    if mostra is None:
-        raise HTTPException(status_code=404, detail="Mostra non trovata")
+    try:
+        mostra = db.query(models.Mostra).filter(models.Mostra.id == dati.mostra_id).first()
+        if mostra is None:
+            raise HTTPException(status_status=status.HTTP_404_NOT_FOUND if 'status_status' in globals() else 404, detail="Mostra non trovata")
 
-    # Accoda l'invio dell'email in background usando i dati validati
-    background_tasks.add_task(
-        invia_email_background,
-        destinatario=dati.email,
-        nome=dati.nome,
-        titolo_mostra=mostra.titolo,
-        data_inizio=mostra.data_inizio,
-        data_fine=mostra.data_fine
-    )
+        background_tasks.add_task(
+            invia_email_background,
+            destinatario=dati.email,
+            nome=dati.nome,
+            titolo_mostra=mostra.titolo,
+            data_inizio=mostra.data_inizio,
+            data_fine=mostra.data_fine
+        )
 
-    return {"message": "Prenotazione effettuata con successo e email in elaborazione!"}
+        return {"message": "Prenotazione effettuata con successo e email in elaborazione!"}
 
-"""
-@app.post("/api/prenota")
-async def crea_prenotazione(
-    background_tasks: BackgroundTasks,
-    mostra_id: int = Form(...),
-    nome: str = Form(...),
-    cognome: str = Form(...),
-    email: str = Form(...),
-    telefono: str = Form(...),
-    db: Session = Depends(get_db)
-):
-    mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
-    if mostra is None:
-        raise HTTPException(status_code=404, detail="Mostra non trovata")
-
-    # Accoda l'invio dell'email in background e risponde immediatamente al front-end
-    background_tasks.add_task(
-        invia_email_background,
-        destinatario=email,
-        nome=nome,
-        titolo_mostra=mostra.titolo,
-        data_inizio=mostra.data_inizio,
-        data_fine=mostra.data_fine
-    )
-
-    return {"message": "Prenotazione effettuata con successo e email in elaborazione!"}
- """
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Errore critico durante la prenotazione: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore interno durante l'elaborazione della prenotazione.")

@@ -96,7 +96,7 @@ export default function FormPrenotazione() {
                             <Grid container spacing={3}>
                                 {/* Nome */}
                                 <Grid item xs={12} sm={6}>
-                                    <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontWeight: 500 }}>
+                                    <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
                                         Nome *
                                     </Typography>
                                     <TextField
@@ -114,7 +114,7 @@ export default function FormPrenotazione() {
 
                                 {/* Cognome */}
                                 <Grid item xs={12} sm={6}>
-                                    <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontWeight: 500 }}>
+                                    <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
                                         Cognome *
                                     </Typography>
                                     <TextField
@@ -132,7 +132,7 @@ export default function FormPrenotazione() {
 
                                 {/* Email */}
                                 <Grid item xs={12} sm={6}>
-                                    <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontWeight: 500 }}>
+                                    <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
                                         Email *
                                     </Typography>
                                     <TextField
@@ -151,7 +151,7 @@ export default function FormPrenotazione() {
 
                                 {/* Telefono */}
                                 <Grid item xs={12} sm={6}>
-                                    <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontWeight: 500 }}>
+                                    <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
                                         Telefono *
                                     </Typography>
                                     <TextField
