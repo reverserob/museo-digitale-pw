@@ -6,7 +6,12 @@
 Progettazione di una piattaforma informatica per la gestione di servizi, dati e utenti
 
 
+<img width="988" height="730" alt="image" src="https://github.com/user-attachments/assets/51d487b4-a8a7-449f-956e-012e966d298e" />
+
+
 Used Backend Library
+<img width="2522" height="2118" alt="swagger" src="https://github.com/user-attachments/assets/c0ad9853-bc0a-4ed1-b2aa-0be80a9aefba" />
+
 - FastAPI: Il framework per le API.
 - Uvicorn: Il server web che farà girare FastAPI.
 - SQLAlchemy: L'ORM (Object-Relational Mapper) per parlare con il database senza scrivere query SQL a mano.
