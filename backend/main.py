@@ -68,16 +68,16 @@ def inserisci_dati_iniziali():
                 ),
                 # MONET
                 models.Mostra(
-                    titolo="Monet: The Immersive Experience",
-                    descrizione="Le opere più affascinanti di Monet in un'esposizione avvolgente e spettacolare con uno show di luci e suoni.",
+                    titolo="Monet: La Natura",
+                    descrizione="Le opere di Monet, i colori, le sfumature e lo spettacolo della natura.",
                     immagini="http://127.0.0.1:8000/static/uploads/monet.webp",
                     data_inizio="2026-12-01",
                     data_fine="2027-04-30"
                 ),
                 # Dalí
                 models.Mostra(
-                    titolo="DALÍ E LA MODA",
-                    descrizione="Un viaggio tra arte e moda, dove immaginazione, identità e desiderio si fondono in un unico linguaggio visivo.",
+                    titolo="DALÍ e le forme",
+                    descrizione="Un viaggio nelle forme e colodi di Dalì, dove immaginazione e colori  si fondono in rapresentazioni uniche.",
                     immagini="http://127.0.0.1:8000/static/uploads/salvador-dali-.webp",
                     data_inizio="2026-12-01",
                     data_fine="2027-04-30"
