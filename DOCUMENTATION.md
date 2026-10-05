@@ -1,5 +1,8 @@
 # RELAZIONE TECNICA DI PROGETTO
-## MUSEO CIVICO DIGITALE
+## Project Work - MUSEO DIGITALE
+## Tema n. 1: La digitalizzazione dell’impresa
+### PW 2 Digitalizzazione dei processi aziendali in un’impresa culturale:
+Progettazione di una piattaforma informatica per la gestione di servizi, dati e utenti
 
 ### 1. Analisi dei Requisiti e Obiettivi
    Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una piattaforma informatica full-stack orientata alla digitalizzazione dei processi aziendali e culturali di un'impresa culturale (nella fattispecie, un museo civico).
