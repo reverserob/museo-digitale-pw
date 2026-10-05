@@ -214,6 +214,29 @@ def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, dat
 
 @app.post("/api/prenota")
 async def crea_prenotazione(
+    dati: schemas.PrenotazioneCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    mostra = db.query(models.Mostra).filter(models.Mostra.id == dati.mostra_id).first()
+    if mostra is None:
+        raise HTTPException(status_code=404, detail="Mostra non trovata")
+
+    # Accoda l'invio dell'email in background usando i dati validati
+    background_tasks.add_task(
+        invia_email_background,
+        destinatario=dati.email,
+        nome=dati.nome,
+        titolo_mostra=mostra.titolo,
+        data_inizio=mostra.data_inizio,
+        data_fine=mostra.data_fine
+    )
+
+    return {"message": "Prenotazione effettuata con successo e email in elaborazione!"}
+
+"""
+@app.post("/api/prenota")
+async def crea_prenotazione(
     background_tasks: BackgroundTasks,
     mostra_id: int = Form(...),
     nome: str = Form(...),
@@ -237,3 +260,4 @@ async def crea_prenotazione(
     )
 
     return {"message": "Prenotazione effettuata con successo e email in elaborazione!"}
+ """

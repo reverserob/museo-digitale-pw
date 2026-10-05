@@ -59,7 +59,10 @@ export default function AdminForm() {
     const inputStyle = {
         input: {
             color: 'white',
-            colorScheme: 'dark' // Forza il calendario del browser in stile scuro
+            colorScheme: 'dark'
+        },
+        textarea: {
+            color: 'white'
         }
     };
 
@@ -83,29 +86,43 @@ export default function AdminForm() {
 
                     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <Grid container spacing={3}>
+                            {/* Titolo */}
                             <Grid item xs={12}>
-                                <TextField fullWidth label="Titolo dell'Esposizione" value={titolo} onChange={(e) => setTitolo(e.target.value)} required sx={inputStyle} />
+                                <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500,minWidth: '450px' }}>
+                                    Titolo dell'Esposizione *
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    value={titolo}
+                                    onChange={(e) => setTitolo(e.target.value)}
+                                    required
+                                    sx={inputStyle}
+                                />
                             </Grid>
 
-                            {/* CAMPI DATA CON CALENDARIO NATIVO E ETICHETTA FISSA TIPO PLACEHOLDER */}
+                            {/* Data Inizio */}
                             <Grid item xs={12} sm={6}>
+                                <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
+                                    Data Inizio *
+                                </Typography>
                                 <TextField
                                     fullWidth
                                     type="date"
-                                    label="Data Inizio"
-                                    InputLabelProps={{ shrink: true, style: { color: '#c5a059', position: 'static', transform: 'none', marginBottom: '8px' } }}
                                     value={dataInizio}
                                     onChange={(e) => setDataInizio(e.target.value)}
                                     required
                                     sx={inputStyle}
                                 />
                             </Grid>
+
+                            {/* Data Fine */}
                             <Grid item xs={12} sm={6}>
+                                <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
+                                    Data Fine *
+                                </Typography>
                                 <TextField
                                     fullWidth
                                     type="date"
-                                    label="Data Fine"
-                                    InputLabelProps={{ shrink: true, style: { color: '#c5a059', position: 'static', transform: 'none', marginBottom: '8px' } }}
                                     value={dataFine}
                                     onChange={(e) => setDataFine(e.target.value)}
                                     required
@@ -113,16 +130,28 @@ export default function AdminForm() {
                                 />
                             </Grid>
 
+                            {/* Descrizione */}
                             <Grid item xs={12}>
-                                <TextField fullWidth multiline rows={4} label="Descrizione Dettagliata" value={descrizione} onChange={(e) => setDescrizione(e.target.value)} required sx={inputStyle} />
+                                <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500,minWwidth: '500px'}}>
+                                    Descrizione Mostra *
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    rows={4}
+                                    value={descrizione}
+                                    onChange={(e) => setDescrizione(e.target.value)}
+                                    required
+                                    sx={inputStyle}
+                                />
                             </Grid>
 
-                            <Grid item xs={12}>
+                            <Grid item xs={12} sx={{ minWidth: '500px'}}>
                                 <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontFamily: 'sans-serif' }}>
-                                    Seleziona nuove foto (facoltativo - se non carichi nulla rimarranno quelle attuali):
+                                    Aggiungi foto:
                                 </Typography>
-                                <Button variant="outlined" component="label" sx={{ color: '#c5a059', borderColor: '#c5a059', borderRadius: 0 }}>
-                                    Carica Immagini
+                                <Button variant="outlined" component="label" sx={{ color: '#c5a059', borderColor: '#c5a059', borderRadius: 0}}>
+                                    Carica Immagini *
                                     <input type="file" hidden multiple accept="image/*" onChange={(e) => setFileImmagini(e.target.files)} />
                                 </Button>
                                 {fileImmagini && (
@@ -134,10 +163,10 @@ export default function AdminForm() {
                         </Grid>
 
                         <Box display="flex" gap={2} mt={2}>
-                            <Button type="submit" variant="contained" color="primary" size="large" sx={{ borderRadius: 0, py: 1.5, px: 5, fontWeight: 'bold' }}>
+                            <Button type="submit" variant="contained" color="primary" size="large" sx={{ borderRadius: 0, py: 1.5, px: 5, fontWeight: 'bold' , margin:'20px'}}>
                                 {isEditMode ? 'SALVA MODIFICHE' : 'PUBBLICA MOSTRA'}
                             </Button>
-                            <Button onClick={() => navigate('/admin')} variant="outlined" color="inherit" size="large" sx={{ borderRadius: 0, py: 1.5, px: 3 }}>
+                            <Button onClick={() => navigate('/admin')} variant="outlined" color="inherit" size="large" sx={{ borderRadius: 0, py: 1.5, px: 3 , margin:'20px'}}>
                                 ANNULLA
                             </Button>
                         </Box>

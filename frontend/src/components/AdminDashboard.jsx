@@ -72,7 +72,13 @@ export default function AdminDashboard() {
                         </Typography>
 
                         <Box component="form" onSubmit={handleLogin} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            <TextField fullWidth label="Email Amministratore" type="email" value={email} onChange={(e) => setEmail(e.target.value)} sx={inputStyle} />
+                            <TextField
+                                InputLabelProps={{ shrink: true }}
+                                fullWidth
+                                label="Email Amministratore"
+                                type="email" value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                sx={inputStyle} />
                             <TextField fullWidth label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} sx={inputStyle} />
                             {erroreLogin && <Typography variant="body2" sx={{ color: '#ff6b6b' }}>Credenziali errate.</Typography>}
                             <Button type="submit" variant="contained" color="primary" size="large" sx={{ borderRadius: 0, py: 1.5, fontWeight: 'bold' }}>ACCEDI</Button>
@@ -85,7 +91,12 @@ export default function AdminDashboard() {
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                             <Typography variant="h4" sx={{ color: '#c5a059' }}>Dashboard Admin - Esposizioni Attive</Typography>
                             <Box display="flex" gap={2}>
-                                <Button component={Link} to="/admin/nuova" variant="contained" color="primary" sx={{ borderRadius: 0, fontWeight: 'bold', margin: '20px'}}>
+                                <Button
+                                    component={Link}
+                                    to="/admin/nuova"
+                                    variant="contained"
+                                    color="primary"
+                                    sx={{ borderRadius: 0, fontWeight: 'bold', margin: '20px'}}>
                                     Nuova Mostra
                                 </Button>
                                 <Button onClick={handleLogout} variant="outlined" color="primary" size="small">Esci</Button>

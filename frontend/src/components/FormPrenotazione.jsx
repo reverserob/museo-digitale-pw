@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid, CircularProgress } from '@mui/material';
+import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid, CircularProgress, Alert } from '@mui/material';
 
 export default function FormPrenotazione() {
     const { id } = useParams();
@@ -13,8 +13,9 @@ export default function FormPrenotazione() {
     const [email, setEmail] = useState('');
     const [telefono, setTelefono] = useState('');
 
-    const [loading, setLoading] = useState(false); // Stato per il loader
+    const [loading, setLoading] = useState(false);
     const [successo, setSuccesso] = useState(false);
+    const [errore, setErrore] = useState('');
 
     useEffect(() => {
         axios.get(`http://127.0.0.1:8000/api/mostre/${id}`)
@@ -22,29 +23,41 @@ export default function FormPrenotazione() {
             .catch(err => console.error(err));
     }, [id]);
 
+    const isNomeValid = nome.trim().length >= 3;
+    const isCognomeValid = cognome.trim().length >= 3;
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    const isTelefonoValid = /^\d+$/.test(telefono.trim());
+
+    const isFormValid = isNomeValid && isCognomeValid && isEmailValid && isTelefonoValid;
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true); // Attiva il loader all'invio
+        if (!isFormValid) return;
 
-        const formData = new FormData();
-        formData.append('mostra_id', id);
-        formData.append('nome', nome);
-        formData.append('cognome', cognome);
-        formData.append('email', email);
-        formData.append('telefono', telefono);
+        setLoading(true);
+        setErrore('');
 
-        axios.post('http://127.0.0.1:8000/api/prenota', formData)
+        const payload = {
+            mostra_id: parseInt(id),
+            nome: nome.trim(),
+            cognome: cognome.trim(),
+            email: email.trim(),
+            telefono: telefono.trim()
+        };
+
+        axios.post('http://127.0.0.1:8000/api/prenota', payload)
             .then(() => {
-                setLoading(false); // Disattiva il loader
-                setSuccesso(true);  // Mostra il messaggio di successo
+                setLoading(false);
+                setSuccesso(true);
             })
             .catch(err => {
                 setLoading(false);
                 console.error("Errore prenotazione:", err);
+                setErrore(err.response?.data?.detail || "Errore di validazione o di rete. Controlla i dati inseriti.");
             });
     };
 
-    const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
+    const inputStyle = { input: { color: 'white' } };
 
     if (!mostra) return null;
 
@@ -59,6 +72,12 @@ export default function FormPrenotazione() {
                     <Typography variant="h4" gutterBottom sx={{ color: '#c5a059', mb: 4 }}>
                         Prenotazione: {mostra.titolo}
                     </Typography>
+
+                    {errore && (
+                        <Alert severity="error" sx={{ mb: 3, backgroundColor: 'rgba(211, 47, 47, 0.15)', color: '#ff8a80', border: '1px solid #d32f2f' }}>
+                            {errore}
+                        </Alert>
+                    )}
 
                     {successo ? (
                         <Box sx={{ p: 4, textAlign: 'center', backgroundColor: 'rgba(76, 175, 80, 0.15)', border: '1px solid #4caf50', borderRadius: 1 }}>
@@ -75,22 +94,81 @@ export default function FormPrenotazione() {
                     ) : (
                         <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                             <Grid container spacing={3}>
-                                <Grid item xs={12} sx={{minWidth: '250px'}}>
-                                    <TextField fullWidth label="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required sx={inputStyle} disabled={loading} />
+                                {/* Nome */}
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontWeight: 500 }}>
+                                        Nome *
+                                    </Typography>
+                                    <TextField
+                                        InputLabelProps={{ shrink: true }}
+                                        fullWidth
+                                        value={nome}
+                                        onChange={(e) => setNome(e.target.value)}
+                                        required
+                                        error={nome.length > 0 && !isNomeValid}
+                                        helperText={nome.length > 0 && !isNomeValid ? "Inserisci almeno 3 caratteri" : ""}
+                                        sx={inputStyle}
+                                        disabled={loading}
+                                    />
                                 </Grid>
-                                <Grid item xs={12} sx={{minWidth: '250px'}}>
-                                    <TextField fullWidth label="Cognome" value={cognome} onChange={(e) => setCognome(e.target.value)} required sx={inputStyle} disabled={loading} />
+
+                                {/* Cognome */}
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontWeight: 500 }}>
+                                        Cognome *
+                                    </Typography>
+                                    <TextField
+                                        InputLabelProps={{ shrink: true }}
+                                        fullWidth
+                                        value={cognome}
+                                        onChange={(e) => setCognome(e.target.value)}
+                                        required
+                                        error={cognome.length > 0 && !isCognomeValid}
+                                        helperText={cognome.length > 0 && !isCognomeValid ? "Inserisci almeno 3 caratteri" : ""}
+                                        sx={inputStyle}
+                                        disabled={loading}
+                                    />
                                 </Grid>
-                                <Grid item xs={12} sx={{minWidth: '250px'}}>
-                                    <TextField fullWidth label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required sx={inputStyle} disabled={loading} />
+
+                                {/* Email */}
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontWeight: 500 }}>
+                                        Email *
+                                    </Typography>
+                                    <TextField
+                                        InputLabelProps={{ shrink: true }}
+                                        fullWidth
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        error={email.length > 0 && !isEmailValid}
+                                        helperText={email.length > 0 && !isEmailValid ? "Formato email non valido" : ""}
+                                        sx={inputStyle}
+                                        disabled={loading}
+                                    />
                                 </Grid>
-                                <Grid item xs={12} sx={{minWidth: '250px'}}>
-                                    <TextField fullWidth label="Telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} required sx={inputStyle} disabled={loading} />
+
+                                {/* Telefono */}
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontWeight: 500 }}>
+                                        Telefono *
+                                    </Typography>
+                                    <TextField
+                                        InputLabelProps={{ shrink: true }}
+                                        fullWidth
+                                        value={telefono}
+                                        onChange={(e) => setTelefono(e.target.value)}
+                                        required
+                                        error={telefono.length > 0 && !isTelefonoValid}
+                                        helperText={telefono.length > 0 && !isTelefonoValid ? "Solo cifre numeriche" : ""}
+                                        sx={inputStyle}
+                                        disabled={loading}
+                                    />
                                 </Grid>
                             </Grid>
 
                             <Box display="flex" justifyContent="flex-end" alignItems="center" mt={3} gap={2}>
-                                {/* Loader visibile solo durante l'invio */}
                                 {loading && (
                                     <Box display="flex" alignItems="center" gap={1.5}>
                                         <CircularProgress size={24} sx={{ color: '#c5a059' }} />
@@ -105,7 +183,7 @@ export default function FormPrenotazione() {
                                     variant="contained"
                                     color="primary"
                                     size="large"
-                                    disabled={loading}
+                                    disabled={loading || !isFormValid}
                                     sx={{ borderRadius: 0, py: 1.5, px: 6, fontWeight: 'bold', letterSpacing: 1 }}
                                 >
                                     {loading ? 'Attendere...' : 'PRENOTA'}

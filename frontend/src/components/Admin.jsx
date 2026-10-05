@@ -124,8 +124,16 @@ export default function Admin() {
                         </Typography>
 
                         <Box component="form" onSubmit={handleLogin} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            <TextField fullWidth label="Email Amministratore" type="email" value={email} onChange={(e) => setEmail(e.target.value)} sx={inputStyle} />
-                            <TextField fullWidth label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} sx={inputStyle} />
+                            <TextField
+                                InputLabelProps={{ shrink: true }}
+                                fullWidth
+                                label="Email Amministratore"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)} sx={inputStyle} />
+                            <TextField
+                                InputLabelProps={{ shrink: true }}
+                                fullWidth label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} sx={inputStyle} />
                             {erroreLogin && <Typography variant="body2" sx={{ color: '#ff6b6b' }}>Credenziali errate.</Typography>}
                             <Button type="submit" variant="contained" color="primary" size="large" sx={{ borderRadius: 0, py: 1.5, fontWeight: 'bold' }}>ACCEDI</Button>
                         </Box>
@@ -152,13 +160,17 @@ export default function Admin() {
 
                             <Grid container spacing={3}>
                                 <Grid item xs={12} sm={8}>
-                                    <TextField fullWidth label="Titolo dell'Esposizione" value={titolo} onChange={(e) => setTitolo(e.target.value)} required sx={inputStyle} />
+                                    <TextField
+                                        InputLabelProps={{ shrink: true }}
+                                        fullWidth label="Titolo dell'Esposizione" value={titolo} onChange={(e) => setTitolo(e.target.value)} required sx={inputStyle} />
                                 </Grid>
    {/*                             <Grid item xs={12} sm={4}>
                                     <TextField fullWidth label="Capienza Massima" type="number" value={capienza} onChange={(e) => setCapienza(e.target.value)} required sx={inputStyle} />
                                 </Grid>*/}
                                 <Grid item xs={12}>
-                                    <TextField fullWidth multiline rows={3} label="Descrizione Dettagliata" value={descrizione} onChange={(e) => setDescrizione(e.target.value)} required sx={inputStyle} />
+                                    <TextField
+                                        InputLabelProps={{ shrink: true }}
+                                        fullWidth multiline rows={3} label="Descrizione Dettagliata" value={descrizione} onChange={(e) => setDescrizione(e.target.value)} required sx={inputStyle} />
                                 </Grid>
                                 <Grid item xs={12}>
                                     <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontFamily: 'sans-serif' }}>
