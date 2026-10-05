@@ -6,6 +6,7 @@
 Progettazione di una piattaforma informatica per la gestione di servizi, dati e utenti
 
 #### DASHBOARD
+Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 <img width="988" height="730" alt="image" src="https://github.com/user-attachments/assets/51d487b4-a8a7-449f-956e-012e966d298e" />
 
 #### Swagger API
