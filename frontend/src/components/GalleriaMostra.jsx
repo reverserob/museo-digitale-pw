@@ -44,7 +44,7 @@ export default function GalleriaMostra() {
                         </Box>
 
                         <Button component={Link} to={`/prenota/${mostra.id}`} variant="contained" color="primary" size="large" fullWidth sx={{ borderRadius: 0, py: 2, letterSpacing: 1.5, fontWeight: 'bold' }}>
-                            ACQUISTA BIGLIETTI
+                            PRENOTA
                         </Button>
                     </Box>
                 </Grid>
