@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { Container, Typography, Card, CardContent, Button, Box, TextField, Divider } from '@mui/material';
+import { API_URL } from '../../config';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function AdminDashboard() {
     const [messaggio, setMessaggio] = useState('');
 
     const caricaMostre = () => {
-        axios.get('http://127.0.0.1:8000/api/mostre')
+        axios.get(`${API_URL}/api/mostre/`)
             .then(res => setMostre(res.data))
             .catch(err => console.error(err));
     };
@@ -45,7 +46,7 @@ export default function AdminDashboard() {
 
     const eliminaMostra = (id) => {
         if (window.confirm("Sei sicura di voler eliminare questa mostra dal database?")) {
-            axios.delete(`http://127.0.0.1:8000/api/mostre/${id}`)
+            axios.delete(`${API_URL}/api/mostre/${id}`)
                 .then(() => {
                     setMessaggio("Mostra eliminata con successo!");
                     caricaMostre();

@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Container, Typography, Grid, Card, CardContent, CardActions, Button, Box } from '@mui/material';
+import { API_URL } from '../../config';
+
 
 export default function Home() {
     const [mostre, setMostre] = useState([]);
 
     useEffect(() => {
-        axios.get('http://127.0.0.1:8000/api/mostre')
+        axios.get(`${API_URL}/api/mostre`)
+         // axios.get('http://127.0.0.1:8000/api/mostre')
             .then(response => setMostre(response.data))
             .catch(error => console.error(error));
     }, []);

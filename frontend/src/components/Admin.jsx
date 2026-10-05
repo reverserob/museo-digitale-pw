@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid, Divider } from '@mui/material';
+import { API_URL } from '/../../config';
 
 export default function Admin() {
     const navigate = useNavigate();
@@ -20,7 +21,8 @@ export default function Admin() {
     const [messaggio, setMessaggio] = useState('');
 
     const caricaMostre = () => {
-        axios.get('http://127.0.0.1:8000/api/mostre')
+           axios.get(`${API_URL}/api/mostre`)
+        // axios.get('http://127.0.0.1:8000/api/mostre')
             .then(res => setMostre(res.data))
             .catch(err => console.error(err));
     };
@@ -60,7 +62,7 @@ export default function Admin() {
     // Funzione per eliminare una mostra
     const eliminaMostra = (id) => {
         if (window.confirm("Sei sicura di voler eliminare questa mostra dal database?")) {
-            axios.delete(`http://127.0.0.1:8000/api/mostre/${id}`)
+            axios.delete(`${API_URL}/api/mostre/${id}`)
                 .then(() => {
                     setMessaggio("Mostra eliminata con successo!");
                     caricaMostre();
@@ -87,7 +89,8 @@ export default function Admin() {
         const config = { headers: { 'Content-Type': 'multipart/form-data' } };
 
         if (editingId) {
-            axios.put(`http://127.0.0.1:8000/api/mostre/${editingId}`, formData, config)
+            axios.put(`${API_URL}/api/mostre/${editingId}`, formData, config)
+            // axios.put(`http://127.0.0.1:8000/api/mostre/${editingId}`, formData, config)
                 .then(() => {
                     setMessaggio("Mostra modificata con successo!");
                     caricaMostre();
@@ -96,7 +99,7 @@ export default function Admin() {
                 })
                 .catch(err => console.error("Errore modifica:", err));
         } else {
-            axios.post('http://127.0.0.1:8000/api/mostre', formData, config)
+            axios.post(`${API_URL}/api/mostre/`, formData, config)
                 .then(() => {
                     setMessaggio("Nuova mostra pubblicata con successo!");
                     caricaMostre();

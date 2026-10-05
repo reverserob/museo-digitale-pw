@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid } from '@mui/material';
+import { API_URL } from '../../config';
+
 
 export default function AdminForm() {
     const navigate = useNavigate();
@@ -17,7 +19,7 @@ export default function AdminForm() {
 
     useEffect(() => {
         if (isEditMode) {
-            axios.get(`http://127.0.0.1:8000/api/mostre/${id}`)
+            axios.get(`${API_URL}/api/mostre/${id}`)
                 .then(res => {
                     setTitolo(res.data.titolo);
                     setDescrizione(res.data.descrizione);
@@ -45,8 +47,8 @@ export default function AdminForm() {
         const config = { headers: { 'Content-Type': 'multipart/form-data' } };
 
         const request = isEditMode
-            ? axios.put(`http://127.0.0.1:8000/api/mostre/${id}`, formData, config)
-            : axios.post('http://127.0.0.1:8000/api/mostre', formData, config);
+            ? axios.put(`${API_URL}/api/mostre/${id}`, formData, config)
+            : axios.post(`${API_URL}/api/mostre`, formData, config);
 
         request
             .then(() => {

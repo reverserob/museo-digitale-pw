@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Container, Typography, Grid, Button, Box, CircularProgress, ImageList, ImageListItem } from '@mui/material';
+import { API_URL } from '../../config';
 
 export default function GalleriaMostra() {
     const { id } = useParams();
@@ -9,7 +10,7 @@ export default function GalleriaMostra() {
     const [mostra, setMostre] = useState(null);
 
     useEffect(() => {
-        axios.get(`http://127.0.0.1:8000/api/mostre/${id}`)
+        axios.get(`${API_URL}/api/mostre/${id}`)
             .then(response => setMostre(response.data))
             .catch(error => console.error(error));
     }, [id]);
