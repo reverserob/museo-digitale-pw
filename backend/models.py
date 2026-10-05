@@ -7,5 +7,7 @@ class Mostra(Base):
     id = Column(Integer, primary_key=True, index=True)
     titolo = Column(String, index=True)
     descrizione = Column(String)
-    capienza_massima = Column(Integer)
-    immagini = Column(String) # NUOVO CAMPO: URL separate da virgola
+   # capienza_massima = Column(Integer)
+    immagini = Column(String)
+    data_inizio = Column(String)
+    data_fine = Column(String)

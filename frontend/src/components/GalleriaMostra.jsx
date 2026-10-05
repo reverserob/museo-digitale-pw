@@ -16,7 +16,6 @@ export default function GalleriaMostra() {
 
     if (!mostra) return <Box textAlign="center" mt={20}><CircularProgress color="primary" /></Box>;
 
-    // Converte la stringa salvata nel DB in un array di URL
     const immaginiGalleria = mostra.immagini ? mostra.immagini.split(',') : [];
 
     return (
@@ -33,13 +32,15 @@ export default function GalleriaMostra() {
                             {mostra.descrizione}
                         </Typography>
                         <Typography variant="body2" sx={{ color: '#aaaaaa', mb: 6, fontFamily: 'sans-serif', lineHeight: 1.7 }}>
-                            Il percorso espositivo è stato curato per offrire un'esperienza immersiva unica, interamente gestita e catalogata tramite i sistemi digitali dell'ente.
+                            Il percorso espositivo è curato per offrire un'esperienza immersiva unica, gestita interamente tramite i sistemi digitali dell'ente.
                         </Typography>
 
+                        {/* AGGIORNATO CON LE DATE DAL DATABASE */}
                         <Box sx={{ p: 3, backgroundColor: 'rgba(197, 160, 89, 0.1)', borderLeft: '4px solid #c5a059', mb: 4 }}>
-                            <Typography variant="subtitle2" sx={{ color: '#c5a059', textTransform: 'uppercase', letterSpacing: 2 }}>Informazioni Visita</Typography>
-                            <Typography variant="body2" sx={{ color: '#dddddd', mt: 1, fontFamily: 'sans-serif' }}>Durata stimata: 90 minuti</Typography>
-                            <Typography variant="body2" sx={{ color: '#dddddd', fontFamily: 'sans-serif' }}>Posti ancora disponibili: {mostra.capienza_massima}</Typography>
+                            <Typography variant="subtitle2" sx={{ color: '#c5a059', textTransform: 'uppercase', letterSpacing: 2 }}>Periodo Espositivo</Typography>
+                            <Typography variant="body1" sx={{ color: '#ffffff', mt: 1, fontWeight: 'bold', fontFamily: 'sans-serif' }}>
+                                Dal {mostra.data_inizio} al {mostra.data_fine}
+                            </Typography>
                         </Box>
 
                         <Button component={Link} to={`/prenota/${mostra.id}`} variant="contained" color="primary" size="large" fullWidth sx={{ borderRadius: 0, py: 2, letterSpacing: 1.5, fontWeight: 'bold' }}>
@@ -56,7 +57,7 @@ export default function GalleriaMostra() {
                                     <img src={immaginiGalleria[0].trim()} alt="Mostra Main" style={{ borderRadius: 8, height: '400px', objectFit: 'cover' }} />
                                 </ImageListItem>
                             )}
-                            {immaginiGalleria.slice(1, 5.0).map((imgUrl, index) => (
+                            {immaginiGalleria.slice(1, 5).map((imgUrl, index) => (
                                 <ImageListItem key={index} cols={1} rows={1}>
                                     <img src={imgUrl.trim()} alt={`Dettaglio ${index + 1}`} style={{ borderRadius: 8, height: '250px', objectFit: 'cover' }} />
                                 </ImageListItem>

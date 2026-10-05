@@ -40,7 +40,7 @@ export default function FormPrenotazione() {
 
     const isAcquirenteValid = acquirente.nome.trim() && acquirente.cognome.trim() && validateEmail(acquirente.email) && validateTelefono(acquirente.telefono);
     const isOspitiValid = ospiti.every(o => o.nome.trim() && o.cognome.trim() && validateEmail(o.email) && validateTelefono(o.telefono));
-    const formValido = isAcquirenteValid && isOspitiValid && quantita >= 1 && quantita <= 5 && quantita <= (mostra?.capienza_massima || 5);
+    const formValido = isAcquirenteValid && isOspitiValid && quantita >= 1 && quantita <= 5 && quantita /*<= (mostra?.capienza_massima || 5)*/;
 
     const handlePrenotazione = () => {
         alert(`Prenotazione di ${quantita} biglietti validata. Verifica la console!`);

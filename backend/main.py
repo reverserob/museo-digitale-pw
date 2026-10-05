@@ -53,20 +53,26 @@ def inserisci_dati_iniziali():
                 models.Mostra(
                     titolo="Caravaggio e il suo tempo",
                     descrizione="Un viaggio tra luce e ombra nelle opere milanesi del maestro.",
-                    capienza_massima=100,
-                    immagini=immagini_default
+                   # capienza_massima=100,
+                    immagini=immagini_default,
+                    data_inizio="10 Ottobre 2026",
+                    data_fine="15 Gennaio 2027"
                 ),
                 models.Mostra(
                     titolo="Leonardo: Il Codice Atlantico",
                     descrizione="Esposizione esclusiva dei disegni tecnici di Leonardo da Vinci.",
-                    capienza_massima=50,
-                    immagini=immagini_default
+                   # capienza_massima=50,
+                    immagini=immagini_default,
+                    data_inizio="01 Dicembre 2026",
+                    data_fine="30 Aprile 2027"
                 ),
                 models.Mostra(
                     titolo="Arte Contemporanea in Lombardia",
                     descrizione="Le nuove correnti artistiche dal 2000 a oggi.",
-                    capienza_massima=200,
-                    immagini=immagini_default
+                   # capienza_massima=200,
+                    immagini=immagini_default,
+                    data_inizio="01 Novembre 2026",
+                    data_fine="28 Febbraio 2027"
                 )
             ]
             db.add_all(mostre_di_prova)
@@ -94,7 +100,9 @@ def leggi_singola_mostra(mostra_id: int, db: Session = Depends(get_db)):
 async def crea_mostra(
     titolo: str = Form(...),
     descrizione: str = Form(...),
-    capienza_massima: int = Form(...),
+   # capienza_massima: int = Form(...),
+    data_inizio: str = Form(...),
+    data_fine: str = Form(...),
     immagini: list[UploadFile] = File(...),
     db: Session = Depends(get_db)
 ):
@@ -110,7 +118,9 @@ async def crea_mostra(
     nuova_mostra = models.Mostra(
         titolo=titolo,
         descrizione=descrizione,
-        capienza_massima=capienza_massima,
+       # capienza_massima=capienza_massima,
+        data_inizio=data_inizio,
+        data_fine=data_fine,
         immagini=immagini_str
     )
     db.add(nuova_mostra)
@@ -118,13 +128,14 @@ async def crea_mostra(
     db.refresh(nuova_mostra)
     return nuova_mostra
 
-# API per MODIFICARE una mostra esistente con eventuali nuovi file
 @app.put("/api/mostre/{mostra_id}", response_model=schemas.MostraResponse)
 async def aggiorna_mostra(
     mostra_id: int,
     titolo: str = Form(...),
     descrizione: str = Form(...),
-    capienza_massima: int = Form(...),
+    # capienza_massima: int = Form(...),
+    data_inizio: str = Form(...),
+    data_fine: str = Form(...),
     immagini: list[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
@@ -134,7 +145,9 @@ async def aggiorna_mostra(
 
     mostra.titolo = titolo
     mostra.descrizione = descrizione
-    mostra.capienza_massima = capienza_massima
+    # mostra.capienza_massima = capienza_massima
+    mostra.data_inizio = data_inizio
+    mostra.data_fine = data_fine
 
     if immagini and len(immagini) > 0 and immagini[0].filename != "":
         percorsi_salvati = []
@@ -148,3 +161,14 @@ async def aggiorna_mostra(
     db.commit()
     db.refresh(mostra)
     return mostra
+
+# API per ELIMINARE una mostra esistente tramite ID
+@app.delete("/api/mostre/{mostra_id}")
+def elimina_mostra(mostra_id: int, db: Session = Depends(get_db)):
+    mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
+    if mostra is None:
+        raise HTTPException(status_code=404, detail="Mostra non trovata")
+
+    db.delete(mostra)
+    db.commit()
+    return {"message": "Mostra eliminata con successo"}

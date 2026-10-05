@@ -5,7 +5,8 @@ import { theme } from './theme';
 import Home from './components/Home';
 import GalleriaMostra from './components/GalleriaMostra';
 import FormPrenotazione from './components/FormPrenotazione';
-import Admin from './components/Admin'; // IMPORTA IL COMPONENTE ADMIN
+import AdminDashboard from './components/AdminDashboard';
+import AdminForm from './components/AdminForm';
 
 function App() {
     return (
@@ -19,7 +20,6 @@ function App() {
                             <Typography variant="h6" sx={{ flexGrow: 1, color: '#c5a059', fontWeight: 'bold', letterSpacing: 3 }}>
                                 <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>MUSEO CIVICO DIGITALE</Link>
                             </Typography>
-                            {/* COLLEGATO ALLA ROTTA ADMIN */}
                             <Button component={Link} to="/admin" color="inherit" sx={{ letterSpacing: 1 }}>Area Riservata</Button>
                         </Toolbar>
                     </AppBar>
@@ -28,7 +28,9 @@ function App() {
                         <Route path="/" element={<Home />} />
                         <Route path="/esposizione/:id" element={<GalleriaMostra />} />
                         <Route path="/prenota/:id" element={<FormPrenotazione />} />
-                        <Route path="/admin" element={<Admin />} /> {/* NUOVA ROTTA */}
+                        <Route path="/admin" element={<AdminDashboard />} />
+                        <Route path="/admin/nuova" element={<AdminForm />} />
+                        <Route path="/admin/modifica/:id" element={<AdminForm />} />
                     </Routes>
 
                 </Box>

@@ -15,7 +15,7 @@ export default function Admin() {
     const [editingId, setEditingId] = useState(null);
     const [titolo, setTitolo] = useState('');
     const [descrizione, setDescrizione] = useState('');
-    const [capienza, setCapienza] = useState(100);
+   // const [capienza, setCapienza] = useState(100);
     const [fileImmagini, setFileImmagini] = useState(null);
     const [messaggio, setMessaggio] = useState('');
 
@@ -43,7 +43,7 @@ export default function Admin() {
         setEditingId(mostra.id);
         setTitolo(mostra.titolo);
         setDescrizione(mostra.descrizione);
-        setCapienza(mostra.capienza_massima);
+        //setCapienza(mostra.capienza_massima);
         setFileImmagini(null);
         setMessaggio('');
     };
@@ -52,9 +52,23 @@ export default function Admin() {
         setEditingId(null);
         setTitolo('');
         setDescrizione('');
-        setCapienza(100);
+       // setCapienza(100);
         setFileImmagini(null);
         setMessaggio('');
+    };
+
+    // Funzione per eliminare una mostra
+    const eliminaMostra = (id) => {
+        if (window.confirm("Sei sicura di voler eliminare questa mostra dal database?")) {
+            axios.delete(`http://127.0.0.1:8000/api/mostre/${id}`)
+                .then(() => {
+                    setMessaggio("Mostra eliminata con successo!");
+                    caricaMostre();
+                    if (editingId === id) annullaModifica(); // Se stavamo modificando la mostra eliminata, chiudiamo il form di edit
+                    setTimeout(() => setMessaggio(''), 4000);
+                })
+                .catch(err => console.error("Errore durante l'eliminazione:", err));
+        }
     };
 
     const handleSubmitMostra = (e) => {
@@ -62,7 +76,7 @@ export default function Admin() {
         const formData = new FormData();
         formData.append('titolo', titolo);
         formData.append('descrizione', descrizione);
-        formData.append('capienza_massima', capienza);
+        // formData.append('capienza_massima', capienza);
 
         if (fileImmagini) {
             for (let i = 0; i < fileImmagini.length; i++) {
@@ -140,9 +154,9 @@ export default function Admin() {
                                 <Grid item xs={12} sm={8}>
                                     <TextField fullWidth label="Titolo dell'Esposizione" value={titolo} onChange={(e) => setTitolo(e.target.value)} required sx={inputStyle} />
                                 </Grid>
-                                <Grid item xs={12} sm={4}>
+   {/*                             <Grid item xs={12} sm={4}>
                                     <TextField fullWidth label="Capienza Massima" type="number" value={capienza} onChange={(e) => setCapienza(e.target.value)} required sx={inputStyle} />
-                                </Grid>
+                                </Grid>*/}
                                 <Grid item xs={12}>
                                     <TextField fullWidth multiline rows={3} label="Descrizione Dettagliata" value={descrizione} onChange={(e) => setDescrizione(e.target.value)} required sx={inputStyle} />
                                 </Grid>
@@ -180,13 +194,18 @@ export default function Admin() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {mostre.map((m) => (
                                 <Box key={m.id} display="flex" justifyContent="space-between" alignItems="center" p={2.5} sx={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 1 }}>
-                                    <Box>
+{/*                                    <Box>
                                         <Typography variant="subtitle1" sx={{ color: '#c5a059', fontWeight: 'bold' }}>{m.titolo}</Typography>
                                         <Typography variant="body2" sx={{ color: '#aaaaaa' }}>Capienza: {m.capienza_massima} posti</Typography>
+                                    </Box>*/}
+                                    <Box display="flex" gap={2}>
+                                        <Button variant="outlined" color="primary" size="small" onClick={() => avviaModifica(m)}>
+                                            Modifica
+                                        </Button>
+                                        <Button variant="outlined" color="error" size="small" onClick={() => eliminaMostra(m.id)}>
+                                            Elimina
+                                        </Button>
                                     </Box>
-                                    <Button variant="outlined" color="primary" size="small" onClick={() => avviaModifica(m)}>
-                                        Modifica
-                                    </Button>
                                 </Box>
                             ))}
                         </Box>
