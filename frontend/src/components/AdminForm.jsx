@@ -36,7 +36,7 @@ export default function AdminForm() {
         formData.append('data_inizio', dataInizio);
         formData.append('data_fine', dataFine);
 
-        if (fileImmagini) {
+        if (fileImmagini && fileImmagini.length > 0) {
             for (let i = 0; i < fileImmagini.length; i++) {
                 formData.append('immagini', fileImmagini[i]);
             }
@@ -56,7 +56,12 @@ export default function AdminForm() {
             .catch(err => console.error("Errore salvataggio:", err));
     };
 
-    const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
+    const inputStyle = {
+        input: {
+            color: 'white',
+            colorScheme: 'dark' // Forza il calendario del browser in stile scuro
+        }
+    };
 
     return (
         <Container maxWidth="md" sx={{ mt: 10, mb: 10 }}>
@@ -82,19 +87,39 @@ export default function AdminForm() {
                                 <TextField fullWidth label="Titolo dell'Esposizione" value={titolo} onChange={(e) => setTitolo(e.target.value)} required sx={inputStyle} />
                             </Grid>
 
+                            {/* CAMPI DATA CON CALENDARIO NATIVO E ETICHETTA FISSA TIPO PLACEHOLDER */}
                             <Grid item xs={12} sm={6}>
-                                <TextField fullWidth label="Data Inizio (es. 10 Ottobre 2026)" value={dataInizio} onChange={(e) => setDataInizio(e.target.value)} required sx={inputStyle} />
+                                <TextField
+                                    fullWidth
+                                    type="date"
+                                    label="Data Inizio"
+                                    InputLabelProps={{ shrink: true, style: { color: '#c5a059', position: 'static', transform: 'none', marginBottom: '8px' } }}
+                                    value={dataInizio}
+                                    onChange={(e) => setDataInizio(e.target.value)}
+                                    required
+                                    sx={inputStyle}
+                                />
                             </Grid>
                             <Grid item xs={12} sm={6}>
-                                <TextField fullWidth label="Data Fine (es. 15 Gennaio 2027)" value={dataFine} onChange={(e) => setDataFine(e.target.value)} required sx={inputStyle} />
+                                <TextField
+                                    fullWidth
+                                    type="date"
+                                    label="Data Fine"
+                                    InputLabelProps={{ shrink: true, style: { color: '#c5a059', position: 'static', transform: 'none', marginBottom: '8px' } }}
+                                    value={dataFine}
+                                    onChange={(e) => setDataFine(e.target.value)}
+                                    required
+                                    sx={inputStyle}
+                                />
                             </Grid>
 
                             <Grid item xs={12}>
                                 <TextField fullWidth multiline rows={4} label="Descrizione Dettagliata" value={descrizione} onChange={(e) => setDescrizione(e.target.value)} required sx={inputStyle} />
                             </Grid>
+
                             <Grid item xs={12}>
                                 <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontFamily: 'sans-serif' }}>
-                                    Seleziona le foto dal computer:
+                                    Seleziona nuove foto (facoltativo - se non carichi nulla rimarranno quelle attuali):
                                 </Typography>
                                 <Button variant="outlined" component="label" sx={{ color: '#c5a059', borderColor: '#c5a059', borderRadius: 0 }}>
                                     Carica Immagini
