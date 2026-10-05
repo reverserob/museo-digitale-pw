@@ -85,8 +85,8 @@ export default function AdminDashboard() {
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                             <Typography variant="h4" sx={{ color: '#c5a059' }}>Dashboard Admin - Esposizioni Attive</Typography>
                             <Box display="flex" gap={2}>
-                                <Button component={Link} to="/admin/nuova" variant="contained" color="primary" sx={{ borderRadius: 0, fontWeight: 'bold' }}>
-                                    + Nuova Mostra
+                                <Button component={Link} to="/admin/nuova" variant="contained" color="primary" sx={{ borderRadius: 0, fontWeight: 'bold', margin: '20px'}}>
+                                    Nuova Mostra
                                 </Button>
                                 <Button onClick={handleLogout} variant="outlined" color="primary" size="small">Esci</Button>
                             </Box>
