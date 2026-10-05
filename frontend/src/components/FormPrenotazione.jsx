@@ -75,16 +75,16 @@ export default function FormPrenotazione() {
                     ) : (
                         <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                             <Grid container spacing={3}>
-                                <Grid item xs={12} sm={6}>
+                                <Grid item xs={12} sx={{minWidth: '250px'}}>
                                     <TextField fullWidth label="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required sx={inputStyle} disabled={loading} />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid item xs={12} sx={{minWidth: '250px'}}>
                                     <TextField fullWidth label="Cognome" value={cognome} onChange={(e) => setCognome(e.target.value)} required sx={inputStyle} disabled={loading} />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid item xs={12} sx={{minWidth: '250px'}}>
                                     <TextField fullWidth label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required sx={inputStyle} disabled={loading} />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid item xs={12} sx={{minWidth: '250px'}}>
                                     <TextField fullWidth label="Telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} required sx={inputStyle} disabled={loading} />
                                 </Grid>
                             </Grid>
