@@ -6,6 +6,9 @@
 Progettazione di una piattaforma informatica per la gestione di servizi, dati e utenti
 
 
+<img width="988" height="730" alt="image" src="https://github.com/user-attachments/assets/51d487b4-a8a7-449f-956e-012e966d298e" />
+
+
 Used Backend Library
 - FastAPI: Il framework per le API.
 - Uvicorn: Il server web che farà girare FastAPI.
