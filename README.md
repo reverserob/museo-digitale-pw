@@ -18,7 +18,7 @@ Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 - Uvicorn: Il server web che farà girare FastAPI.
 - SQLAlchemy: L'ORM (Object-Relational Mapper) per parlare con il database senza scrivere query SQL a mano.
 - Pydantic: Serve per validare i dati JSON in entrata e uscita (FastAPI lo usa di default).
-
+  pip install -r requirements.txt
 ####  Run the backend
 1. `cd backend`
 2. `python -m venv venv && source venv/bin/activate`
