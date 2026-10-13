@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/museo-digitale-pw.iml" filepath="$PROJECT_DIR$/.idea/museo-digitale-pw.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/museo-digitale-pw-patch.iml" filepath="$PROJECT_DIR$/.idea/museo-digitale-pw-patch.iml" />
     </modules>
   </component>
 </project>

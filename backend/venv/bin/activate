@@ -37,7 +37,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="/Users/u475666/Documents/Intesa SanPaolo/Documenti/Documenti/PRIVATE/PEGASO- Laurea in Informatica L-31 2024_2025/ProjectWork/museo-digitale-pw/backend/venv"
+VIRTUAL_ENV="/Users/u475666/Documents/Intesa SanPaolo/Documenti/Documenti/PRIVATE/PEGASO- Laurea in Informatica L-31 2024_2025/museo-digitale-pw-patch/backend/venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

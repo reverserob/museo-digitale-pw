@@ -1,34 +1,42 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Container, Typography, Grid, Button, Box, CircularProgress, ImageList, ImageListItem } from '@mui/material';
-import { API_URL } from '../../config';
+import { Container, Typography, Grid, Button, Box, CircularProgress, ImageList, ImageListItem, Alert } from '@mui/material';
+import { api, splitImmagini, messaggioErrore } from '../api';
 
 export default function GalleriaMostra() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [mostra, setMostre] = useState(null);
+    const [mostra, setMostra] = useState(null);
+    const [errore, setErrore] = useState('');
 
     useEffect(() => {
-        axios.get(`${API_URL}/api/mostre/${id}`)
-            .then(response => setMostre(response.data))
-            .catch(error => console.error(error));
+        api.get(`/api/mostre/${id}`)
+            .then((response) => setMostra(response.data))
+            .catch((err) => setErrore(messaggioErrore(err, 'Impossibile caricare la mostra.')));
     }, [id]);
 
-    if (!mostra) return <Box textAlign="center" mt={20}><CircularProgress color="primary" /></Box>;
+    if (errore) {
+        return (
+            <Container maxWidth="md" sx={{ mt: 10 }}>
+                <Alert severity="error" sx={{ mb: 3 }}>{errore}</Alert>
+                <Button onClick={() => navigate('/')} variant="outlined">Torna alle esposizioni</Button>
+            </Container>
+        );
+    }
+    if (!mostra) return <Box sx={{ textAlign: 'center', mt: 20 }}><CircularProgress color="primary" /></Box>;
 
-    const immaginiGalleria = mostra.immagini ? mostra.immagini.split(',') : [];
+    const immaginiGalleria = splitImmagini(mostra.immagini);
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 10 }}>
+        <Container maxWidth="lg" sx={{ mt: { xs: 5, md: 10 } }}>
             <Button onClick={() => navigate('/')} sx={{ color: '#bbbbbb', mb: 4, fontFamily: 'sans-serif' }}>
                 ← Torna alle esposizioni
             </Button>
 
             <Grid container spacing={6}>
-                <Grid item xs={12} md={5}>
-                    <Box sx={{ position: 'sticky', top: 100 }}>
-                        <Typography variant="h3" gutterBottom sx={{ color: '#c5a059' }}>{mostra.titolo}</Typography>
+                <Grid size={{ xs: 12, md: 5 }}>
+                    <Box sx={{ position: { md: 'sticky' }, top: 100 }}>
+                        <Typography variant="h3" gutterBottom sx={{ color: '#c5a059', fontSize: { xs: '2rem', md: '3rem' } }}>{mostra.titolo}</Typography>
                         <Typography variant="body1" sx={{ color: '#e0e0e0', mt: 4, mb: 2, fontSize: '1.1rem', fontFamily: 'sans-serif', lineHeight: 1.8 }}>
                             {mostra.descrizione}
                         </Typography>
@@ -36,7 +44,6 @@ export default function GalleriaMostra() {
                             Il percorso espositivo è curato per offrire un'esperienza immersiva unica, gestita interamente tramite i sistemi digitali dell'ente.
                         </Typography>
 
-                        {/* AGGIORNATO CON LE DATE DAL DATABASE */}
                         <Box sx={{ p: 3, backgroundColor: 'rgba(197, 160, 89, 0.1)', borderLeft: '4px solid #c5a059', mb: 4 }}>
                             <Typography variant="subtitle2" sx={{ color: '#c5a059', textTransform: 'uppercase', letterSpacing: 2 }}>Periodo Espositivo</Typography>
                             <Typography variant="body1" sx={{ color: '#ffffff', mt: 1, fontWeight: 'bold', fontFamily: 'sans-serif' }}>
@@ -50,17 +57,15 @@ export default function GalleriaMostra() {
                     </Box>
                 </Grid>
 
-                <Grid item xs={12} md={7}>
+                <Grid size={{ xs: 12, md: 7 }}>
                     {immaginiGalleria.length > 0 && (
                         <ImageList variant="quilted" cols={2} gap={16}>
-                            {immaginiGalleria[0] && (
-                                <ImageListItem cols={2} rows={2}>
-                                    <img src={immaginiGalleria[0].trim()} alt="Mostra Main" style={{ borderRadius: 8, height: '400px', objectFit: 'cover' }} />
-                                </ImageListItem>
-                            )}
+                            <ImageListItem cols={2} rows={2}>
+                                <img src={immaginiGalleria[0]} alt={mostra.titolo} style={{ borderRadius: 8, height: '400px', objectFit: 'cover' }} />
+                            </ImageListItem>
                             {immaginiGalleria.slice(1, 5).map((imgUrl, index) => (
-                                <ImageListItem key={index} cols={1} rows={1}>
-                                    <img src={imgUrl.trim()} alt={`Dettaglio ${index + 1}`} style={{ borderRadius: 8, height: '250px', objectFit: 'cover' }} />
+                                <ImageListItem key={imgUrl} cols={1} rows={1}>
+                                    <img src={imgUrl} alt={`${mostra.titolo} - dettaglio ${index + 1}`} style={{ borderRadius: 8, height: '250px', objectFit: 'cover' }} />
                                 </ImageListItem>
                             ))}
                         </ImageList>

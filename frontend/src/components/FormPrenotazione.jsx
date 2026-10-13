@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid, CircularProgress, Alert } from '@mui/material';
-import { API_URL } from '../../config';
+import { api, messaggioErrore } from '../api';
 
 export default function FormPrenotazione() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [mostra, setMostra] = useState(null);
+    const [erroreCaricamento, setErroreCaricamento] = useState('');
 
     const [nome, setNome] = useState('');
     const [cognome, setCognome] = useState('');
@@ -19,15 +19,15 @@ export default function FormPrenotazione() {
     const [errore, setErrore] = useState('');
 
     useEffect(() => {
-        axios.get(`${API_URL}/api/mostre/${id}`)
+        api.get(`/api/mostre/${id}`)
             .then(res => setMostra(res.data))
-            .catch(err => console.error(err));
+            .catch(err => setErroreCaricamento(messaggioErrore(err, 'Impossibile caricare la mostra.')));
     }, [id]);
 
     const isNomeValid = nome.trim().length >= 3;
     const isCognomeValid = cognome.trim().length >= 3;
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-    const isTelefonoValid = /^\d+$/.test(telefono.trim());
+    const isTelefonoValid = /^\d{6,15}$/.test(telefono.trim());
 
     const isFormValid = isNomeValid && isCognomeValid && isEmailValid && isTelefonoValid;
 
@@ -46,30 +46,36 @@ export default function FormPrenotazione() {
             telefono: telefono.trim()
         };
 
-        axios.post(`${API_URL}/api/prenota`, payload)
-        // axios.post('http://127.0.0.1:8000/api/prenota', payload)
+        api.post('/api/prenota', payload)
             .then(() => {
                 setLoading(false);
                 setSuccesso(true);
             })
             .catch(err => {
                 setLoading(false);
-                console.error("Errore prenotazione:", err);
-                setErrore(err.response?.data?.detail || "Errore di validazione o di rete. Controlla i dati inseriti.");
+                setErrore(messaggioErrore(err, "Errore di validazione o di rete. Controlla i dati inseriti."));
             });
     };
 
     const inputStyle = { input: { color: 'white' } };
 
-    if (!mostra) return null;
+    if (erroreCaricamento) {
+        return (
+            <Container maxWidth="md" sx={{ mt: 10 }}>
+                <Alert severity="error" sx={{ mb: 3 }}>{erroreCaricamento}</Alert>
+                <Button onClick={() => navigate('/')} variant="outlined">Torna alla Home</Button>
+            </Container>
+        );
+    }
+    if (!mostra) return <Box sx={{ textAlign: 'center', mt: 20 }}><CircularProgress color="primary" /></Box>;
 
     return (
-        <Container maxWidth="md" sx={{ mt: 10, mb: 10 }}>
+        <Container maxWidth="md" sx={{ mt: { xs: 5, md: 10 }, mb: 10 }}>
             <Button onClick={() => navigate(`/esposizione/${id}`)} sx={{ color: '#bbbbbb', mb: 4, fontFamily: 'sans-serif' }}>
                 ← Torna ai dettagli della mostra
             </Button>
 
-            <Card elevation={0} sx={{ backdropFilter: 'blur(12px)', border: '1px solid rgba(197, 160, 89, 0.5)', backgroundColor: 'rgba(10, 10, 10, 0.85)', p: 4 }}>
+            <Card elevation={0} sx={{ backdropFilter: 'blur(12px)', border: '1px solid rgba(197, 160, 89, 0.5)', backgroundColor: 'rgba(10, 10, 10, 0.85)', p: { xs: 1, sm: 4 } }}>
                 <CardContent>
                     <Typography variant="h4" gutterBottom sx={{ color: '#c5a059', mb: 4 }}>
                         Prenotazione: {mostra.titolo}
@@ -97,12 +103,12 @@ export default function FormPrenotazione() {
                         <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                             <Grid container spacing={3}>
                                 {/* Nome */}
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
                                         Nome *
                                     </Typography>
                                     <TextField
-                                        InputLabelProps={{ shrink: true }}
+                                        slotProps={{ inputLabel: { shrink: true } }}
                                         fullWidth
                                         value={nome}
                                         onChange={(e) => setNome(e.target.value)}
@@ -115,12 +121,12 @@ export default function FormPrenotazione() {
                                 </Grid>
 
                                 {/* Cognome */}
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
                                         Cognome *
                                     </Typography>
                                     <TextField
-                                        InputLabelProps={{ shrink: true }}
+                                        slotProps={{ inputLabel: { shrink: true } }}
                                         fullWidth
                                         value={cognome}
                                         onChange={(e) => setCognome(e.target.value)}
@@ -133,12 +139,12 @@ export default function FormPrenotazione() {
                                 </Grid>
 
                                 {/* Email */}
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
                                         Email *
                                     </Typography>
                                     <TextField
-                                        InputLabelProps={{ shrink: true }}
+                                        slotProps={{ inputLabel: { shrink: true } }}
                                         fullWidth
                                         type="email"
                                         value={email}
@@ -152,30 +158,30 @@ export default function FormPrenotazione() {
                                 </Grid>
 
                                 {/* Telefono */}
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
                                         Telefono *
                                     </Typography>
                                     <TextField
-                                        InputLabelProps={{ shrink: true }}
+                                        slotProps={{ inputLabel: { shrink: true } }}
                                         fullWidth
                                         value={telefono}
                                         onChange={(e) => setTelefono(e.target.value)}
                                         required
                                         error={telefono.length > 0 && !isTelefonoValid}
-                                        helperText={telefono.length > 0 && !isTelefonoValid ? "Solo cifre numeriche" : ""}
+                                        helperText={telefono.length > 0 && !isTelefonoValid ? "Solo cifre, da 6 a 15" : ""}
                                         sx={inputStyle}
                                         disabled={loading}
                                     />
                                 </Grid>
                             </Grid>
 
-                            <Box display="flex" justifyContent="flex-end" alignItems="center" mt={3} gap={2}>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 3, gap: 2 }}>
                                 {loading && (
-                                    <Box display="flex" alignItems="center" gap={1.5}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                         <CircularProgress size={24} sx={{ color: '#c5a059' }} />
                                         <Typography variant="body2" sx={{ color: '#c5a059', fontFamily: 'sans-serif' }}>
-                                            Invio email di conferma in corso...
+                                            Invio prenotazione in corso...
                                         </Typography>
                                     </Box>
                                 )}

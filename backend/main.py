@@ -1,41 +1,66 @@
-import shutil
-import os
-from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import html
 import logging
+import smtplib
+import uuid
+from datetime import date
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from pathlib import Path
+from typing import List, Optional
+
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
 
 import models
 import schemas
+import settings
+from auth import crea_token, richiedi_admin, verifica_credenziali
 from database import SessionLocal, engine
 
-# Configurazione del logger per tracciare gli errori sul terminale
 logger = logging.getLogger("uvicorn.error")
 
-# 1. Crea le tabelle nel database SQLite se non esistono
+# 1. Crea le tabelle nel database se non esistono
 models.Base.metadata.create_all(bind=engine)
 
-# 2. INIZIALIZZA SUBITO L'APPLICAZIONE FASTAPI
-app = FastAPI()
+# 2. Applicazione FastAPI
+app = FastAPI(title="Museo Civico Digitale - API")
 
-# 3. Configurazione della cartella statica per i file caricati
-UPLOAD_DIR = Path("static/uploads")
+# 3. Cartella statica per i file caricati.
+#    Nel DB salviamo percorsi RELATIVI ("/static/uploads/<file>"): è il frontend
+#    ad anteporre l'indirizzo del backend, così funziona sia in locale sia online.
+STATIC_DIR = Path(__file__).parent / "static"
+UPLOAD_DIR = STATIC_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# 4. Configurazione CORS per permettere le chiamate da React (porta 5173)
+# 4. CORS: solo i domini del frontend configurati
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+# Errori di validazione Pydantic (422) trasformati in un messaggio leggibile,
+# così il frontend può mostrarlo direttamente all'utente.
+@app.exception_handler(RequestValidationError)
+async def errore_validazione(request: Request, exc: RequestValidationError):
+    messaggi = []
+    for err in exc.errors():
+        campo = err["loc"][-1] if err.get("loc") else ""
+        testo = str(err.get("msg", "")).replace("Value error, ", "")
+        messaggi.append(f"{campo}: {testo}" if campo else testo)
+    return JSONResponse(
+        status_code=422,
+        content={"detail": " · ".join(messaggi) or "Dati non validi."},
+    )
+
 
 def get_db():
     db = SessionLocal()
@@ -44,104 +69,146 @@ def get_db():
     finally:
         db.close()
 
-# Seeding iniziale dei dati con immagini di default dedicate
+
+# --- Seeding iniziale ---
 def inserisci_dati_iniziali():
     db = SessionLocal()
     try:
         if db.query(models.Mostra).count() == 0:
-            mostre_di_prova = [
-                # Caravaggio
+            db.add_all([
                 models.Mostra(
                     titolo="Caravaggio e il suo tempo",
                     descrizione="Un viaggio tra luce e ombra nelle opere milanesi del maestro.",
-                    immagini="http://127.0.0.1:8000/static/uploads/caravaggio.webp",
+                    immagini="/static/uploads/caravaggio.webp",
                     data_inizio="2026-10-10",
-                    data_fine="2027-01-15"
+                    data_fine="2027-01-15",
                 ),
-                # Leonardo
                 models.Mostra(
                     titolo="Leonardo: Il Codice Atlantico",
                     descrizione="Esposizione esclusiva dei disegni tecnici di Leonardo da Vinci.",
-                    immagini="http://127.0.0.1:8000/static/uploads/leonardo-da-vinci.webp",
+                    immagini="/static/uploads/leonardo-da-vinci.webp",
                     data_inizio="2026-11-01",
-                    data_fine="2027-02-28"
+                    data_fine="2027-02-28",
                 ),
-                # MONET
                 models.Mostra(
                     titolo="Monet: La Natura",
                     descrizione="Le opere di Monet, i colori, le sfumature e lo spettacolo della natura.",
-                    immagini="http://127.0.0.1:8000/static/uploads/monet.webp",
+                    immagini="/static/uploads/monet.webp",
                     data_inizio="2026-12-01",
-                    data_fine="2027-04-30"
+                    data_fine="2027-04-30",
                 ),
-                # Dalí
                 models.Mostra(
-                    titolo="DALÍ e le forme",
-                    descrizione="Un viaggio nelle forme e colodi di Dalì, dove immaginazione e colori  si fondono in rapresentazioni uniche.",
-                    immagini="http://127.0.0.1:8000/static/uploads/salvador-dali-.webp",
+                    titolo="Dalí e le forme",
+                    descrizione="Un viaggio nelle forme e nei colori di Dalí, dove immaginazione e colori si fondono in rappresentazioni uniche.",
+                    immagini="/static/uploads/salvador-dali-.webp",
                     data_inizio="2026-12-01",
-                    data_fine="2027-04-30"
-                )
-            ]
-            db.add_all(mostre_di_prova)
+                    data_fine="2027-04-30",
+                ),
+            ])
             db.commit()
     except Exception as e:
+        db.rollback()
         logger.error(f"Errore durante il seeding iniziale: {e}")
     finally:
         db.close()
 
+
 inserisci_dati_iniziali()
 
-# --- ROTTE API GESTIONE ERRORI ---
 
-# API GET
-@app.get("/api/mostre", response_model=list[schemas.MostraResponse])
+# --- Utility upload ---
+def _file_presenti(immagini: Optional[List[UploadFile]]) -> List[UploadFile]:
+    return [f for f in (immagini or []) if f is not None and f.filename]
+
+
+async def salva_immagini(immagini: List[UploadFile]) -> List[str]:
+    """Valida e salva le immagini con un nome univoco; restituisce i percorsi relativi."""
+    limite = settings.UPLOAD_MAX_MB * 1024 * 1024
+    da_scrivere = []
+    for file in immagini:
+        estensione = Path(file.filename).suffix.lower()
+        if estensione not in settings.ESTENSIONI_IMMAGINI or not (file.content_type or "").startswith("image/"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Il file '{file.filename}' non è un'immagine supportata (jpg, png, webp, gif).",
+            )
+        contenuto = await file.read()
+        if len(contenuto) > limite:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Il file '{file.filename}' supera il limite di {settings.UPLOAD_MAX_MB} MB.",
+            )
+        # Nome generato dal server: niente path traversal né sovrascritture
+        da_scrivere.append((f"{uuid.uuid4().hex}{estensione}", contenuto))
+
+    # Scriviamo su disco solo dopo aver validato TUTTI i file
+    percorsi = []
+    for nome, contenuto in da_scrivere:
+        (UPLOAD_DIR / nome).write_bytes(contenuto)
+        percorsi.append(f"/static/uploads/{nome}")
+    return percorsi
+
+
+def _date_valide(data_inizio: str, data_fine: str) -> None:
+    try:
+        schemas.valida_date(data_inizio, data_fine)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+def _trova_mostra(db: Session, mostra_id: int) -> models.Mostra:
+    mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
+    if mostra is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mostra non trovata")
+    return mostra
+
+
+# --- AUTENTICAZIONE ---
+@app.post("/api/login", response_model=schemas.TokenResponse)
+def login(dati: schemas.LoginRequest):
+    if not verifica_credenziali(dati.email, dati.password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenziali errate.")
+    return {"access_token": crea_token(dati.email.strip().lower())}
+
+
+# --- MOSTRE (lettura pubblica) ---
+@app.get("/api/mostre", response_model=List[schemas.MostraResponse])
 def leggi_mostre(db: Session = Depends(get_db)):
     try:
-        return db.query(models.Mostra).all()
+        return db.query(models.Mostra).order_by(models.Mostra.data_inizio).all()
     except Exception as e:
         logger.error(f"Errore nel recupero delle mostre: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore nel recupero delle mostre dal database.")
 
+
 @app.get("/api/mostre/{mostra_id}", response_model=schemas.MostraResponse)
 def leggi_singola_mostra(mostra_id: int, db: Session = Depends(get_db)):
-    try:
-        mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
-        if mostra is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mostra non trovata")
-        return mostra
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logger.error(f"Errore nel recupero della mostra {mostra_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore interno del server.")
+    return _trova_mostra(db, mostra_id)
 
-# API POST
+
+# --- MOSTRE (scrittura, solo admin) ---
 @app.post("/api/mostre", response_model=schemas.MostraResponse, status_code=status.HTTP_201_CREATED)
 async def crea_mostra(
-    titolo: str = Form(...),
-    descrizione: str = Form(...),
+    titolo: str = Form(..., min_length=3, max_length=200),
+    descrizione: str = Form(..., min_length=10),
     data_inizio: str = Form(...),
     data_fine: str = Form(...),
-    immagini: list[UploadFile] = File(...),
-    db: Session = Depends(get_db)
+    immagini: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    _admin: str = Depends(richiedi_admin),
 ):
+    _date_valide(data_inizio, data_fine)
+    file_validi = _file_presenti(immagini)
+    if not file_validi:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Carica almeno un'immagine.")
+    percorsi = await salva_immagini(file_validi)
     try:
-        percorsi_salvati = []
-        for file in immagini:
-            file_path = UPLOAD_DIR / file.filename
-            with file_path.open("wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            percorsi_salvati.append(f"http://127.0.0.1:8000/static/uploads/{file.filename}")
-
-        immagini_str = ",".join(percorsi_salvati)
-
         nuova_mostra = models.Mostra(
-            titolo=titolo,
-            descrizione=descrizione,
+            titolo=titolo.strip(),
+            descrizione=descrizione.strip(),
             data_inizio=data_inizio,
             data_fine=data_fine,
-            immagini=immagini_str
+            immagini=",".join(percorsi),
         )
         db.add(nuova_mostra)
         db.commit()
@@ -152,81 +219,74 @@ async def crea_mostra(
         logger.error(f"Errore durante la creazione della mostra: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile pubblicare la nuova mostra.")
 
-# API PUT/EDIT
+
 @app.put("/api/mostre/{mostra_id}", response_model=schemas.MostraResponse)
 async def aggiorna_mostra(
     mostra_id: int,
-    titolo: str = Form(...),
-    descrizione: str = Form(...),
+    titolo: str = Form(..., min_length=3, max_length=200),
+    descrizione: str = Form(..., min_length=10),
     data_inizio: str = Form(...),
     data_fine: str = Form(...),
-    immagini: list[UploadFile] = File(None),
-    db: Session = Depends(get_db)
+    immagini: Optional[List[UploadFile]] = File(None),
+    db: Session = Depends(get_db),
+    _admin: str = Depends(richiedi_admin),
 ):
+    mostra = _trova_mostra(db, mostra_id)
+    _date_valide(data_inizio, data_fine)
+    file_validi = _file_presenti(immagini)
+    # Le immagini sono facoltative in modifica: se non ne arrivano si tengono le attuali
+    percorsi = await salva_immagini(file_validi) if file_validi else None
     try:
-        mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
-        if mostra is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mostra non trovata")
-
-        mostra.titolo = titolo
-        mostra.descrizione = descrizione
+        mostra.titolo = titolo.strip()
+        mostra.descrizione = descrizione.strip()
         mostra.data_inizio = data_inizio
         mostra.data_fine = data_fine
-
-        if immagini and len(immagini) > 0 and immagini[0].filename != "":
-            percorsi_salvati = []
-            for file in immagini:
-                file_path = UPLOAD_DIR / file.filename
-                with file_path.open("wb") as buffer:
-                    shutil.copyfileobj(file.file, buffer)
-                percorsi_salvati.append(f"http://127.0.0.1:8000/static/uploads/{file.filename}")
-            mostra.immagini = ",".join(percorsi_salvati)
-
+        if percorsi:
+            mostra.immagini = ",".join(percorsi)
         db.commit()
         db.refresh(mostra)
         return mostra
-    except HTTPException as he:
-        raise he
     except Exception as e:
         db.rollback()
         logger.error(f"Errore durante l'aggiornamento della mostra {mostra_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile aggiornare la mostra.")
 
-# API DELETE
-@app.delete("/api/mostre/{mostra_id}")
-def elimina_mostra(mostra_id: int, db: Session = Depends(get_db)):
-    try:
-        mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
-        if mostra is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mostra non trovata")
 
-        db.delete(mostra)
+@app.delete("/api/mostre/{mostra_id}")
+def elimina_mostra(
+    mostra_id: int,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(richiedi_admin),
+):
+    mostra = _trova_mostra(db, mostra_id)
+    try:
+        db.delete(mostra)  # elimina anche le prenotazioni collegate (cascade)
         db.commit()
         return {"message": "Mostra eliminata con successo"}
-    except HTTPException as he:
-        raise he
     except Exception as e:
         db.rollback()
         logger.error(f"Errore durante l'eliminazione della mostra {mostra_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile eliminare la mostra.")
 
 
-# Funzione di invio email in background
+# --- PRENOTAZIONI ---
 def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, data_inizio: str, data_fine: str):
-    smtp_server = "smtp.gmail.com"
-    smtp_port = 587
-    mittente = "r.randazzo85@gmail.com"
-    password_app = "rwcgvgpxgfwlevcp"
+    """Invia l'email di conferma. Gira in background dopo la risposta HTTP."""
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.warning(f"SMTP non configurato: email di conferma per {destinatario} non inviata.")
+        return
 
-    oggetto = f"Conferma Prenotazione: {titolo_mostra}"
+    # I dati inseriti dall'utente vengono "escapati" prima di finire nell'HTML
+    nome_html = html.escape(nome)
+    titolo_html = html.escape(titolo_mostra)
 
     html_content = f"""
         <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; background-color: #0f0f0f; border: 1px solid #c5a059;">
             <h2 style="color: #c5a059;">Museo Civico Digitale</h2>
-            <p style="color: #fff;">Gentile <b>{nome}</b>,</p>
+            <p style="color: #fff;">Gentile <b>{nome_html}</b>,</p>
             <p style="color: #ddd;">La tua prenotazione è andata a buon fine! Ti aspettiamo per l'esposizione:</p>
             <div style="background: #1a1a1a; padding: 15px; border-left: 4px solid #c5a059; margin: 20px 0;">
-                <h3 style="margin: 0 0 10px 0; color: #c5a059;">{titolo_mostra}</h3>
+                <h3 style="margin: 0 0 10px 0; color: #c5a059;">{titolo_html}</h3>
                 <p style="margin: 0; color: #ccc;"><b>Periodo:</b> Dal {data_inizio} al {data_fine}</p>
             </div>
             <p style="color: #aaa;">A presto,<br><b>La Direzione del Museo</b></p>
@@ -234,45 +294,66 @@ def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, dat
     """
 
     msg = MIMEMultipart()
-    msg['From'] = mittente
-    msg['To'] = destinatario
-    msg['Subject'] = oggetto
-    msg.attach(MIMEText(html_content, 'html'))
+    msg["From"] = settings.SMTP_USER
+    msg["To"] = destinatario
+    msg["Subject"] = f"Conferma Prenotazione: {titolo_mostra}"
+    msg.attach(MIMEText(html_content, "html"))
 
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
-        server.starttls()
-        server.login(mittente, password_app)
-        server.sendmail(mittente, destinatario, msg.as_string())
-        server.quit()
-        print(f"\n[EMAIL REALE INVIATA CON SUCCESSO A]: {destinatario}\n")
+        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as server:
+            server.starttls()
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            server.sendmail(settings.SMTP_USER, destinatario, msg.as_string())
+        logger.info(f"Email di conferma inviata a {destinatario}")
     except Exception as e:
-        print(f"\n[ERRORE INVIO EMAIL BACKGROUND]: {e}\n")
+        logger.error(f"Errore invio email a {destinatario}: {e}")
+
 
 @app.post("/api/prenota", status_code=status.HTTP_201_CREATED)
-async def crea_prenotazione(
+def crea_prenotazione(
     dati: schemas.PrenotazioneCreate,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
+    mostra = _trova_mostra(db, dati.mostra_id)
+
+    if date.fromisoformat(mostra.data_fine) < date.today():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra è già conclusa: non è più possibile prenotare.")
+
     try:
-        mostra = db.query(models.Mostra).filter(models.Mostra.id == dati.mostra_id).first()
-        if mostra is None:
-            raise HTTPException(status_status=status.HTTP_404_NOT_FOUND if 'status_status' in globals() else 404, detail="Mostra non trovata")
-
-        background_tasks.add_task(
-            invia_email_background,
-            destinatario=dati.email,
+        prenotazione = models.Prenotazione(
+            mostra_id=mostra.id,
             nome=dati.nome,
-            titolo_mostra=mostra.titolo,
-            data_inizio=mostra.data_inizio,
-            data_fine=mostra.data_fine
+            cognome=dati.cognome,
+            email=dati.email,
+            telefono=dati.telefono,
         )
-
-        return {"message": "Prenotazione effettuata con successo e email in elaborazione!"}
-
-    except HTTPException as he:
-        raise he
+        db.add(prenotazione)
+        db.commit()
+        db.refresh(prenotazione)
     except Exception as e:
+        db.rollback()
         logger.error(f"Errore critico durante la prenotazione: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore interno durante l'elaborazione della prenotazione.")
+
+    background_tasks.add_task(
+        invia_email_background,
+        destinatario=dati.email,
+        nome=dati.nome,
+        titolo_mostra=mostra.titolo,
+        data_inizio=mostra.data_inizio,
+        data_fine=mostra.data_fine,
+    )
+    return {"message": "Prenotazione effettuata con successo!", "id": prenotazione.id}
+
+
+@app.get("/api/prenotazioni", response_model=List[schemas.PrenotazioneResponse])
+def leggi_prenotazioni(
+    mostra_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(richiedi_admin),
+):
+    query = db.query(models.Prenotazione)
+    if mostra_id is not None:
+        query = query.filter(models.Prenotazione.mostra_id == mostra_id)
+    return query.order_by(models.Prenotazione.creata_il.desc()).all()

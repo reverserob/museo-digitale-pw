@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid } from '@mui/material';
-import { API_URL } from '../../config';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
+import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid, Alert } from '@mui/material';
+import { api, getToken, messaggioErrore } from '../api';
 
+const labelSx = { color: '#c5a059', mb: 1, fontWeight: 500 };
+const inputStyle = {
+    input: { color: 'white', colorScheme: 'dark' },
+    textarea: { color: 'white' },
+};
 
 export default function AdminForm() {
     const navigate = useNavigate();
@@ -16,97 +20,92 @@ export default function AdminForm() {
     const [dataFine, setDataFine] = useState('');
     const [fileImmagini, setFileImmagini] = useState(null);
     const [messaggio, setMessaggio] = useState('');
+    const [errore, setErrore] = useState('');
+    const [salvataggio, setSalvataggio] = useState(false);
 
     useEffect(() => {
         if (isEditMode) {
-            axios.get(`${API_URL}/api/mostre/${id}`)
-                .then(res => {
+            api.get(`/api/mostre/${id}`)
+                .then((res) => {
                     setTitolo(res.data.titolo);
                     setDescrizione(res.data.descrizione);
                     setDataInizio(res.data.data_inizio || '');
                     setDataFine(res.data.data_fine || '');
                 })
-                .catch(err => console.error(err));
+                .catch((err) => setErrore(messaggioErrore(err, 'Impossibile caricare la mostra.')));
         }
     }, [id, isEditMode]);
 
+    // Senza login non si accede al form
+    if (!getToken()) return <Navigate to="/admin" replace />;
+
+    const dateValide = !dataInizio || !dataFine || dataFine >= dataInizio;
+    const immaginiOk = isEditMode || (fileImmagini && fileImmagini.length > 0);
+    const isFormValid = titolo.trim().length >= 3 && descrizione.trim().length >= 10 && dataInizio && dataFine && dateValide && immaginiOk;
+
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (!isFormValid) return;
+        setErrore('');
+        setSalvataggio(true);
+
         const formData = new FormData();
-        formData.append('titolo', titolo);
-        formData.append('descrizione', descrizione);
+        formData.append('titolo', titolo.trim());
+        formData.append('descrizione', descrizione.trim());
         formData.append('data_inizio', dataInizio);
         formData.append('data_fine', dataFine);
-
-        if (fileImmagini && fileImmagini.length > 0) {
-            for (let i = 0; i < fileImmagini.length; i++) {
-                formData.append('immagini', fileImmagini[i]);
-            }
+        if (fileImmagini) {
+            Array.from(fileImmagini).forEach((file) => formData.append('immagini', file));
         }
 
-        const config = { headers: { 'Content-Type': 'multipart/form-data' } };
-
+        // Il Content-Type multipart (con il boundary) viene impostato da axios
         const request = isEditMode
-            ? axios.put(`${API_URL}/api/mostre/${id}`, formData, config)
-            : axios.post(`${API_URL}/api/mostre`, formData, config);
+            ? api.put(`/api/mostre/${id}`, formData)
+            : api.post('/api/mostre', formData);
 
         request
             .then(() => {
-                setMessaggio(isEditMode ? "Mostra modificata con successo!" : "Nuova mostra pubblicata con successo!");
+                setMessaggio(isEditMode ? 'Mostra modificata con successo!' : 'Nuova mostra pubblicata con successo!');
                 setTimeout(() => navigate('/admin'), 1200);
             })
-            .catch(err => console.error("Errore salvataggio:", err));
-    };
-
-    const inputStyle = {
-        input: {
-            color: 'white',
-            colorScheme: 'dark'
-        },
-        textarea: {
-            color: 'white'
-        }
+            .catch((err) => {
+                setErrore(messaggioErrore(err, 'Errore durante il salvataggio.'));
+                setSalvataggio(false);
+            });
     };
 
     return (
-        <Container maxWidth="md" sx={{ mt: 10, mb: 10 }}>
+        <Container maxWidth="md" sx={{ mt: { xs: 5, md: 10 }, mb: 10 }}>
             <Button onClick={() => navigate('/admin')} sx={{ color: '#bbbbbb', mb: 4, fontFamily: 'sans-serif' }}>
                 ← Torna alla Dashboard
             </Button>
 
-            <Card elevation={0} sx={{ backdropFilter: 'blur(12px)', border: '1px solid rgba(197, 160, 89, 0.5)', backgroundColor: 'rgba(10, 10, 10, 0.85)', p: 4 }}>
+            <Card elevation={0} sx={{ backdropFilter: 'blur(12px)', border: '1px solid rgba(197, 160, 89, 0.5)', backgroundColor: 'rgba(10, 10, 10, 0.85)', p: { xs: 1, sm: 4 } }}>
                 <CardContent>
                     <Typography variant="h4" gutterBottom sx={{ color: '#c5a059', mb: 4 }}>
                         {isEditMode ? `Modifica Mostra (ID: ${id})` : 'Carica Nuova Mostra'}
                     </Typography>
 
-                    {messaggio && (
-                        <Box sx={{ p: 2, mb: 4, backgroundColor: 'rgba(76, 175, 80, 0.2)', border: '1px solid #4caf50', borderRadius: 1 }}>
-                            <Typography variant="body2" sx={{ color: '#81c784', fontWeight: 'bold' }}>{messaggio}</Typography>
-                        </Box>
-                    )}
+                    {messaggio && <Alert severity="success" sx={{ mb: 3 }}>{messaggio}</Alert>}
+                    {errore && <Alert severity="error" sx={{ mb: 3 }}>{errore}</Alert>}
 
                     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <Grid container spacing={3}>
-                            {/* Titolo */}
-                            <Grid item xs={12}>
-                                <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500,minWidth: '450px' }}>
-                                    Titolo dell'Esposizione *
-                                </Typography>
+                            <Grid size={12}>
+                                <Typography variant="body2" sx={labelSx}>Titolo dell'Esposizione *</Typography>
                                 <TextField
                                     fullWidth
                                     value={titolo}
                                     onChange={(e) => setTitolo(e.target.value)}
                                     required
+                                    error={titolo.length > 0 && titolo.trim().length < 3}
+                                    helperText={titolo.length > 0 && titolo.trim().length < 3 ? 'Almeno 3 caratteri' : ''}
                                     sx={inputStyle}
                                 />
                             </Grid>
 
-                            {/* Data Inizio */}
-                            <Grid item xs={12} sm={6}>
-                                <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
-                                    Data Inizio *
-                                </Typography>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Typography variant="body2" sx={labelSx}>Data Inizio *</Typography>
                                 <TextField
                                     fullWidth
                                     type="date"
@@ -117,26 +116,23 @@ export default function AdminForm() {
                                 />
                             </Grid>
 
-                            {/* Data Fine */}
-                            <Grid item xs={12} sm={6}>
-                                <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
-                                    Data Fine *
-                                </Typography>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Typography variant="body2" sx={labelSx}>Data Fine *</Typography>
                                 <TextField
                                     fullWidth
                                     type="date"
                                     value={dataFine}
                                     onChange={(e) => setDataFine(e.target.value)}
                                     required
+                                    error={!dateValide}
+                                    helperText={!dateValide ? 'Deve essere successiva alla data di inizio' : ''}
+                                    slotProps={{ htmlInput: { min: dataInizio || undefined } }}
                                     sx={inputStyle}
                                 />
                             </Grid>
 
-                            {/* Descrizione */}
-                            <Grid item xs={12}>
-                                <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500,minWwidth: '500px'}}>
-                                    Descrizione Mostra *
-                                </Typography>
+                            <Grid size={12}>
+                                <Typography variant="body2" sx={labelSx}>Descrizione Mostra *</Typography>
                                 <TextField
                                     fullWidth
                                     multiline
@@ -144,19 +140,23 @@ export default function AdminForm() {
                                     value={descrizione}
                                     onChange={(e) => setDescrizione(e.target.value)}
                                     required
+                                    error={descrizione.length > 0 && descrizione.trim().length < 10}
+                                    helperText={descrizione.length > 0 && descrizione.trim().length < 10 ? 'Almeno 10 caratteri' : ''}
                                     sx={inputStyle}
                                 />
                             </Grid>
 
-                            <Grid item xs={12} sx={{ minWidth: '500px'}}>
+                            <Grid size={12}>
                                 <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontFamily: 'sans-serif' }}>
-                                    Aggiungi foto:
+                                    {isEditMode
+                                        ? 'Sostituisci le foto (facoltativo: se non carichi nulla restano quelle attuali):'
+                                        : 'Aggiungi foto (jpg, png, webp, gif - max 5 MB ciascuna):'}
                                 </Typography>
-                                <Button variant="outlined" component="label" sx={{ color: '#c5a059', borderColor: '#c5a059', borderRadius: 0}}>
-                                    Carica Immagini *
-                                    <input type="file" hidden multiple accept="image/*" onChange={(e) => setFileImmagini(e.target.files)} />
+                                <Button variant="outlined" component="label" sx={{ color: '#c5a059', borderColor: '#c5a059', borderRadius: 0 }}>
+                                    {isEditMode ? 'Carica Immagini' : 'Carica Immagini *'}
+                                    <input type="file" hidden multiple accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => setFileImmagini(e.target.files)} />
                                 </Button>
-                                {fileImmagini && (
+                                {fileImmagini && fileImmagini.length > 0 && (
                                     <Typography variant="caption" sx={{ color: '#81c784', display: 'block', mt: 1 }}>
                                         {fileImmagini.length} file selezionati.
                                     </Typography>
@@ -164,11 +164,11 @@ export default function AdminForm() {
                             </Grid>
                         </Grid>
 
-                        <Box display="flex" gap={2} mt={2}>
-                            <Button type="submit" variant="contained" color="primary" size="large" sx={{ borderRadius: 0, py: 1.5, px: 5, fontWeight: 'bold' , margin:'20px'}}>
-                                {isEditMode ? 'SALVA MODIFICHE' : 'PUBBLICA MOSTRA'}
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
+                            <Button type="submit" variant="contained" color="primary" size="large" disabled={!isFormValid || salvataggio} sx={{ borderRadius: 0, py: 1.5, px: 5, fontWeight: 'bold' }}>
+                                {salvataggio ? 'Salvataggio...' : isEditMode ? 'SALVA MODIFICHE' : 'PUBBLICA MOSTRA'}
                             </Button>
-                            <Button onClick={() => navigate('/admin')} variant="outlined" color="inherit" size="large" sx={{ borderRadius: 0, py: 1.5, px: 3 , margin:'20px'}}>
+                            <Button onClick={() => navigate('/admin')} variant="outlined" color="inherit" size="large" sx={{ borderRadius: 0, py: 1.5, px: 3 }}>
                                 ANNULLA
                             </Button>
                         </Box>
