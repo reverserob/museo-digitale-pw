@@ -6,13 +6,13 @@ from pathlib import Path
 try:
     from dotenv import load_dotenv
 
+    load_dotenv(Path(__file__).parent / ".env.local")
     load_dotenv(Path(__file__).parent / ".env")
-except ImportError:  # python-dotenv è opzionale
+except ImportError:
     pass
 
 
 def _env(nome, default=""):
-    # se la variabile manca o è vuota uso il default
     valore = os.getenv(nome, "").strip()
     return valore or default
 
