@@ -15,7 +15,7 @@ __pycache__/
 # Segreti e configurazione locale (mai committarli!)
 .env
 *.env.local
-!.env.example
+# !.env.example
 
 # Database locale
 *.db
