@@ -1,10 +1,4 @@
-"""Autenticazione dell'area riservata con token firmati (HMAC-SHA256).
-
-Il client invia email e password a POST /api/login e riceve un token da
-mandare nell'header `Authorization: Bearer <token>` per le operazioni di
-scrittura. Il token contiene la scadenza ed è firmato con SECRET_KEY, quindi
-non può essere falsificato senza conoscere la chiave.
-"""
+"""Autenticazione dell'area riservata"""
 import base64
 import hashlib
 import hmac

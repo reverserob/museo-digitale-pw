@@ -47,8 +47,7 @@ app.add_middleware(
 )
 
 
-# Errori di validazione Pydantic (422) trasformati in un messaggio leggibile,
-# così il frontend può mostrarlo direttamente all'utente.
+# Error handler
 @app.exception_handler(RequestValidationError)
 async def errore_validazione(request: Request, exc: RequestValidationError):
     messaggi = []
@@ -86,7 +85,7 @@ def inserisci_dati_iniziali():
                 models.Mostra(
                     titolo="Leonardo: Il Codice Atlantico",
                     descrizione="Esposizione esclusiva dei disegni tecnici di Leonardo da Vinci.",
-                    immagini="/static/uploads/leonardo-da-vinci.webp",
+                    immagini="/static/uploads/leonardo-da-vinci.webp,/static/uploads/leonardo-alle-pmi.webp,/static/uploads/leonardo-da-vinci-3.webp",
                     data_inizio="2026-11-01",
                     data_fine="2027-02-28",
                 ),
@@ -141,7 +140,7 @@ async def salva_immagini(immagini: List[UploadFile]) -> List[str]:
         # Nome generato dal server: niente path traversal né sovrascritture
         da_scrivere.append((f"{uuid.uuid4().hex}{estensione}", contenuto))
 
-    # Scriviamo su disco solo dopo aver validato TUTTI i file
+    # Scrittura su disco con validazione
     percorsi = []
     for nome, contenuto in da_scrivere:
         (UPLOAD_DIR / nome).write_bytes(contenuto)
@@ -171,7 +170,7 @@ def login(dati: schemas.LoginRequest):
     return {"access_token": crea_token(dati.email.strip().lower())}
 
 
-# --- MOSTRE (lettura pubblica) ---
+# --- API GET MOSTRE ---
 @app.get("/api/mostre", response_model=List[schemas.MostraResponse])
 def leggi_mostre(db: Session = Depends(get_db)):
     try:
@@ -180,13 +179,13 @@ def leggi_mostre(db: Session = Depends(get_db)):
         logger.error(f"Errore nel recupero delle mostre: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore nel recupero delle mostre dal database.")
 
-
+# --- API GET MOSTRE_ID---
 @app.get("/api/mostre/{mostra_id}", response_model=schemas.MostraResponse)
 def leggi_singola_mostra(mostra_id: int, db: Session = Depends(get_db)):
     return _trova_mostra(db, mostra_id)
 
 
-# --- MOSTRE (scrittura, solo admin) ---
+# --- API POST MOSTRE ---
 @app.post("/api/mostre", response_model=schemas.MostraResponse, status_code=status.HTTP_201_CREATED)
 async def crea_mostra(
     titolo: str = Form(..., min_length=3, max_length=200),
@@ -219,7 +218,7 @@ async def crea_mostra(
         logger.error(f"Errore durante la creazione della mostra: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile pubblicare la nuova mostra.")
 
-
+# --- API PUT MOSTRE ---
 @app.put("/api/mostre/{mostra_id}", response_model=schemas.MostraResponse)
 async def aggiorna_mostra(
     mostra_id: int,
@@ -251,7 +250,7 @@ async def aggiorna_mostra(
         logger.error(f"Errore durante l'aggiornamento della mostra {mostra_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile aggiornare la mostra.")
 
-
+# --- API DELETE MOSTRE ---
 @app.delete("/api/mostre/{mostra_id}")
 def elimina_mostra(
     mostra_id: int,
@@ -276,7 +275,6 @@ def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, dat
         logger.warning(f"SMTP non configurato: email di conferma per {destinatario} non inviata.")
         return
 
-    # I dati inseriti dall'utente vengono "escapati" prima di finire nell'HTML
     nome_html = html.escape(nome)
     titolo_html = html.escape(titolo_mostra)
 
@@ -308,7 +306,7 @@ def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, dat
     except Exception as e:
         logger.error(f"Errore invio email a {destinatario}: {e}")
 
-
+# --- API POST PRENOTA ---
 @app.post("/api/prenota", status_code=status.HTTP_201_CREATED)
 def crea_prenotazione(
     dati: schemas.PrenotazioneCreate,
@@ -346,7 +344,7 @@ def crea_prenotazione(
     )
     return {"message": "Prenotazione effettuata con successo!", "id": prenotazione.id}
 
-
+# --- API POST PRENOTAZIONI ---
 @app.get("/api/prenotazioni", response_model=List[schemas.PrenotazioneResponse])
 def leggi_prenotazioni(
     mostra_id: Optional[int] = None,

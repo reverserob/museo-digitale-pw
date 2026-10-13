@@ -22,7 +22,7 @@ def _lista(valore: str):
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./museo.db")
 
-# CORS: domini del frontend autorizzati a chiamare le API
+# CORS
 CORS_ORIGINS = _lista(
     os.getenv(
         "CORS_ORIGINS",
@@ -30,15 +30,14 @@ CORS_ORIGINS = _lista(
     )
 )
 
-# Area riservata (i default servono solo per la demo in locale)
+# Area riservata (default solo demo locale)
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@museo.it")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin2026")
-# Chiave usata per firmare i token di accesso: in produzione va impostata
-# con un valore casuale lungo (es. `python -c "import secrets; print(secrets.token_hex(32))"`)
+# KEY per token di accesso
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-cambiami")
 TOKEN_DURATA_ORE = int(os.getenv("TOKEN_DURATA_ORE", "8"))
 
-# Invio email (se mancano le credenziali l'invio viene saltato e solo loggato)
+# Invio email
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")

@@ -1,8 +1,6 @@
 import axios from 'axios';
 
-// Indirizzo del backend: si può impostare con la variabile VITE_API_URL
-// (file .env in locale, pannello "Environment Variables" su Vercel).
-// Se manca, si usa il backend locale in sviluppo e quello su Render in produzione.
+// backend address
 const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 export const API_URL = (
@@ -23,7 +21,7 @@ export const setToken = (token) => {
     } catch { /* sessionStorage non disponibile */ }
 };
 
-// Istanza axios condivisa: aggiunge da sola il token admin quando presente
+// axios instance
 export const api = axios.create({ baseURL: API_URL });
 
 api.interceptors.request.use((config) => {
