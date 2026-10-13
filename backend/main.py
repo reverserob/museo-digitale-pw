@@ -23,21 +23,19 @@ from database import SessionLocal, engine
 
 logger = logging.getLogger("uvicorn.error")
 
-# 1. Crea le tabelle nel database se non esistono
+# Create default tables
 models.Base.metadata.create_all(bind=engine)
 
-# 2. Applicazione FastAPI
+# FastAPI declaration
 app = FastAPI(title="Museo Civico Digitale - API")
 
-# 3. Cartella statica per i file caricati.
-#    Nel DB salviamo percorsi RELATIVI ("/static/uploads/<file>"): è il frontend
-#    ad anteporre l'indirizzo del backend, così funziona sia in locale sia online.
+# Static Dir images
 STATIC_DIR = Path(__file__).parent / "static"
 UPLOAD_DIR = STATIC_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# 4. CORS: solo i domini del frontend configurati
+# CORS CONFIG
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -69,7 +67,7 @@ def get_db():
         db.close()
 
 
-# --- Seeding iniziale ---
+# START SEEDING
 def inserisci_dati_iniziali():
     db = SessionLocal()
     try:
@@ -115,11 +113,11 @@ def inserisci_dati_iniziali():
 inserisci_dati_iniziali()
 
 
-# --- Utility upload ---
+# Utility upload
 def _file_presenti(immagini: Optional[List[UploadFile]]) -> List[UploadFile]:
     return [f for f in (immagini or []) if f is not None and f.filename]
 
-
+# save images
 async def salva_immagini(immagini: List[UploadFile]) -> List[str]:
     """Valida e salva le immagini con un nome univoco; restituisce i percorsi relativi."""
     limite = settings.UPLOAD_MAX_MB * 1024 * 1024
@@ -137,10 +135,9 @@ async def salva_immagini(immagini: List[UploadFile]) -> List[str]:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Il file '{file.filename}' supera il limite di {settings.UPLOAD_MAX_MB} MB.",
             )
-        # Nome generato dal server: niente path traversal né sovrascritture
         da_scrivere.append((f"{uuid.uuid4().hex}{estensione}", contenuto))
 
-    # Scrittura su disco con validazione
+    # write on disk
     percorsi = []
     for nome, contenuto in da_scrivere:
         (UPLOAD_DIR / nome).write_bytes(contenuto)
@@ -154,7 +151,7 @@ def _date_valide(data_inizio: str, data_fine: str) -> None:
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-
+# find by mostra_ID
 def _trova_mostra(db: Session, mostra_id: int) -> models.Mostra:
     mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
     if mostra is None:
@@ -162,7 +159,7 @@ def _trova_mostra(db: Session, mostra_id: int) -> models.Mostra:
     return mostra
 
 
-# --- AUTENTICAZIONE ---
+# API LOGIN
 @app.post("/api/login", response_model=schemas.TokenResponse)
 def login(dati: schemas.LoginRequest):
     if not verifica_credenziali(dati.email, dati.password):
@@ -170,7 +167,7 @@ def login(dati: schemas.LoginRequest):
     return {"access_token": crea_token(dati.email.strip().lower())}
 
 
-# --- API GET MOSTRE ---
+# API GET MOSTRE 
 @app.get("/api/mostre", response_model=List[schemas.MostraResponse])
 def leggi_mostre(db: Session = Depends(get_db)):
     try:
@@ -179,13 +176,13 @@ def leggi_mostre(db: Session = Depends(get_db)):
         logger.error(f"Errore nel recupero delle mostre: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore nel recupero delle mostre dal database.")
 
-# --- API GET MOSTRE_ID---
+#  API GET MOSTRE_ID
 @app.get("/api/mostre/{mostra_id}", response_model=schemas.MostraResponse)
 def leggi_singola_mostra(mostra_id: int, db: Session = Depends(get_db)):
     return _trova_mostra(db, mostra_id)
 
 
-# --- API POST MOSTRE ---
+#  API POST MOSTRE 
 @app.post("/api/mostre", response_model=schemas.MostraResponse, status_code=status.HTTP_201_CREATED)
 async def crea_mostra(
     titolo: str = Form(..., min_length=3, max_length=200),
@@ -218,7 +215,7 @@ async def crea_mostra(
         logger.error(f"Errore durante la creazione della mostra: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile pubblicare la nuova mostra.")
 
-# --- API PUT MOSTRE ---
+#  API PUT MOSTRE 
 @app.put("/api/mostre/{mostra_id}", response_model=schemas.MostraResponse)
 async def aggiorna_mostra(
     mostra_id: int,
@@ -233,7 +230,6 @@ async def aggiorna_mostra(
     mostra = _trova_mostra(db, mostra_id)
     _date_valide(data_inizio, data_fine)
     file_validi = _file_presenti(immagini)
-    # Le immagini sono facoltative in modifica: se non ne arrivano si tengono le attuali
     percorsi = await salva_immagini(file_validi) if file_validi else None
     try:
         mostra.titolo = titolo.strip()
@@ -250,7 +246,7 @@ async def aggiorna_mostra(
         logger.error(f"Errore durante l'aggiornamento della mostra {mostra_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile aggiornare la mostra.")
 
-# --- API DELETE MOSTRE ---
+#  API DELETE MOSTRE 
 @app.delete("/api/mostre/{mostra_id}")
 def elimina_mostra(
     mostra_id: int,
@@ -268,7 +264,7 @@ def elimina_mostra(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile eliminare la mostra.")
 
 
-# --- PRENOTAZIONI ---
+#  PRENOTAZIONI 
 def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, data_inizio: str, data_fine: str):
     """Invia l'email di conferma. Gira in background dopo la risposta HTTP."""
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
@@ -306,7 +302,7 @@ def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, dat
     except Exception as e:
         logger.error(f"Errore invio email a {destinatario}: {e}")
 
-# --- API POST PRENOTA ---
+#  API POST PRENOTA 
 @app.post("/api/prenota", status_code=status.HTTP_201_CREATED)
 def crea_prenotazione(
     dati: schemas.PrenotazioneCreate,
@@ -344,7 +340,7 @@ def crea_prenotazione(
     )
     return {"message": "Prenotazione effettuata con successo!", "id": prenotazione.id}
 
-# --- API POST PRENOTAZIONI ---
+#  API POST PRENOTAZIONI 
 @app.get("/api/prenotazioni", response_model=List[schemas.PrenotazioneResponse])
 def leggi_prenotazioni(
     mostra_id: Optional[int] = None,
