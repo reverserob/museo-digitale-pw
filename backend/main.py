@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Request
+import logging
+
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from services.error_service import errore_validazione
 from services.seed_service import inserisci_dati_iniziali
@@ -11,9 +12,17 @@ import settings
 from database import engine
 from routers import login, mostre, prenotazioni
 
+logger = logging.getLogger("uvicorn.error")
+
 # Create default tables and seeding
 models.Base.metadata.create_all(bind=engine)
 inserisci_dati_iniziali()
+
+# IMPORTANT LOGS
+if settings.SECRET_KEY == "dev-secret-cambiami":
+    logger.warning("SECRET_KEY non impostata: imposta un valore segreto nel file .env o su Render")
+if settings.ADMIN_PASSWORD == "admin2026":
+    logger.warning("Stai usando la password demo dell'area riservata (admin2026)")
 
 # FastAPI declaration
 app = FastAPI(title="Museo Civico Digitale - API")
