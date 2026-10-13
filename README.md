@@ -9,6 +9,9 @@ Progettazione di una piattaforma informatica per la gestione di servizi, dati e 
 Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 <img width="988" height="730" alt="image" src="https://github.com/user-attachments/assets/51d487b4-a8a7-449f-956e-012e966d298e" />
 
+#### Invio Mail Prenotazione
+![img.png](backend/static/img.png)
+
 #### Swagger API
 <img width="2522" height="2118" alt="swagger" src="https://github.com/user-attachments/assets/c0ad9853-bc0a-4ed1-b2aa-0be80a9aefba" />
 
