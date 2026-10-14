@@ -17,6 +17,7 @@ def immagine(nome="foto.png", contenuto=PNG_FINTO, tipo="image/png"):
 
 # --- lettura (pubblica) ---
 
+
 def test_elenco_contiene_le_mostre_del_seeding(client):
     attese = json.loads((Path(__file__).parent.parent / "data" / "mostre.json").read_text(encoding="utf-8"))
     r = client.get("/api/mostre")
@@ -49,6 +50,7 @@ def test_dettaglio_mostra_inesistente(client):
 
 
 # --- creazione ---
+
 
 def test_crea_mostra(client, auth, cartella_upload):
     r = client.post("/api/mostre", data=DATI_MOSTRA, files=[immagine()], headers=auth)
@@ -87,6 +89,7 @@ def test_crea_mostra_file_non_immagine(client, auth):
 
 def test_crea_mostra_immagine_troppo_grande(client, auth, monkeypatch):
     import settings
+
     monkeypatch.setattr(settings, "UPLOAD_MAX_MB", 0)
     r = client.post("/api/mostre", data=DATI_MOSTRA, files=[immagine()], headers=auth)
     assert r.status_code == 400
@@ -139,6 +142,7 @@ def test_modifica_mostra_inesistente(client, auth):
 
 
 # --- eliminazione ---
+
 
 def test_elimina_mostra(client, auth):
     r = client.delete("/api/mostre/1", headers=auth)

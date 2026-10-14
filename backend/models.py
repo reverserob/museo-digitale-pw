@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
@@ -17,6 +18,7 @@ class Mostra(Base):
     data_fine = Column(Date, nullable=False)
 
     prenotazioni = relationship("Prenotazione", back_populates="mostra", cascade="all, delete-orphan")
+
 
 class Prenotazione(Base):
     __tablename__ = "prenotazioni"

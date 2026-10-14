@@ -11,6 +11,7 @@ logger = logging.getLogger("uvicorn.error")
 # File con le mostre iniziali
 SEED_FILE = Path(__file__).parent.parent / "data" / "mostre.json"
 
+
 # get dat from mostre.-json
 def leggi_mostre_json():
     with SEED_FILE.open(encoding="utf-8") as f:
