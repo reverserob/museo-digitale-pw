@@ -3,7 +3,7 @@
 .vscode/
 .DS_Store
 
-# Node
+# dependencies
 node_modules/
 
 # Python
@@ -12,13 +12,10 @@ venv/
 __pycache__/
 *.pyc
 
-# Segreti e configurazione locale (mai committarli!)
+#env
 .env
 *.env.local
 # !.env.example
 
-# Database locale
+# DB local
 *.db
-
-# Immagini caricate dall'area admin (le immagini delle mostre iniziali restano versionate)
-backend/.env
