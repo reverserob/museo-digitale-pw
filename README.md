@@ -17,7 +17,7 @@ Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 #### Swagger API
 <img width="2522" height="2118" alt="swagger" src="https://github.com/user-attachments/assets/c0ad9853-bc0a-4ed1-b2aa-0be80a9aefba" />
 
-#### Used Backend Library
+#### Backend Library
 
 - FastAPI: Il framework per le API.
 - Uvicorn: Il server web che farà girare FastAPI.
