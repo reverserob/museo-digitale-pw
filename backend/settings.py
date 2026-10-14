@@ -49,6 +49,13 @@ SMTP_USER = _env("SMTP_USER")
 # la password per le app di Google viene mostrata con gli spazi: li tolgo
 SMTP_PASSWORD = _env("SMTP_PASSWORD").replace(" ", "")
 
+# Invio tramite API di Brevo (porta HTTPS 443): da usare dove le porte SMTP sono bloccate (es. Render free).
+# Se BREVO_API_KEY è impostata ha la precedenza su SMTP.
+BREVO_API_KEY = _env("BREVO_API_KEY")
+# indirizzo mittente (deve essere verificato su Brevo) e nome visualizzato
+EMAIL_MITTENTE = _env("EMAIL_MITTENTE", SMTP_USER)
+EMAIL_MITTENTE_NOME = _env("EMAIL_MITTENTE_NOME", "Museo Civico Digitale")
+
 # Upload immagini
 STATIC_DIR = Path(__file__).parent / "static"
 UPLOAD_DIR = STATIC_DIR / "uploads"

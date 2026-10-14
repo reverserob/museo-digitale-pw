@@ -108,6 +108,10 @@ Poiché il client React gira su un'origine diversa dal server FastAPI (porta 517
 #### 4.3. Invio Asincrono tramite BackgroundTasks
 Per evitare che l'invio delle email di conferma (tramite protocollo SMTP con autenticazione TLS) blocchi la risposta HTTP — evitando così timeout o blocchi imputabili ai firewall aziendali o di rete — l'applicazione sfrutta i BackgroundTasks di FastAPI. La funzione `invia_email_background`, contenuta in `services/email_service.py`, viene registrata dal router delle prenotazioni con `background_tasks.add_task(...)`: la risposta di successo viene restituita immediatamente al client React e l'email viene inviata subito dopo. Se le credenziali SMTP non sono configurate, la prenotazione viene comunque salvata e l'evento viene registrato nei log.
 
+L'invio avviene in due modi alternativi.
+In locale si usa il protocollo SMTP (ad esempio con un account Gmail).
+In produzione, invece, il piano gratuito di Render blocca le connessioni in uscita verso le porte SMTP (25, 465, 587): per questo, quando è impostata la variabile `BREVO_API_KEY`, l'email viene inviata tramite l'API del servizio di email transazionale Brevo, che usa una normale richiesta HTTPS (porta 443).
+
 #### 4.4. Sicurezza e Variabili Sensibili
 Le credenziali del server SMTP, quelle dell'amministratore e la chiave di firma dei token non sono scritte nel codice: vengono lette da variabili d'ambiente tramite il modulo `settings.py`. In locale i valori si trovano nei file `.env` o `.env.local`, esclusi dal versionamento tramite `.gitignore`; in produzione si impostano dal pannello Environment di Render. Il file `.env.example` documenta le variabili necessarie senza contenere valori reali.
 

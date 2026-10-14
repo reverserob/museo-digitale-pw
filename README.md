@@ -46,6 +46,8 @@ Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Credenziali dell'area riservata |
 | `SECRET_KEY` | Chiave per firmare i token di accesso (valore casuale lungo) |
 | `SMTP_USER` / `SMTP_PASSWORD` | Account e "password per le app" per l'invio delle email |
+| `BREVO_API_KEY` | Facoltativa: chiave API di Brevo. Se presente le email partono via API (necessario su Render free, che blocca SMTP) |
+| `EMAIL_MITTENTE` / `EMAIL_MITTENTE_NOME` | Mittente delle email inviate con Brevo (indirizzo verificato su Brevo) |
 | `CORS_ORIGINS` | Domini del frontend autorizzati, separati da virgola |
 | `DATABASE_URL` | Facoltativa, default `sqlite:///./museo.db` |
 | `LOGIN_RATE_LIMIT` | Facoltativa, tentativi di login consentiti per IP (default `5/minute`) |

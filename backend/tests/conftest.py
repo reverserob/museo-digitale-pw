@@ -16,6 +16,7 @@ os.environ["ADMIN_PASSWORD"] = "password-test"
 os.environ["SECRET_KEY"] = "chiave-segreta-di-test"
 os.environ["SMTP_USER"] = ""
 os.environ["SMTP_PASSWORD"] = ""
+os.environ["BREVO_API_KEY"] = ""
 
 from fastapi.testclient import TestClient  # noqa: E402
 
