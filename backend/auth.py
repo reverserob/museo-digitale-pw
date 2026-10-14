@@ -1,4 +1,5 @@
 """Autenticazione dell'area riservata"""
+
 import base64
 import hashlib
 import hmac

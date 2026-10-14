@@ -1,5 +1,7 @@
 # Project Work - Museo Digitale
 
+[![CI](https://github.com/reverserob/museo-digitale-pw/actions/workflows/ci.yml/badge.svg)](https://github.com/reverserob/museo-digitale-pw/actions/workflows/ci.yml)
+
 ## Tema n. 1: La digitalizzazione dell’impresa 
 
 ### PW 2 Digitalizzazione dei processi aziendali in un’impresa culturale:
@@ -35,7 +37,8 @@ Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 2. `python -m venv venv && source venv/bin/activate`
 3. `pip install -r requirements-dev.txt`
 4. `pytest`
-5. `ruff check .`
+5. `ruff check .` 
+6. `ruff format .`
 
 
 | Variabile | Descrizione |
@@ -66,9 +69,22 @@ Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 1. `cd frontend`
 2. `npm install`
 3. `npm test`
+4. `npm run lint` (ESLint) 
+5. `npm run format` (Prettier)
 
 L'indirizzo del backend si può impostare con `VITE_API_URL` (vedi `frontend/.env.example`; su Vercel
 in *Settings → Environment Variables*).
+
+#### Integrazione continua (GitHub Actions)
+A ogni push su `main` il workflow `.github/workflows/ci.yml` esegue ruff e pytest sul backend
+(Python 3.9 e 3.12) e ESLint, Prettier, Vitest e la build sul frontend. L'esito si vede nella scheda
+**Actions** del repository e nel badge in cima a questo file.
+
+#### Deploy del backend su Render
+Start Command del servizio (necessario perché il limite ai tentativi di login legga l'IP reale dei visitatori):
+```
+uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'
+```
 
 #### Credenziali Reserved Area (solo demo in locale)
 Se `ADMIN_EMAIL` e `ADMIN_PASSWORD` non sono impostate, in locale valgono:

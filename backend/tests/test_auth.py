@@ -26,11 +26,14 @@ def test_login_email_non_sensibile_a_maiuscole_e_spazi(client):
     assert r.status_code == 200
 
 
-@pytest.mark.parametrize("email, password", [
-    (ADMIN_EMAIL, "sbagliata"),
-    ("altro@test.it", ADMIN_PASSWORD),
-    ("", ""),
-])
+@pytest.mark.parametrize(
+    "email, password",
+    [
+        (ADMIN_EMAIL, "sbagliata"),
+        ("altro@test.it", ADMIN_PASSWORD),
+        ("", ""),
+    ],
+)
 def test_login_credenziali_errate(client, email, password):
     r = client.post("/api/login", json={"email": email, "password": password})
     assert r.status_code == 401
@@ -78,3 +81,13 @@ def test_token_firmato_con_altra_chiave_viene_rifiutato(client, monkeypatch):
 def test_token_valido_permette_accesso(client, auth):
     r = client.get("/api/prenotazioni", headers=auth)
     assert r.status_code == 200
+
+
+def test_troppi_tentativi_di_login_bloccati(client):
+    # i primi 5 tentativi (limite "5/minute") ricevono 401, il sesto viene bloccato con 429
+    for _ in range(5):
+        r = client.post("/api/login", json={"email": ADMIN_EMAIL, "password": "sbagliata"})
+        assert r.status_code == 401
+    r = client.post("/api/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    assert r.status_code == 429
+    assert "Troppi tentativi" in r.json()["detail"]

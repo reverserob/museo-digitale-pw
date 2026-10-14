@@ -29,7 +29,7 @@ def test_prenotazione_avvia_invio_email(client, mostra_futura, email_finta):
     assert len(email_finta) == 1
     assert email_finta[0]["destinatario"] == "mario.rossi@test.it"
     assert email_finta[0]["titolo_mostra"] == "Mostra futura"
-    assert email_finta[0]["data_fine"] == "2099-12-31"
+    assert str(email_finta[0]["data_fine"]) == "2099-12-31"
 
 
 def test_prenotazione_normalizza_i_dati(client, auth, mostra_futura):
@@ -41,15 +41,18 @@ def test_prenotazione_normalizza_i_dati(client, auth, mostra_futura):
     assert salvata["telefono"] == "3331234567"
 
 
-@pytest.mark.parametrize("campo, valore, messaggio", [
-    ("nome", "Al", "almeno 3 caratteri"),
-    ("cognome", "  ", "almeno 3 caratteri"),
-    ("nome", "x" * 101, "al massimo 100"),
-    ("email", "non-una-email", "email"),
-    ("telefono", "333-123", "da 6 a 15 cifre"),
-    ("telefono", "12345", "da 6 a 15 cifre"),
-    ("telefono", "1" * 16, "da 6 a 15 cifre"),
-])
+@pytest.mark.parametrize(
+    "campo, valore, messaggio",
+    [
+        ("nome", "Al", "almeno 3 caratteri"),
+        ("cognome", "  ", "almeno 3 caratteri"),
+        ("nome", "x" * 101, "al massimo 100"),
+        ("email", "non-una-email", "email"),
+        ("telefono", "333-123", "da 6 a 15 cifre"),
+        ("telefono", "12345", "da 6 a 15 cifre"),
+        ("telefono", "1" * 16, "da 6 a 15 cifre"),
+    ],
+)
 def test_prenotazione_dati_non_validi(client, mostra_futura, email_finta, campo, valore, messaggio):
     r = client.post("/api/prenota", json=dati_validi(mostra_futura, **{campo: valore}))
     assert r.status_code == 422

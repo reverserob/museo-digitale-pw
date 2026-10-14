@@ -1,5 +1,6 @@
 import os
 import tempfile
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -22,10 +23,18 @@ import models  # noqa: E402
 import settings  # noqa: E402
 from database import SessionLocal, engine  # noqa: E402
 from main import app  # noqa: E402
+from services.rate_limit_service import limiter  # noqa: E402
 from services.seed_service import inserisci_dati_iniziali  # noqa: E402
 
 ADMIN_EMAIL = "admin@test.it"
 ADMIN_PASSWORD = "password-test"
+
+
+@pytest.fixture(autouse=True)
+def azzera_limite_login():
+    # ogni test parte con il contatore dei tentativi di login a zero
+    limiter.reset()
+    yield
 
 
 @pytest.fixture(autouse=True)
@@ -78,8 +87,8 @@ def crea_mostra_nel_db(data_inizio, data_fine, titolo="Mostra di test"):
         titolo=titolo,
         descrizione="Descrizione della mostra di test",
         immagini="/static/uploads/test.webp",
-        data_inizio=data_inizio,
-        data_fine=data_fine,
+        data_inizio=date.fromisoformat(data_inizio),
+        data_fine=date.fromisoformat(data_fine),
     )
     db.add(mostra)
     db.commit()

@@ -1,5 +1,6 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { ThemeProvider, CssBaseline, Box, CircularProgress } from '@mui/material';
 
 import { theme } from './theme';
 import './styles/layout.css';
@@ -9,11 +10,12 @@ import background from './config/background.json';
 import AppHeader from './components/AppHeader';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
-import GalleriaMostra from './pages/GalleriaMostra';
-import FormPrenotazione from './pages/FormPrenotazione';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminForm from './pages/AdminForm';
-import NotFound from './pages/NotFound';
+
+const GalleriaMostra = lazy(() => import('./pages/GalleriaMostra'));
+const FormPrenotazione = lazy(() => import('./pages/FormPrenotazione'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminForm = lazy(() => import('./pages/AdminForm'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Nel JSON le pagine sono indicate per nome: qui associo ogni nome al componente vero
 const pages = { Home, GalleriaMostra, FormPrenotazione, AdminDashboard, AdminForm, NotFound };
@@ -24,24 +26,32 @@ function App() {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <div className="app-container" style={sfondo}>
                     <AppHeader />
 
-                    <Routes>
-                        {routes.map((route) => {
-                            const Pagina = pages[route.component];
-                            // le rotte con "protected": true sono visibili solo dopo il login
-                            const elemento = route.protected ? (
-                                <ProtectedRoute>
+                    <Suspense
+                        fallback={
+                            <Box sx={{ textAlign: 'center', mt: 20 }}>
+                                <CircularProgress color="primary" />
+                            </Box>
+                        }
+                    >
+                        <Routes>
+                            {routes.map((route) => {
+                                const Pagina = pages[route.component];
+                                // le rotte con "protected": true sono visibili solo dopo il login
+                                const elemento = route.protected ? (
+                                    <ProtectedRoute>
+                                        <Pagina />
+                                    </ProtectedRoute>
+                                ) : (
                                     <Pagina />
-                                </ProtectedRoute>
-                            ) : (
-                                <Pagina />
-                            );
-                            return <Route key={route.path} path={route.path} element={elemento} />;
-                        })}
-                    </Routes>
+                                );
+                                return <Route key={route.path} path={route.path} element={elemento} />;
+                            })}
+                        </Routes>
+                    </Suspense>
                 </div>
             </BrowserRouter>
         </ThemeProvider>

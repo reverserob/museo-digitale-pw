@@ -36,21 +36,25 @@ backend/
 │   ├── mostre.py           → CRUD delle mostre (/api/mostre)
 │   └── prenotazioni.py     → POST /api/prenota, GET /api/prenotazioni
 ├── services/
+│   ├── mostre_service.py   → ricerca di una mostra e controllo delle date (usato da più router)
 │   ├── email_service.py    → invio dell'email di conferma (SMTP)
 │   ├── immagini_service.py → validazione e salvataggio delle immagini caricate
+│   ├── rate_limit_service.py → limite ai tentativi di login (slowapi)
 │   ├── error_service.py    → formattazione degli errori di validazione (422)
-│   └── seed_service.py     → inserimento delle mostre iniziali
-└── static/uploads/         → immagini delle mostre
+│   └── seed_service.py     → inserimento delle mostre iniziali lette da data/mostre.json
+├── data/mostre.json        → dati delle mostre iniziali
+├── static/uploads/         → immagini delle mostre
+└── tests/                  → test automatici (pytest)
 ```
 
 I vantaggi di questa organizzazione sono:
 - **Leggibilità**: chi cerca le rotte delle mostre apre `routers/mostre.py`, chi deve modificare il testo dell'email apre `services/email_service.py`.
-- **Riutilizzo**: i servizi sono funzioni indipendenti dalle rotte; ad esempio `trova_mostra` è usata sia dal router delle mostre sia da quello delle prenotazioni.
+- **Riutilizzo**: i servizi sono funzioni indipendenti dalle rotte; ad esempio `trova_mostra` (in `services/mostre_service.py`) è usata sia dal router delle mostre sia da quello delle prenotazioni, senza che un router dipenda dall'altro.
 - **Manutenibilità**: aggiungere una nuova area funzionale significa creare un nuovo router e registrarlo in `main.py` con `app.include_router(...)`, senza toccare il codice esistente.
 - **Documentazione**: ogni router ha un proprio tag, quindi nella Swagger UI le rotte compaiono raggruppate in *Area riservata*, *Mostre* e *Prenotazioni*.
 
 ### 2. Architettura del Database e Diagramma ER (Entità-Relazione)
-Il sistema si appoggia a un database relazionale SQLite, interfacciato tramite l'ORM SQLAlchemy per la gestione trasparente delle entità in oggetti Python. Le tabelle vengono create automaticamente all'avvio e, se il database è vuoto, vengono inserite quattro mostre dimostrative (seeding).
+Il sistema si appoggia a un database relazionale SQLite, interfacciato tramite l'ORM SQLAlchemy per la gestione trasparente delle entità in oggetti Python. Le tabelle vengono create automaticamente all'avvio e, se il database è vuoto, vengono inserite le mostre dimostrative descritte nel file `data/mostre.json` (seeding): per aggiungere o modificare le mostre iniziali basta modificare il file JSON, senza toccare il codice.
 
 Struttura delle Entità:
 Tabella mostre: Memorizza le informazioni relative alle esposizioni culturali.
@@ -58,8 +62,8 @@ Tabella mostre: Memorizza le informazioni relative alle esposizioni culturali.
 `id (Integer, Primary Key)
 titolo (String)
 descrizione (Text)
-data_inizio (String, formato ISO AAAA-MM-GG)
-data_fine (String, formato ISO AAAA-MM-GG)
+data_inizio (Date)
+data_fine (Date)
 immagini (String - percorsi relativi multipli separati da virgola, es. /static/uploads/<file>)`
 
 Tabella prenotazioni: Memorizza le prenotazioni effettuate dai visitatori.
@@ -115,13 +119,31 @@ Il controllo delle credenziali avviene sul server e non nel browser. L'endpoint 
 #### 4.6. Gestione Sicura del Caricamento File
 Il caricamento delle immagini è gestito da `services/immagini_service.py`. Le immagini vengono accettate solo se hanno un'estensione e un tipo MIME da immagine (jpg, png, webp, gif) e non superano la dimensione massima configurata. Il nome del file su disco viene generato dal server (UUID), evitando sia la sovrascrittura di file esistenti sia attacchi di tipo path traversal. Nel database si salvano percorsi relativi: è il frontend ad anteporre l'indirizzo del backend, così l'applicazione funziona sia in locale sia in produzione. I dati inseriti dagli utenti vengono inoltre "escapati" prima di essere inseriti nel corpo HTML dell'email di conferma.
 
+#### 4.7. Limite ai Tentativi di Accesso
+Per impedire attacchi "a forza bruta" (provare molte password in sequenza), l'endpoint di login è protetto dalla libreria `slowapi`: ogni indirizzo IP può effettuare un numero limitato di tentativi (di default 5 al minuto, configurabile con la variabile `LOGIN_RATE_LIMIT`). Superato il limite il server risponde 429 Too Many Requests con un messaggio leggibile, che il frontend mostra nel form di accesso. Poiché in produzione il backend si trova dietro il proxy di Render, uvicorn viene avviato con l'opzione `--proxy-headers`, così da leggere l'indirizzo IP reale del visitatore.
+
 ### 5. Implementazione del Front-end in React e Validazione End-to-End
 ####   5.1. Architettura dei Componenti e Single Page Application (SPA)
-Il front-end è stato sviluppato come una Single Page Application (SPA) modulare basata su React e React Router per la gestione delle rotte dinamiche: catalogo (`Home`), dettaglio mostra (`GalleriaMostra`), form di prenotazione (`FormPrenotazione`) e pannello amministrativo (`AdminDashboard`, `AdminForm`).
+Il front-end è stato sviluppato come una Single Page Application (SPA) modulare basata su React e React Router. Il codice è organizzato per responsabilità:
+
+```
+frontend/src/
+├── App.jsx        → tema, router e rotte
+├── config/        → routes.json (elenco delle rotte) e background.json (immagine di sfondo)
+├── pages/         → una pagina per rotta: Home, GalleriaMostra, FormPrenotazione, AdminDashboard, AdminForm, NotFound
+├── components/    → componenti riutilizzabili: AppHeader, ProtectedRoute
+├── services/      → api.js (istanza Axios) e un servizio per area: mostreService, prenotazioniService, authService
+├── styles/        → fogli di stile del layout
+└── tests/         → test automatici (Vitest)
+```
+
+Le rotte non sono scritte nel codice ma lette da `config/routes.json`: ogni rotta indica il percorso e il nome della pagina da mostrare. Le rotte riservate all'amministratore sono contrassegnate con `"protected": true` e vengono racchiuse nel componente `ProtectedRoute`, che rimanda alla pagina di accesso chi non ha effettuato il login. Un indirizzo inesistente mostra la pagina `NotFound` (errore 404), collegata alla rotta jolly `*`.
+
+Per alleggerire il primo caricamento, le pagine diverse dalla Home vengono caricate solo quando servono (`React.lazy` e `Suspense`): il browser scarica il codice dell'area riservata solo se l'utente la apre.
 
 Per la progettazione dell'interfaccia grafica è stata adottata la libreria Material-UI (MUI), personalizzando i componenti tramite la prop `sx` e un tema grafico coerente con l'identità visiva dell'istituzione culturale (palette cromatica basata su toni scuri e dettagli color oro). Il layout utilizza il componente `Grid` con dimensioni responsive, così da adattarsi anche ai dispositivi mobili.
 
-L'interazione con le API REST avviene tramite un client Axios centralizzato (`src/api.js`), che:
+Le pagine non contengono gli indirizzi delle API: usano le funzioni dei servizi (ad esempio `getMostre()`, `prenota(dati)`, `login(email, password)`), così ogni indirizzo è definito in un solo punto, in modo analogo ai servizi del backend. I servizi si appoggiano a un client Axios centralizzato (`services/api.js`), che:
 - determina l'indirizzo del backend (variabile `VITE_API_URL`, oppure backend locale in sviluppo e Render in produzione);
 - aggiunge automaticamente il token dell'amministratore a ogni richiesta e, se il token è scaduto, riporta l'utente alla pagina di login;
 - costruisce l'indirizzo completo delle immagini a partire dai percorsi relativi salvati nel database.
@@ -151,12 +173,27 @@ Al fine di evitare schermate bloccate o silenziose in caso di problemi di rete o
 Le chiamate asincrone sono protette dal metodo .catch() di Axios, che intercetta i codici di errore HTTP restituiti dal back-end (401, 404, 422, 500).
 È stato implementato un sistema di notifica basato sul componente Alert di Material-UI: in caso di errori di connessione o fallimenti nelle operazioni di scrittura, un messaggio descrittivo compare in modo dinamico all'utente, migliorando sensibilmente la resilienza e l'usabilità complessiva dell'applicazione.
 
-### 6. Deploy
+### 6. Qualità del Codice e Test Automatici
+Per mantenere il codice uniforme e individuare gli errori prima della pubblicazione sono stati adottati strumenti di controllo automatico:
+
+| | Back-end | Front-end |
+|---|---|---|
+| Controllo del codice (linter) | Ruff | ESLint |
+| Formattazione | Ruff format | Prettier |
+| Test automatici | pytest + TestClient di FastAPI | Vitest + React Testing Library |
+
+**Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
+
+**Test del front-end** (cartella `frontend/src/tests/`): montano le pagine in un browser simulato (jsdom) e sostituiscono le risposte del backend con dati finti. Verificano la visualizzazione delle mostre, la validazione dei form, l'invio delle prenotazioni, login e logout dell'area riservata, la protezione delle rotte, la pagina 404 e il caricamento delle pagine "lazy".
+
+**Integrazione continua (GitHub Actions)**: il file `.github/workflows/ci.yml` esegue automaticamente, a ogni push e pull request, linter, controllo della formattazione e test di entrambe le parti, oltre alla build di produzione del front-end. Il back-end viene verificato con due versioni di Python. Se un controllo fallisce, GitHub lo segnala accanto al commit, impedendo che un errore passi inosservato.
+
+### 7. Deploy
 L'applicazione è pubblicata con due servizi separati, coerentemente con l'architettura disaccoppiata:
 - **Front-end** su Vercel: [museo-digitale-pw-azure.vercel.app](https://museo-digitale-pw-azure.vercel.app/)
 - **Back-end** su Render: `museo-digitale-pw.onrender.com`
 
-Su Render le variabili d'ambiente (SECRET_KEY, credenziali dell'amministratore, credenziali SMTP, CORS_ORIGINS) sono impostate dal pannello Environment del servizio.
+Su Render le variabili d'ambiente (SECRET_KEY, credenziali dell'amministratore, credenziali SMTP, CORS_ORIGINS) sono impostate dal pannello Environment del servizio. Il backend viene avviato con il comando `uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'`, che permette al server di conoscere l'indirizzo IP reale dei visitatori (necessario per il limite ai tentativi di login). Le versioni delle librerie Python sono fissate in `requirements.txt`, così il server installa sempre le stesse versioni verificate in locale.
 
 Limiti noti della soluzione attuale, accettabili per un prototipo:
 - Sul piano gratuito di Render il disco non è persistente: a ogni riavvio il database SQLite e le immagini caricate dall'area riservata vengono azzerati. Le mostre iniziali vengono ricreate automaticamente dal seeding, insieme alle loro immagini incluse nel repository. In un contesto reale si utilizzerebbero un database gestito (es. PostgreSQL, già supportato tramite la variabile DATABASE_URL) e uno storage esterno per i file.

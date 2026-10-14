@@ -118,7 +118,6 @@ def test_crea_mostra_senza_immagini(client, auth):
 
 
 # --- modifica ---
-
 def test_modifica_senza_immagini_mantiene_le_vecchie(client, auth):
     prima = client.get("/api/mostre/1").json()
     r = client.put("/api/mostre/1", data={**DATI_MOSTRA, "titolo": "Titolo modificato"}, headers=auth)
@@ -152,7 +151,13 @@ def test_elimina_mostra_inesistente(client, auth):
 
 
 def test_elimina_mostra_cancella_le_prenotazioni(client, auth, mostra_futura):
-    dati = {"mostra_id": mostra_futura, "nome": "Mario", "cognome": "Rossi", "email": "mario@test.it", "telefono": "3331234567"}
+    dati = {
+        "mostra_id": mostra_futura,
+        "nome": "Mario",
+        "cognome": "Rossi",
+        "email": "mario@test.it",
+        "telefono": "3331234567",
+    }
     assert client.post("/api/prenota", json=dati).status_code == 201
     assert len(client.get("/api/prenotazioni", headers=auth).json()) == 1
 

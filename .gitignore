@@ -20,9 +20,18 @@ __pycache__/
 # DB local
 *.db
 
-# python test
-pytest_cache/
+# cache di pytest e ruff
+.pytest_cache/
+.ruff_cache/
 
 # fe ignore
 dist/
+# Immagini caricate dall'area admin: non vanno nel repository...
 backend/static/uploads/*
+# ...tranne quelle delle mostre iniziali (usate da data/mostre.json)
+!backend/static/uploads/caravaggio.webp
+!backend/static/uploads/leonardo-da-vinci.webp
+!backend/static/uploads/leonardo-alle-pmi.webp
+!backend/static/uploads/leonardo-da-vinci-3.webp
+!backend/static/uploads/monet.webp
+!backend/static/uploads/salvador-dali-.webp

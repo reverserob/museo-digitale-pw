@@ -1,0 +1,75 @@
+# Integrazione continua: a ogni push e pull request controlla backend e frontend.
+# Se un controllo fallisce, su GitHub compare la croce rossa accanto al commit.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 3.9 = versione usata in locale, 3.12 = versione recente (come sul server)
+        python-version: ["3.9", "3.12"]
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v4
+
+      - name: Installa Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: Installa le dipendenze
+        run: pip install -r requirements-dev.txt
+
+      - name: Controllo del codice (ruff)
+        run: ruff check .
+
+      - name: Controllo della formattazione (ruff format)
+        run: ruff format --check .
+
+      - name: Test (pytest)
+        run: pytest
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v4
+
+      - name: Installa Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installa le dipendenze
+        run: npm ci
+
+      - name: Controllo del codice (ESLint)
+        run: npm run lint
+
+      - name: Controllo della formattazione (Prettier)
+        run: npm run format:check
+
+      - name: Test (Vitest)
+        run: npm test
+
+      - name: Build di produzione
+        run: npm run build
