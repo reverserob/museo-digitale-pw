@@ -1,46 +1,41 @@
+import json
 import logging
+from pathlib import Path
 
 import models
 from database import SessionLocal
 
 logger = logging.getLogger("uvicorn.error")
 
+# File con le mostre iniziali
+SEED_FILE = Path(__file__).parent.parent / "data" / "mostre.json"
+
+# get dat from mostre.-json
+def leggi_mostre_json():
+    with SEED_FILE.open(encoding="utf-8") as f:
+        return json.load(f)
+
 
 def inserisci_dati_iniziali():
     db = SessionLocal()
     try:
         if db.query(models.Mostra).count() == 0:
-            db.add_all([
-                models.Mostra(
-                    titolo="Caravaggio e il suo tempo",
-                    descrizione="Un viaggio tra luce e ombra nelle opere milanesi del maestro.",
-                    immagini="/static/uploads/caravaggio.webp",
-                    data_inizio="2026-10-10",
-                    data_fine="2027-01-15",
-                ),
-                models.Mostra(
-                    titolo="Leonardo: Il Codice Atlantico",
-                    descrizione="Esposizione esclusiva dei disegni tecnici di Leonardo da Vinci.",
-                    immagini="/static/uploads/leonardo-da-vinci.webp,/static/uploads/leonardo-alle-pmi.webp,/static/uploads/leonardo-da-vinci-3.webp",
-                    data_inizio="2026-11-01",
-                    data_fine="2027-02-28",
-                ),
-                models.Mostra(
-                    titolo="Monet: La Natura",
-                    descrizione="Le opere di Monet, i colori, le sfumature e lo spettacolo della natura.",
-                    immagini="/static/uploads/monet.webp",
-                    data_inizio="2026-12-01",
-                    data_fine="2027-04-30",
-                ),
-                models.Mostra(
-                    titolo="Dalí e le forme",
-                    descrizione="Un viaggio nelle forme e nei colori di Dalí, dove immaginazione e colori si fondono in rappresentazioni uniche.",
-                    immagini="/static/uploads/salvador-dali-.webp",
-                    data_inizio="2026-12-01",
-                    data_fine="2027-04-30",
-                ),
-            ])
+            mostre = leggi_mostre_json()
+            for m in mostre:
+                db.add(models.Mostra(
+                    titolo=m["titolo"],
+                    descrizione=m["descrizione"],
+                    # nel JSON le immagini sono una lista, nel DB una stringa separata da virgole
+                    immagini=",".join(m["immagini"]),
+                    data_inizio=m["data_inizio"],
+                    data_fine=m["data_fine"],
+                ))
             db.commit()
+            logger.info(f"Seeding completato: {len(mostre)} mostre inserite da {SEED_FILE.name}")
+    except FileNotFoundError:
+        logger.error(f"File {SEED_FILE} non trovato: nessuna mostra iniziale inserita")
+    except (json.JSONDecodeError, KeyError) as e:
+        logger.error(f"Errore nel file {SEED_FILE.name}: {e}")
     except Exception as e:
         db.rollback()
         logger.error(f"Errore durante il seeding iniziale: {e}")
