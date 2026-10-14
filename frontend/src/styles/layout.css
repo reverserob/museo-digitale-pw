@@ -1,0 +1,27 @@
+.app-container {
+    min-height: 100vh;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    padding-bottom: 64px;
+}
+
+.app-header.app-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.app-header .app-header__title {
+    flex-grow: 1;
+    color: #c5a059;
+    font-weight: bold;
+    letter-spacing: 3px;
+}
+
+.app-header .app-header__title a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.app-header .app-header__button {
+    letter-spacing: 1px;
+}

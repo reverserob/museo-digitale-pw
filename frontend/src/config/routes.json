@@ -1,0 +1,8 @@
+[
+  { "path": "/", "component": "Home" },
+  { "path": "/esposizione/:id", "component": "GalleriaMostra" },
+  { "path": "/prenota/:id", "component": "FormPrenotazione" },
+  { "path": "/admin", "component": "AdminDashboard" },
+  { "path": "/admin/nuova", "component": "AdminForm" },
+  { "path": "/admin/modifica/:id", "component": "AdminForm" }
+]

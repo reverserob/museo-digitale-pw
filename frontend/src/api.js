@@ -24,13 +24,14 @@ export const setToken = (token) => {
 // axios instance
 export const api = axios.create({ baseURL: API_URL });
 
+// api request logic
 api.interceptors.request.use((config) => {
     const token = getToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
 });
 
-// Se il token è scaduto o non valido lo eliminiamo e torniamo al login
+// api response logic
 api.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -42,8 +43,7 @@ api.interceptors.response.use(
     }
 );
 
-// Le immagini nel DB sono percorsi relativi ("/static/uploads/x.webp"):
-// qui anteponiamo l'indirizzo del backend. Gli URL assoluti restano invariati.
+// images path
 export const imageUrl = (percorso) => {
     const p = (percorso || '').trim();
     if (!p) return '';
@@ -54,7 +54,7 @@ export const imageUrl = (percorso) => {
 export const splitImmagini = (immagini) =>
     (immagini || '').split(',').map((s) => s.trim()).filter(Boolean).map(imageUrl);
 
-// Messaggio leggibile da mostrare all'utente a partire da un errore axios
+// api axios error message
 export const messaggioErrore = (err, fallback = 'Si è verificato un errore. Riprova.') => {
     if (!err.response) return 'Impossibile contattare il server. Controlla la connessione.';
     const detail = err.response.data?.detail;
