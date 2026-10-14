@@ -10,7 +10,7 @@ export const theme = createTheme({
         fontFamily: '"Playfair Display", "Georgia", "Times New Roman", serif',
         h3: { fontWeight: 700, letterSpacing: '0.05em' },
         h4: { fontWeight: 600, letterSpacing: '0.03em' },
-        h5: { fontWeight: 600, letterSpacing: '0.02em' }
+        h5: { fontWeight: 600, letterSpacing: '0.02em' },
     },
     shape: { borderRadius: 8 },
 });

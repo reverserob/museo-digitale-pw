@@ -29,7 +29,7 @@ export default function Home() {
             {loading && <Box sx={{ textAlign: 'center' }}><CircularProgress color="primary" /></Box>}
             {errore && <Alert severity="error" sx={{ mb: 4 }}>{errore}</Alert>}
             {!loading && !errore && mostre.length === 0 && (
-                <Typography textAlign="center" sx={{ color: '#bbbbbb', fontFamily: 'sans-serif' }}>
+                <Typography sx={{ textAlign: 'center', color: '#bbbbbb', fontFamily: 'sans-serif' }}>
                     Nessuna esposizione in programma al momento.
                 </Typography>
             )}

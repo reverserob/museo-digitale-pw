@@ -4,21 +4,26 @@ import axios from 'axios';
 const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 export const API_URL = (
-    import.meta.env.VITE_API_URL ||
-    (isLocal ? 'http://127.0.0.1:8000' : 'https://museo-digitale-pw.onrender.com')
+    import.meta.env.VITE_API_URL || (isLocal ? 'http://127.0.0.1:8000' : 'https://museo-digitale-pw.onrender.com')
 ).replace(/\/$/, '');
 
 const TOKEN_KEY = 'admin_token';
 
 export const getToken = () => {
-    try { return sessionStorage.getItem(TOKEN_KEY); } catch { return null; }
+    try {
+        return sessionStorage.getItem(TOKEN_KEY);
+    } catch {
+        return null;
+    }
 };
 
 export const setToken = (token) => {
     try {
         if (token) sessionStorage.setItem(TOKEN_KEY, token);
         else sessionStorage.removeItem(TOKEN_KEY);
-    } catch { /* sessionStorage non disponibile */ }
+    } catch {
+        /* sessionStorage non disponibile */
+    }
 };
 
 // axios instance
@@ -52,7 +57,11 @@ export const imageUrl = (percorso) => {
 };
 
 export const splitImmagini = (immagini) =>
-    (immagini || '').split(',').map((s) => s.trim()).filter(Boolean).map(imageUrl);
+    (immagini || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map(imageUrl);
 
 // api axios error message
 export const messaggioErrore = (err, fallback = 'Si è verificato un errore. Riprova.') => {

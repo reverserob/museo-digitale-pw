@@ -7,13 +7,16 @@ import routes from './config/routes.json';
 import background from './config/background.json';
 
 import AppHeader from './components/AppHeader';
-import Home from './components/Home';
-import GalleriaMostra from './components/GalleriaMostra';
-import FormPrenotazione from './components/FormPrenotazione';
-import AdminDashboard from './components/AdminDashboard';
-import AdminForm from './components/AdminForm';
+import ProtectedRoute from './components/ProtectedRoute';
+import Home from './pages/Home';
+import GalleriaMostra from './pages/GalleriaMostra';
+import FormPrenotazione from './pages/FormPrenotazione';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminForm from './pages/AdminForm';
+import NotFound from './pages/NotFound';
 
-const components = { Home, GalleriaMostra, FormPrenotazione, AdminDashboard, AdminForm };
+// Nel JSON le pagine sono indicate per nome: qui associo ogni nome al componente vero
+const pages = { Home, GalleriaMostra, FormPrenotazione, AdminDashboard, AdminForm, NotFound };
 
 function App() {
     const sfondo = { backgroundImage: `${background.overlay}, url(${background.image})` };
@@ -27,8 +30,16 @@ function App() {
 
                     <Routes>
                         {routes.map((route) => {
-                            const Componente = components[route.component];
-                            return <Route key={route.path} path={route.path} element={<Componente />} />;
+                            const Pagina = pages[route.component];
+                            // le rotte con "protected": true sono visibili solo dopo il login
+                            const elemento = route.protected ? (
+                                <ProtectedRoute>
+                                    <Pagina />
+                                </ProtectedRoute>
+                            ) : (
+                                <Pagina />
+                            );
+                            return <Route key={route.path} path={route.path} element={elemento} />;
                         })}
                     </Routes>
                 </div>

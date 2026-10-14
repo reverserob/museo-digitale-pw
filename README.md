@@ -62,6 +62,11 @@ impostate, le prenotazioni vengono comunque salvate ma l'email di conferma non v
 3. `npm run dev`
 4. go to `http://localhost:5173/`
 
+#### Run Test Frontend
+1. `cd frontend`
+2. `npm install`
+3. `npm test`
+
 L'indirizzo del backend si può impostare con `VITE_API_URL` (vedi `frontend/.env.example`; su Vercel
 in *Settings → Environment Variables*).
 
