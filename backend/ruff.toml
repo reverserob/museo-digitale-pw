@@ -1,0 +1,25 @@
+# Ruff CONFIG
+line-length = 120
+target-version = "py39"
+extend-exclude = ["venv"]
+src = ["."]
+
+[lint]
+select = [
+    "E",   # style errors (pycodestyle)
+    "W",   # style errors
+    "F",   # logic errors (pyflakes)
+    "I",   # import order (isort)
+    "B",   # find bug (flake8-bugbear)
+    "UP",  # Python syntax update
+]
+ignore = [
+    "E501",  # long rows
+    "B008",  # FastAPI Depends(), Form(), File() as defaults
+]
+
+[lint.per-file-ignores]
+"tests/conftest.py" = ["E402"]  # env var
+
+[format]
+quote-style = "double"

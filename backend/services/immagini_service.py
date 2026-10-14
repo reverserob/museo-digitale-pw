@@ -1,17 +1,17 @@
 import uuid
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import HTTPException, UploadFile, status
 
 import settings
 
 
-def file_presenti(immagini: Optional[List[UploadFile]]) -> List[UploadFile]:
+def file_presenti(immagini: Optional[list[UploadFile]]) -> list[UploadFile]:
     return [f for f in (immagini or []) if f is not None and f.filename]
 
 
-async def salva_immagini(immagini: List[UploadFile]) -> List[str]:
+async def salva_immagini(immagini: list[UploadFile]) -> list[str]:
     limite = settings.UPLOAD_MAX_MB * 1024 * 1024
     da_scrivere = []
     for file in immagini:

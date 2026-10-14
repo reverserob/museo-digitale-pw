@@ -4,13 +4,15 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from services.error_service import errore_validazione
-from services.seed_service import inserisci_dati_iniziali
+from slowapi.errors import RateLimitExceeded
 
 import models
 import settings
 from database import engine
 from routers import login, mostre, prenotazioni
+from services.error_service import errore_validazione
+from services.rate_limit_service import limiter, troppe_richieste
+from services.seed_service import inserisci_dati_iniziali
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -26,6 +28,10 @@ if settings.ADMIN_PASSWORD == "admin2026":
 
 # FastAPI declaration
 app = FastAPI(title="Museo Civico Digitale - API")
+
+# login try limit
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, troppe_richieste)
 
 # Static Dir images
 settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

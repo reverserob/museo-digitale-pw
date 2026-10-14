@@ -1,6 +1,6 @@
 import logging
 from datetime import date
-from typing import List, Optional
+from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -8,8 +8,8 @@ import models
 import schemas
 from auth import richiedi_admin
 from database import get_db
-from routers.mostre import trova_mostra
 from services.email_service import invia_email_background
+from services.mostre_service import trova_mostra
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -25,8 +25,10 @@ def crea_prenotazione(
 ):
     mostra = trova_mostra(db, dati.mostra_id)
 
-    if date.fromisoformat(mostra.data_fine) < date.today():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra è già conclusa: non è più possibile prenotare.")
+    if mostra.data_fine < date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra è già conclusa: non è più possibile prenotare."
+        )
 
     try:
         prenotazione = models.Prenotazione(
@@ -42,7 +44,10 @@ def crea_prenotazione(
     except Exception as e:
         db.rollback()
         logger.error(f"Errore critico durante la prenotazione: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore interno durante l'elaborazione della prenotazione.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Errore interno durante l'elaborazione della prenotazione.",
+        ) from e
 
     background_tasks.add_task(
         invia_email_background,
@@ -56,7 +61,7 @@ def crea_prenotazione(
 
 
 # API GET PRENOTAZIONI
-@router.get("/prenotazioni", response_model=List[schemas.PrenotazioneResponse])
+@router.get("/prenotazioni", response_model=list[schemas.PrenotazioneResponse])
 def leggi_prenotazioni(
     mostra_id: Optional[int] = None,
     db: Session = Depends(get_db),

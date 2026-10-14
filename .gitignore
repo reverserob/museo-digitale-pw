@@ -19,3 +19,10 @@ __pycache__/
 
 # DB local
 *.db
+
+# python test
+pytest_cache/
+
+# fe ignore
+dist/
+backend/static/uploads/*

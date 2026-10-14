@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -8,35 +8,23 @@ import schemas
 from auth import richiedi_admin
 from database import get_db
 from services.immagini_service import file_presenti, salva_immagini
+from services.mostre_service import converti_date, trova_mostra
 
 logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter(prefix="/api/mostre", tags=["Mostre"])
 
 
-# FIND mostra
-def trova_mostra(db: Session, mostra_id: int) -> models.Mostra:
-    mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
-    if mostra is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mostra non trovata")
-    return mostra
-
-
-def date_valide(data_inizio: str, data_fine: str) -> None:
-    try:
-        schemas.valida_date(data_inizio, data_fine)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
 # API GET MOSTRE
-@router.get("", response_model=List[schemas.MostraResponse])
+@router.get("", response_model=list[schemas.MostraResponse])
 def leggi_mostre(db: Session = Depends(get_db)):
     try:
         return db.query(models.Mostra).order_by(models.Mostra.data_inizio).all()
     except Exception as e:
         logger.error(f"Errore nel recupero delle mostre: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore nel recupero delle mostre dal database.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore nel recupero delle mostre dal database."
+        ) from e
 
 
 # API GET MOSTRE_ID
@@ -52,11 +40,11 @@ async def crea_mostra(
     descrizione: str = Form(..., min_length=10),
     data_inizio: str = Form(...),
     data_fine: str = Form(...),
-    immagini: List[UploadFile] = File(...),
+    immagini: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
-    date_valide(data_inizio, data_fine)
+    inizio, fine = converti_date(data_inizio, data_fine)
     file_validi = file_presenti(immagini)
     if not file_validi:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Carica almeno un'immagine.")
@@ -65,8 +53,8 @@ async def crea_mostra(
         nuova_mostra = models.Mostra(
             titolo=titolo.strip(),
             descrizione=descrizione.strip(),
-            data_inizio=data_inizio,
-            data_fine=data_fine,
+            data_inizio=inizio,
+            data_fine=fine,
             immagini=",".join(percorsi),
         )
         db.add(nuova_mostra)
@@ -76,7 +64,9 @@ async def crea_mostra(
     except Exception as e:
         db.rollback()
         logger.error(f"Errore durante la creazione della mostra: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile pubblicare la nuova mostra.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile pubblicare la nuova mostra."
+        ) from e
 
 
 # API PUT MOSTRE
@@ -87,19 +77,19 @@ async def aggiorna_mostra(
     descrizione: str = Form(..., min_length=10),
     data_inizio: str = Form(...),
     data_fine: str = Form(...),
-    immagini: Optional[List[UploadFile]] = File(None),
+    immagini: Optional[list[UploadFile]] = File(None),
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
     mostra = trova_mostra(db, mostra_id)
-    date_valide(data_inizio, data_fine)
+    inizio, fine = converti_date(data_inizio, data_fine)
     file_validi = file_presenti(immagini)
     percorsi = await salva_immagini(file_validi) if file_validi else None
     try:
         mostra.titolo = titolo.strip()
         mostra.descrizione = descrizione.strip()
-        mostra.data_inizio = data_inizio
-        mostra.data_fine = data_fine
+        mostra.data_inizio = inizio
+        mostra.data_fine = fine
         if percorsi:
             mostra.immagini = ",".join(percorsi)
         db.commit()
@@ -108,7 +98,9 @@ async def aggiorna_mostra(
     except Exception as e:
         db.rollback()
         logger.error(f"Errore durante l'aggiornamento della mostra {mostra_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile aggiornare la mostra.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile aggiornare la mostra."
+        ) from e
 
 
 # API DELETE MOSTRE
@@ -126,4 +118,6 @@ def elimina_mostra(
     except Exception as e:
         db.rollback()
         logger.error(f"Errore durante l'eliminazione della mostra {mostra_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile eliminare la mostra.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile eliminare la mostra."
+        ) from e

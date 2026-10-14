@@ -26,18 +26,17 @@ Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 1. `cd backend`
 2. `python -m venv venv && source venv/bin/activate`
 3. `pip install -r requirements.txt`
-4. `cp .env.example .env` e compila i valori (credenziali admin, `SECRET_KEY`, SMTP)
+4. `cp .env.example .env`
 5. `uvicorn main:app --reload`
+
 
 #### Run Tests PY
 1. `cd backend`
 2. `python -m venv venv && source venv/bin/activate`
 3. `pip install -r requirements-dev.txt`
 4. `pytest`
+5. `ruff check .`
 
-Le credenziali e le chiavi si leggono **solo** da variabili d'ambiente (file `backend/.env` in locale,
-pannello *Environment* su Render): nessun segreto è scritto nel codice. Se le variabili SMTP non sono
-impostate, le prenotazioni vengono comunque salvate ma l'email di conferma non viene inviata.
 
 | Variabile | Descrizione |
 |---|---|
@@ -46,6 +45,7 @@ impostate, le prenotazioni vengono comunque salvate ma l'email di conferma non v
 | `SMTP_USER` / `SMTP_PASSWORD` | Account e "password per le app" per l'invio delle email |
 | `CORS_ORIGINS` | Domini del frontend autorizzati, separati da virgola |
 | `DATABASE_URL` | Facoltativa, default `sqlite:///./museo.db` |
+| `LOGIN_RATE_LIMIT` | Facoltativa, tentativi di login consentiti per IP (default `5/minute`) |
 
 #### Swagger API docs
 `http://127.0.0.1:8000/docs`

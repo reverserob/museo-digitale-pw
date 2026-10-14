@@ -39,6 +39,9 @@ ADMIN_PASSWORD = _env("ADMIN_PASSWORD", "admin2026")
 SECRET_KEY = _env("SECRET_KEY", "dev-secret-cambiami")
 TOKEN_DURATA_ORE = int(_env("TOKEN_DURATA_ORE", "8"))
 
+# login try limit
+LOGIN_RATE_LIMIT = _env("LOGIN_RATE_LIMIT", "5/minute")
+
 # Invio email
 SMTP_SERVER = _env("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(_env("SMTP_PORT", "587"))

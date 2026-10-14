@@ -11,8 +11,8 @@ class MostraResponse(BaseModel):
     titolo: str
     descrizione: str
     immagini: str
-    data_inizio: str
-    data_fine: str
+    data_inizio: date
+    data_fine: date
 
 
 class PrenotazioneCreate(BaseModel):
@@ -71,12 +71,13 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
-def valida_date(data_inizio: str, data_fine: str) -> None:
+def valida_date(data_inizio: str, data_fine: str) -> tuple[date, date]:
     """Controlla il formato ISO delle date e che la fine non preceda l'inizio."""
     try:
         inizio = date.fromisoformat(data_inizio)
         fine = date.fromisoformat(data_fine)
     except ValueError:
-        raise ValueError("Le date devono essere nel formato AAAA-MM-GG.")
+        raise ValueError("Le date devono essere nel formato AAAA-MM-GG.") from None
     if fine < inizio:
         raise ValueError("La data di fine non può precedere la data di inizio.")
+    return inizio, fine

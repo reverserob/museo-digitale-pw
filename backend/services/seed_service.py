@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import date
 from pathlib import Path
 
 import models
@@ -22,14 +23,16 @@ def inserisci_dati_iniziali():
         if db.query(models.Mostra).count() == 0:
             mostre = leggi_mostre_json()
             for m in mostre:
-                db.add(models.Mostra(
-                    titolo=m["titolo"],
-                    descrizione=m["descrizione"],
-                    # nel JSON le immagini sono una lista, nel DB una stringa separata da virgole
-                    immagini=",".join(m["immagini"]),
-                    data_inizio=m["data_inizio"],
-                    data_fine=m["data_fine"],
-                ))
+                db.add(
+                    models.Mostra(
+                        titolo=m["titolo"],
+                        descrizione=m["descrizione"],
+                        # nel JSON le immagini sono una lista, nel DB una stringa separata da virgole
+                        immagini=",".join(m["immagini"]),
+                        data_inizio=date.fromisoformat(m["data_inizio"]),
+                        data_fine=date.fromisoformat(m["data_fine"]),
+                    )
+                )
             db.commit()
             logger.info(f"Seeding completato: {len(mostre)} mostre inserite da {SEED_FILE.name}")
     except FileNotFoundError:

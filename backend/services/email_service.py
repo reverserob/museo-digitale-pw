@@ -1,6 +1,7 @@
 import html
 import logging
 import smtplib
+from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -8,8 +9,9 @@ import settings
 
 logger = logging.getLogger("uvicorn.error")
 
+
 # SEND MAIL PRENOTAZIONE
-def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, data_inizio: str, data_fine: str):
+def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, data_inizio: date, data_fine: date):
     """Invia l'email di conferma. Gira in background dopo la risposta HTTP."""
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.warning(f"SMTP non configurato: email di conferma per {destinatario} non inviata.")
