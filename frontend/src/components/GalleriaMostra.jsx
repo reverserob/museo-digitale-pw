@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Container, Typography, Grid, Button, Box, CircularProgress, ImageList, ImageListItem, Alert } from '@mui/material';
-import { api, splitImmagini, messaggioErrore } from '../api';
+import { api, splitImmagini, messaggioErrore } from '../services/api';
 
 export default function GalleriaMostra() {
     const { id } = useParams();

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Typography, Grid, Card, CardContent, CardActions, Button, Box, CircularProgress, Alert } from '@mui/material';
-import { api, messaggioErrore } from '../api';
+import { api, messaggioErrore } from '../services/api';
 
 export default function Home() {
     const [mostre, setMostre] = useState([]);

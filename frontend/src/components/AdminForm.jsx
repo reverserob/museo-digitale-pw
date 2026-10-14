@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid, Alert } from '@mui/material';
-import { api, getToken, messaggioErrore } from '../api';
+import { api, getToken, messaggioErrore } from '../services/api';
 
 const labelSx = { color: '#c5a059', mb: 1, fontWeight: 500 };
 const inputStyle = {

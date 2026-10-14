@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Container, Typography, Card, CardContent, Button, Box, TextField, Divider, Alert, Collapse, CircularProgress } from '@mui/material';
-import { api, getToken, setToken, messaggioErrore } from '../api';
+import { api, getToken, setToken, messaggioErrore } from '../services/api';
 
 const cardSx = { backdropFilter: 'blur(12px)', border: '1px solid rgba(197, 160, 89, 0.5)', backgroundColor: 'rgba(10, 10, 10, 0.85)', p: { xs: 1, sm: 4 } };
 const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid, CircularProgress, Alert } from '@mui/material';
-import { api, messaggioErrore } from '../api';
+import { api, messaggioErrore } from '../services/api';
 
 export default function FormPrenotazione() {
     const { id } = useParams();
