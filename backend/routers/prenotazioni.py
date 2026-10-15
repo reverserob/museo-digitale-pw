@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 import models
 import schemas
-from auth import richiedi_admin
+from auth import richiedi_admin, richiedi_utente
 from database import get_db
 from services.email_service import invia_email_background
 from services.mostre_service import trova_mostra
@@ -23,6 +23,7 @@ def crea_prenotazione(
     dati: schemas.PrenotazioneCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    utente: models.Utente = Depends(richiedi_utente),
 ):
     mostra = trova_mostra(db, dati.mostra_id)
 
@@ -32,12 +33,14 @@ def crea_prenotazione(
         )
 
     try:
+        # i dati anagrafici arrivano dall'account del visitatore collegato
         prenotazione = models.Prenotazione(
             mostra_id=mostra.id,
-            nome=dati.nome,
-            cognome=dati.cognome,
-            email=dati.email,
-            telefono=dati.telefono,
+            utente_id=utente.id,
+            nome=utente.nome,
+            cognome=utente.cognome,
+            email=utente.email,
+            telefono=dati.telefono or utente.telefono,
         )
         db.add(prenotazione)
         db.commit()
@@ -52,8 +55,8 @@ def crea_prenotazione(
 
     background_tasks.add_task(
         invia_email_background,
-        destinatario=dati.email,
-        nome=dati.nome,
+        destinatario=utente.email,
+        nome=utente.nome,
         titolo_mostra=mostra.titolo,
         data_inizio=mostra.data_inizio,
         data_fine=mostra.data_fine,

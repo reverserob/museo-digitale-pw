@@ -9,8 +9,9 @@ from slowapi.errors import RateLimitExceeded
 import models
 import settings
 from database import engine
-from routers import feedback, login, mostre, prenotazioni, statistiche
+from routers import feedback, login, mostre, prenotazioni, statistiche, utenti
 from services.error_service import errore_validazione
+from services.migrazioni_service import aggiorna_schema
 from services.rate_limit_service import limiter, troppe_richieste
 from services.seed_service import inserisci_dati_iniziali
 
@@ -18,6 +19,7 @@ logger = logging.getLogger("uvicorn.error")
 
 # Create default tables and seeding
 models.Base.metadata.create_all(bind=engine)
+aggiorna_schema(engine)
 inserisci_dati_iniziali()
 
 # IMPORTANT LOGS
@@ -53,6 +55,7 @@ app.add_exception_handler(RequestValidationError, errore_validazione)
 
 # Routers API SERVICES
 app.include_router(login.router)
+app.include_router(utenti.router)
 app.include_router(mostre.router)
 app.include_router(prenotazioni.router)
 app.include_router(feedback.router)

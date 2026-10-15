@@ -17,9 +17,11 @@ const FormPrenotazione = lazy(() => import('./pages/FormPrenotazione'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminForm = lazy(() => import('./pages/AdminForm'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const Accedi = lazy(() => import('./pages/Accedi'));
+const AreaPersonale = lazy(() => import('./pages/AreaPersonale'));
 
 // Nel JSON le pagine sono indicate per nome: qui associo ogni nome al componente vero
-const pages = { Home, GalleriaMostra, FormPrenotazione, AdminDashboard, AdminForm, NotFound };
+const pages = { Home, GalleriaMostra, FormPrenotazione, AdminDashboard, AdminForm, NotFound, Accedi, AreaPersonale };
 
 function App() {
     const sfondo = { backgroundImage: `${background.overlay}, url(${background.image})` };
@@ -41,9 +43,9 @@ function App() {
                         <Routes>
                             {routes.map((route) => {
                                 const Pagina = pages[route.component];
-                                // le rotte con "protected": true sono visibili solo dopo il login
+                                // "protected": true = solo admin, "protected": "utente" = solo visitatori collegati
                                 const pagina = route.protected ? (
-                                    <ProtectedRoute>
+                                    <ProtectedRoute ruolo={route.protected === 'utente' ? 'utente' : 'admin'}>
                                         <Pagina />
                                     </ProtectedRoute>
                                 ) : (

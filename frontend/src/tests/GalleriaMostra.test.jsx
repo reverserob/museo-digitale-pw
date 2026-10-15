@@ -3,7 +3,7 @@ import { screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import GalleriaMostra from '../pages/GalleriaMostra';
 import { api, API_URL, setToken } from '../services/api';
-import { renderConRouter, erroreHttp, MOSTRA } from './utils';
+import { renderConRouter, erroreHttp, MOSTRA, collegaUtente } from './utils';
 
 // vi.mock viene eseguito prima degli import: le chiamate HTTP di axios diventano
 // funzioni finte (vi.fn), il resto di services/api.js resta quello vero
@@ -61,54 +61,63 @@ describe('GalleriaMostra - feedback', () => {
         expect(screen.getByText('Luca')).toBeInTheDocument();
     });
 
-    it('invia un nuovo feedback e lo aggiunge in cima alla lista', async () => {
+    it("senza login mostra l'invito ad accedere invece del form", async () => {
+        rispostaMostra([], IN_CORSO);
+        apriPagina();
+
+        expect(await screen.findByText(/Accedi o registrati per lasciare un feedback/)).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Accedi' })).toHaveAttribute('href', '/accedi?next=%2Fesposizione%2F1');
+        expect(screen.queryByRole('button', { name: 'Invia feedback' })).not.toBeInTheDocument();
+    });
+
+    it('il visitatore collegato invia un feedback che compare in cima alla lista', async () => {
+        collegaUtente();
         rispostaMostra([], IN_CORSO);
         api.post.mockResolvedValue({
-            data: { id: 9, mostra_id: 1, nome: 'Anna', voto: 3, commento: 'Carina', creato_il: '2026-10-15T08:00:00' },
+            data: {
+                id: 9,
+                mostra_id: 1,
+                nome: 'Mario R.',
+                voto: 3,
+                commento: 'Carina',
+                creato_il: '2026-10-15T08:00:00',
+            },
         });
         const user = userEvent.setup();
         apriPagina();
 
-        expect(await screen.findByText('Nessuna recensione per ora.')).toBeInTheDocument();
+        expect(await screen.findByText('Il feedback sarà pubblicato come Mario R.')).toBeInTheDocument();
         // il componente Rating di MUI reagisce al click diretto sul radio (userEvent in jsdom non lo seleziona)
         fireEvent.click(screen.getByRole('radio', { name: '3 Stars' }));
-        await user.type(screen.getByLabelText(/^Nome/), 'Anna');
         await user.type(screen.getByLabelText(/Commento/), 'Carina');
         await user.click(screen.getByRole('button', { name: 'Invia feedback' }));
 
-        expect(api.post).toHaveBeenCalledWith('/api/feedback', {
-            mostra_id: 1,
-            nome: 'Anna',
-            voto: 3,
-            commento: 'Carina',
-        });
+        expect(api.post).toHaveBeenCalledWith('/api/feedback', { mostra_id: 1, voto: 3, commento: 'Carina' });
         expect(await screen.findByText('Grazie! Il tuo feedback è stato pubblicato.')).toBeInTheDocument();
         expect(screen.getByText('Carina')).toBeInTheDocument();
     });
 
     it('senza voto non invia nulla', async () => {
+        collegaUtente();
         rispostaMostra([], IN_CORSO);
         const user = userEvent.setup();
         apriPagina();
 
-        await user.type(await screen.findByLabelText(/^Nome/), 'Anna');
-        await user.click(screen.getByRole('button', { name: 'Invia feedback' }));
-
+        await user.click(await screen.findByRole('button', { name: 'Invia feedback' }));
         expect(screen.getByText('Seleziona un voto da 1 a 5 stelle.')).toBeInTheDocument();
         expect(api.post).not.toHaveBeenCalled();
     });
 
-    it("mostra l'errore restituito dal backend", async () => {
+    it("mostra l'errore restituito dal backend (feedback già lasciato)", async () => {
+        collegaUtente();
         rispostaMostra([], IN_CORSO);
-        api.post.mockRejectedValue(erroreHttp(422, 'nome: Il nome deve contenere almeno 2 caratteri.'));
+        api.post.mockRejectedValue(erroreHttp(409, 'Hai già lasciato un feedback su questa mostra.'));
         const user = userEvent.setup();
         apriPagina();
 
         fireEvent.click(await screen.findByRole('radio', { name: '5 Stars' }));
-        await user.type(screen.getByLabelText(/^Nome/), 'A');
         await user.click(screen.getByRole('button', { name: 'Invia feedback' }));
-
-        expect(await screen.findByText(/almeno 2 caratteri/)).toBeInTheDocument();
+        expect(await screen.findByText('Hai già lasciato un feedback su questa mostra.')).toBeInTheDocument();
     });
 
     it('per una mostra non ancora iniziata il form non compare', async () => {

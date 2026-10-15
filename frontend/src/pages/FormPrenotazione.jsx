@@ -15,6 +15,7 @@ import {
 import { messaggioErrore } from '../services/api';
 import { getMostra } from '../services/mostreService';
 import { prenota } from '../services/prenotazioniService';
+import useUtente from '../hooks/useUtente';
 
 export default function FormPrenotazione() {
     const { id } = useParams();
@@ -22,10 +23,9 @@ export default function FormPrenotazione() {
     const [mostra, setMostra] = useState(null);
     const [erroreCaricamento, setErroreCaricamento] = useState('');
 
-    const [nome, setNome] = useState('');
-    const [cognome, setCognome] = useState('');
-    const [email, setEmail] = useState('');
-    const [telefono, setTelefono] = useState('');
+    // la pagina è protetta: il visitatore è sempre collegato e i suoi dati arrivano dall'account
+    const utente = useUtente();
+    const [telefono, setTelefono] = useState(utente?.telefono || '');
 
     const [loading, setLoading] = useState(false);
     const [successo, setSuccesso] = useState(false);
@@ -37,12 +37,8 @@ export default function FormPrenotazione() {
             .catch((err) => setErroreCaricamento(messaggioErrore(err, 'Impossibile caricare la mostra.')));
     }, [id]);
 
-    const isNomeValid = nome.trim().length >= 3;
-    const isCognomeValid = cognome.trim().length >= 3;
-    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     const isTelefonoValid = /^\d{6,15}$/.test(telefono.trim());
-
-    const isFormValid = isNomeValid && isCognomeValid && isEmailValid && isTelefonoValid;
+    const isFormValid = Boolean(utente) && isTelefonoValid;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -51,13 +47,7 @@ export default function FormPrenotazione() {
         setLoading(true);
         setErrore('');
 
-        const payload = {
-            mostra_id: parseInt(id),
-            nome: nome.trim(),
-            cognome: cognome.trim(),
-            email: email.trim(),
-            telefono: telefono.trim(),
-        };
+        const payload = { mostra_id: parseInt(id), telefono: telefono.trim() };
 
         prenota(payload)
             .then(() => {
@@ -142,8 +132,8 @@ export default function FormPrenotazione() {
                                 Prenotazione confermata con successo!
                             </Typography>
                             <Typography variant="body1" sx={{ color: '#ffffff', mb: 3, fontFamily: 'sans-serif' }}>
-                                Abbiamo inviato un'email di riepilogo all'indirizzo <b>{email}</b> con tutti i dettagli
-                                dell'esposizione.
+                                Abbiamo inviato un'email di riepilogo all'indirizzo <b>{utente?.email}</b> con tutti i
+                                dettagli dell'esposizione.
                             </Typography>
                             <Button
                                 onClick={() => navigate('/')}
@@ -161,64 +151,24 @@ export default function FormPrenotazione() {
                             sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
                         >
                             <Grid container spacing={3}>
-                                {/* Nome */}
-                                <Grid size={{ xs: 12, sm: 6 }}>
-                                    <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
-                                        Nome *
-                                    </Typography>
-                                    <TextField
-                                        slotProps={{ inputLabel: { shrink: true } }}
-                                        fullWidth
-                                        value={nome}
-                                        onChange={(e) => setNome(e.target.value)}
-                                        required
-                                        error={nome.length > 0 && !isNomeValid}
-                                        helperText={
-                                            nome.length > 0 && !isNomeValid ? 'Inserisci almeno 3 caratteri' : ''
-                                        }
-                                        sx={inputStyle}
-                                        disabled={loading}
-                                    />
-                                </Grid>
-
-                                {/* Cognome */}
-                                <Grid size={{ xs: 12, sm: 6 }}>
-                                    <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
-                                        Cognome *
-                                    </Typography>
-                                    <TextField
-                                        slotProps={{ inputLabel: { shrink: true } }}
-                                        fullWidth
-                                        value={cognome}
-                                        onChange={(e) => setCognome(e.target.value)}
-                                        required
-                                        error={cognome.length > 0 && !isCognomeValid}
-                                        helperText={
-                                            cognome.length > 0 && !isCognomeValid ? 'Inserisci almeno 3 caratteri' : ''
-                                        }
-                                        sx={inputStyle}
-                                        disabled={loading}
-                                    />
-                                </Grid>
-
-                                {/* Email */}
-                                <Grid size={{ xs: 12, sm: 6 }}>
-                                    <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
-                                        Email *
-                                    </Typography>
-                                    <TextField
-                                        slotProps={{ inputLabel: { shrink: true } }}
-                                        fullWidth
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        required
-                                        error={email.length > 0 && !isEmailValid}
-                                        helperText={email.length > 0 && !isEmailValid ? 'Formato email non valido' : ''}
-                                        sx={inputStyle}
-                                        disabled={loading}
-                                    />
-                                </Grid>
+                                {/* Dati dell'account: non modificabili da qui */}
+                                {[
+                                    ['Nome', utente?.nome],
+                                    ['Cognome', utente?.cognome],
+                                    ['Email', utente?.email],
+                                ].map(([etichetta, valore]) => (
+                                    <Grid key={etichetta} size={{ xs: 12, sm: 6 }}>
+                                        <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
+                                            {etichetta}
+                                        </Typography>
+                                        <TextField
+                                            fullWidth
+                                            value={valore || ''}
+                                            slotProps={{ htmlInput: { readOnly: true, 'aria-label': etichetta } }}
+                                            sx={{ input: { color: '#bbbbbb' } }}
+                                        />
+                                    </Grid>
+                                ))}
 
                                 {/* Telefono */}
                                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -226,7 +176,10 @@ export default function FormPrenotazione() {
                                         Telefono *
                                     </Typography>
                                     <TextField
-                                        slotProps={{ inputLabel: { shrink: true } }}
+                                        slotProps={{
+                                            inputLabel: { shrink: true },
+                                            htmlInput: { 'aria-label': 'Telefono' },
+                                        }}
                                         fullWidth
                                         value={telefono}
                                         onChange={(e) => setTelefono(e.target.value)}

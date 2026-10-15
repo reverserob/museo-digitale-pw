@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 import models
 import schemas
-from auth import richiedi_admin
+from auth import richiedi_admin, richiedi_utente
 from database import get_db
 from services.mostre_service import trova_mostra
 
@@ -18,7 +18,11 @@ router = APIRouter(prefix="/api/feedback", tags=["Feedback"])
 
 # API POST FEEDBACK
 @router.post("", response_model=schemas.FeedbackResponse, status_code=status.HTTP_201_CREATED)
-def crea_feedback(dati: schemas.FeedbackCreate, db: Session = Depends(get_db)):
+def crea_feedback(
+    dati: schemas.FeedbackCreate,
+    db: Session = Depends(get_db),
+    utente: models.Utente = Depends(richiedi_utente),
+):
     mostra = trova_mostra(db, dati.mostra_id)
 
     # si può recensire solo una mostra già aperta al pubblico
@@ -28,10 +32,23 @@ def crea_feedback(dati: schemas.FeedbackCreate, db: Session = Depends(get_db)):
             detail="La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita.",
         )
 
+    # un solo feedback per visitatore su ogni mostra
+    gia_presente = (
+        db.query(models.Feedback)
+        .filter(models.Feedback.mostra_id == mostra.id, models.Feedback.utente_id == utente.id)
+        .first()
+    )
+    if gia_presente:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Hai già lasciato un feedback su questa mostra."
+        )
+
     try:
         feedback = models.Feedback(
             mostra_id=mostra.id,
-            nome=dati.nome,
+            utente_id=utente.id,
+            # nel feedback pubblico compaiono il nome e l'iniziale del cognome (es. "Mario R.")
+            nome=f"{utente.nome} {utente.cognome[0].upper()}.",
             voto=dati.voto,
             commento=dati.commento,
         )

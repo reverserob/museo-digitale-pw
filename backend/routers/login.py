@@ -15,4 +15,4 @@ router = APIRouter(prefix="/api", tags=["Area riservata"])
 def login(request: Request, dati: schemas.LoginRequest):
     if not verifica_credenziali(dati.email, dati.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenziali errate.")
-    return {"access_token": crea_token(dati.email.strip().lower())}
+    return {"access_token": crea_token(dati.email.strip().lower(), ruolo="admin")}

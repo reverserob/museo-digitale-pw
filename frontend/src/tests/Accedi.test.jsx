@@ -1,0 +1,129 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import Accedi from '../pages/Accedi';
+import { api, getSessioneUtente } from '../services/api';
+import { FUTURE, UTENTE, collegaUtente, erroreHttp } from './utils';
+
+vi.mock('../services/api', async (importOriginal) => ({
+    ...(await importOriginal()),
+    api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+}));
+
+function apri(indirizzo = '/accedi') {
+    return render(
+        <MemoryRouter initialEntries={[indirizzo]} future={FUTURE}>
+            <Routes>
+                <Route path="/accedi" element={<Accedi />} />
+                <Route path="/profilo" element={<p>Pagina Profilo</p>} />
+                <Route path="/prenota/:id" element={<p>Pagina Prenotazione</p>} />
+            </Routes>
+        </MemoryRouter>
+    );
+}
+
+const SESSIONE = { data: { access_token: 'token-nuovo', utente: UTENTE } };
+
+describe('Accedi', () => {
+    it('login corretto: salva la sessione e torna alla pagina richiesta', async () => {
+        api.post.mockResolvedValue(SESSIONE);
+        const user = userEvent.setup();
+        apri('/accedi?next=%2Fprenota%2F3');
+
+        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/Password/), 'password-sicura');
+        await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
+
+        expect(api.post).toHaveBeenCalledWith('/api/utenti/login', {
+            email: 'mario@test.it',
+            password: 'password-sicura',
+        });
+        expect(await screen.findByText('Pagina Prenotazione')).toBeInTheDocument();
+        expect(getSessioneUtente()).toEqual({ token: 'token-nuovo', utente: UTENTE });
+    });
+
+    it('senza pagina richiesta porta alla propria area', async () => {
+        api.post.mockResolvedValue(SESSIONE);
+        const user = userEvent.setup();
+        apri();
+        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/Password/), 'password-sicura');
+        await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
+        expect(await screen.findByText('Pagina Profilo')).toBeInTheDocument();
+    });
+
+    it('ignora destinazioni esterne al sito', async () => {
+        api.post.mockResolvedValue(SESSIONE);
+        const user = userEvent.setup();
+        apri('/accedi?next=https%3A%2F%2Fsito-esterno.example');
+        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/Password/), 'password-sicura');
+        await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
+        expect(await screen.findByText('Pagina Profilo')).toBeInTheDocument();
+    });
+
+    it("login errato: mostra l'errore e non salva nulla", async () => {
+        api.post.mockRejectedValue(erroreHttp(401, 'Email o password errate.'));
+        const user = userEvent.setup();
+        apri();
+        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/Password/), 'sbagliata');
+        await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('Email o password errate.');
+        expect(getSessioneUtente()).toBeNull();
+    });
+
+    it('registrazione: il pulsante si attiva solo con dati validi e poi collega il visitatore', async () => {
+        api.post.mockResolvedValue(SESSIONE);
+        const user = userEvent.setup();
+        apri();
+        await user.click(screen.getByRole('tab', { name: 'Registrati' }));
+
+        const pulsante = screen.getByRole('button', { name: 'CREA ACCOUNT' });
+        expect(pulsante).toBeDisabled();
+
+        await user.type(screen.getByLabelText(/^Nome/), 'Mario');
+        await user.type(screen.getByLabelText(/Cognome/), 'Rossi');
+        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/Telefono/), '3331234567');
+        await user.type(screen.getByLabelText(/Password/), 'corta');
+        expect(pulsante).toBeDisabled();
+
+        await user.type(screen.getByLabelText(/Password/), '-e-sicura');
+        expect(pulsante).toBeEnabled();
+        await user.click(pulsante);
+
+        expect(api.post).toHaveBeenCalledWith('/api/utenti/registrazione', {
+            nome: 'Mario',
+            cognome: 'Rossi',
+            email: 'mario@test.it',
+            telefono: '3331234567',
+            password: 'corta-e-sicura',
+        });
+        expect(await screen.findByText('Pagina Profilo')).toBeInTheDocument();
+    });
+
+    it('registrazione con email già usata: mostra il messaggio del server', async () => {
+        api.post.mockRejectedValue(erroreHttp(409, 'Esiste già un account con questa email.'));
+        const user = userEvent.setup();
+        apri();
+        await user.click(screen.getByRole('tab', { name: 'Registrati' }));
+        await user.type(screen.getByLabelText(/^Nome/), 'Mario');
+        await user.type(screen.getByLabelText(/Cognome/), 'Rossi');
+        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/Telefono/), '3331234567');
+        await user.type(screen.getByLabelText(/Password/), 'password-sicura');
+        await user.click(screen.getByRole('button', { name: 'CREA ACCOUNT' }));
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('Esiste già un account');
+    });
+
+    it('se il visitatore è già collegato non mostra il form', () => {
+        collegaUtente();
+        apri();
+        expect(screen.getByText('Sei già collegato come Mario Rossi')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'ACCEDI' })).not.toBeInTheDocument();
+    });
+});
