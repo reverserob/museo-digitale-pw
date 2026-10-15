@@ -466,22 +466,22 @@ sequenceDiagram
 FastAPI genera in modo automatico e nativo la documentazione interattiva delle API basata sullo standard OpenAPI. All'indirizzo [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) è possibile esplorare e testare gli endpoint in tempo reale (Swagger UI), raggruppati per router. Lo screenshot della Swagger UI è riportato nel README del progetto.
 
 #### 7.1. Elenco degli endpoint
- = richiede il token dell'area riservata nell'header `Authorization: Bearer <token>`.
+🔒 = richiede il token dell'area riservata nell'header `Authorization: Bearer <token>`.
 
 | Router | Metodo e percorso | Descrizione | Risposte principali |
 |---|---|---|---|
 | Area riservata | POST /api/login | Verifica le credenziali dell'amministratore e restituisce un token di accesso firmato a tempo. | 200, 401, 429 |
-| Area riservata |  GET /api/statistiche | Indicatori per la dashboard: conteggi di mostre, prenotazioni e feedback, voto medio, dettaglio per mostra. | 200, 401 |
+| Area riservata | 🔒 GET /api/statistiche | Indicatori per la dashboard: conteggi di mostre, prenotazioni e feedback, voto medio, dettaglio per mostra. | 200, 401 |
 | Mostre | GET /api/mostre | Restituisce la lista di tutte le esposizioni, ordinate per data di inizio. | 200 |
 | Mostre | GET /api/mostre/{mostra_id} | Recupera i dettagli di una singola mostra. | 200, 404 |
-| Mostre |  POST /api/mostre | Caricamento di una nuova mostra e delle relative immagini (multipart/form-data). | 201, 400, 401, 422 |
-| Mostre |  PUT /api/mostre/{mostra_id} | Aggiornamento di un'esposizione esistente; le immagini sono facoltative. | 200, 400, 401, 404 |
-| Mostre |  DELETE /api/mostre/{mostra_id} | Eliminazione di un'esposizione, delle sue prenotazioni e dei suoi feedback. | 200, 401, 404 |
+| Mostre | 🔒 POST /api/mostre | Caricamento di una nuova mostra e delle relative immagini (multipart/form-data). | 201, 400, 401, 422 |
+| Mostre | 🔒 PUT /api/mostre/{mostra_id} | Aggiornamento di un'esposizione esistente. Il campo `immagini_esistenti` (lista JSON) indica quali immagini attuali tenere; le nuove immagini caricate si aggiungono in coda. Deve restare almeno un'immagine. | 200, 400, 401, 404 |
+| Mostre | 🔒 DELETE /api/mostre/{mostra_id} | Eliminazione di un'esposizione, delle sue prenotazioni e dei suoi feedback. | 200, 401, 404 |
 | Prenotazioni | POST /api/prenota | Salva la prenotazione validata e avvia in background l'invio dell'email di conferma. | 201, 400, 404, 422 |
-| Prenotazioni |  GET /api/prenotazioni | Elenco delle prenotazioni, filtrabile per mostra (`?mostra_id=`). | 200, 401 |
+| Prenotazioni | 🔒 GET /api/prenotazioni | Elenco delle prenotazioni, filtrabile per mostra (`?mostra_id=`). | 200, 401 |
 | Feedback | POST /api/feedback | Salva il feedback di un visitatore su una mostra già iniziata. | 201, 400, 404, 422 |
 | Feedback | GET /api/feedback | Elenco pubblico dei feedback, filtrabile per mostra (`?mostra_id=`), dal più recente. | 200 |
-| Feedback |  DELETE /api/feedback/{feedback_id} | Eliminazione di un feedback (moderazione). | 200, 401, 404 |
+| Feedback | 🔒 DELETE /api/feedback/{feedback_id} | Eliminazione di un feedback (moderazione). | 200, 401, 404 |
 
 #### 7.2. Esempi di richiesta e risposta
 
@@ -493,13 +493,13 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 // risposta 201 Created
 { "message": "Prenotazione effettuata con successo!", "id": 12 }
 
-// risposta 422
+// risposta 422 Unprocessable Entity (telefono non valido)
 { "detail": "telefono: Il numero di telefono deve contenere da 6 a 15 cifre." }
 ```
 
 **Feedback** – `POST /api/feedback`
 ```json
-// richiesta 
+// richiesta (il commento è facoltativo)
 { "mostra_id": 1, "nome": "Giulia", "voto": 5, "commento": "Allestimento bellissimo" }
 
 // risposta 201 Created
@@ -509,7 +509,7 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 { "detail": "La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita." }
 ```
 
-**Statistiche** – `GET /api/statistiche` ()
+**Statistiche** – `GET /api/statistiche` (🔒)
 ```json
 {
   "totale_mostre": 4,
@@ -531,7 +531,7 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 | Codice | Significato nel progetto |
 |---|---|
 | 200 OK / 201 Created | Operazione riuscita / risorsa creata |
-| 400 Bad Request | Errore di logica: date incoerenti, mostra conclusa o non iniziata, file non valido o troppo grande |
+| 400 Bad Request | Errore di logica: date incoerenti, mostra conclusa o non iniziata, file non valido o troppo grande, mostra senza immagini |
 | 401 Unauthorized | Credenziali errate, token assente, manomesso o scaduto |
 | 404 Not Found | Mostra o feedback inesistente |
 | 422 Unprocessable Entity | Dati che non rispettano lo schema (con messaggio leggibile) |
@@ -771,7 +771,7 @@ cd museo-digitale-pw/backend
 python -m venv venv
 source venv/bin/activate          # su Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env
+cp .env.example .env              # poi compilare i valori necessari
 uvicorn main:app --reload
 ```
 Il back-end è disponibile su `http://127.0.0.1:8000` e la documentazione delle API su `http://127.0.0.1:8000/docs`. Al primo avvio viene creato il file `museo.db` con le mostre iniziali.

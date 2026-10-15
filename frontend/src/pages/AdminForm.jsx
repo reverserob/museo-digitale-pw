@@ -10,6 +10,7 @@ const inputStyle = {
     textarea: { color: 'white' },
 };
 
+// Miniatura di un'immagine con il pulsante per toglierla
 function Miniatura({ src, nome, onRimuovi }) {
     return (
         <Box sx={{ position: 'relative', width: 110, border: '1px solid rgba(197, 160, 89, 0.4)' }}>
@@ -50,7 +51,9 @@ export default function AdminForm() {
     const [descrizione, setDescrizione] = useState('');
     const [dataInizio, setDataInizio] = useState('');
     const [dataFine, setDataFine] = useState('');
+    // in modifica: percorsi delle immagini già salvate che l'admin decide di tenere
     const [immaginiAttuali, setImmaginiAttuali] = useState([]);
+    // nuove immagini scelte: ogni nuova selezione si aggiunge a quelle già presenti
     const [fileImmagini, setFileImmagini] = useState([]);
     const [messaggio, setMessaggio] = useState('');
     const [errore, setErrore] = useState('');
@@ -79,15 +82,18 @@ export default function AdminForm() {
     const totaleImmagini = immaginiAttuali.length + fileImmagini.length;
     const immaginiOk = totaleImmagini > 0;
 
+    // anteprime delle immagini scelte (URL temporanei liberati quando cambia l'elenco)
     const anteprime = useMemo(() => fileImmagini.map((file) => URL.createObjectURL(file)), [fileImmagini]);
     useEffect(() => () => anteprime.forEach((url) => URL.revokeObjectURL(url)), [anteprime]);
 
     const aggiungiImmagini = (e) => {
         const nuovi = Array.from(e.target.files || []);
         setFileImmagini((precedenti) => {
+            // evita di aggiungere due volte lo stesso file
             const giaPresenti = new Set(precedenti.map((f) => `${f.name}-${f.size}`));
             return [...precedenti, ...nuovi.filter((f) => !giaPresenti.has(`${f.name}-${f.size}`))];
         });
+        // svuota l'input, così si può riselezionare anche un file appena rimosso
         e.target.value = '';
     };
 
@@ -112,9 +118,10 @@ export default function AdminForm() {
         formData.append('data_inizio', dataInizio);
         formData.append('data_fine', dataFine);
         fileImmagini.forEach((file) => formData.append('immagini', file));
+        // in modifica il server tiene solo le immagini attuali elencate qui e aggiunge le nuove in coda
         if (isEditMode) formData.append('immagini_esistenti', JSON.stringify(immaginiAttuali));
 
-        // content-type multipart
+        // Il Content-Type multipart (con il boundary) viene impostato da axios
         const request = isEditMode ? aggiornaMostra(id, formData) : creaMostra(formData);
 
         request

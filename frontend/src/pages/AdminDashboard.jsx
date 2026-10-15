@@ -52,6 +52,7 @@ export default function AdminDashboard() {
 
     const caricaDati = useCallback(() => {
         setLoading(true);
+        // feedback e statistiche sono facoltativi: se non rispondono la dashboard mostra comunque mostre e prenotazioni
         const facoltativo = (promessa, valoreDiRiserva) =>
             promessa.catch((err) => {
                 console.warn('Dati della dashboard non disponibili:', messaggioErrore(err));

@@ -51,7 +51,7 @@ describe('AdminForm', () => {
 
         const foto = new File(['contenuto'], 'foto.png', { type: 'image/png' });
         await user.upload(container.querySelector('input[type="file"]'), foto);
-        expect(screen.getByText('immagine selezionata')).toBeInTheDocument();
+        expect(screen.getByText('1 immagine selezionata')).toBeInTheDocument();
 
         await user.click(pulsante);
 
