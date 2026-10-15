@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, Rating, TextField, Button, Alert, Divider } from '@mui/material';
 import { messaggioErrore } from '../services/api';
-import { getFeedback, inviaFeedback } from '../services/feedbackService';
+import { getFeedback, inviaFeedback, eliminaFeedback } from '../services/feedbackService';
 
 const inputStyle = {
     input: { color: 'white' },
@@ -9,10 +9,9 @@ const inputStyle = {
     label: { color: '#999999' },
 };
 
-// data di oggi nel formato AAAA-MM-GG, confrontabile con le date delle mostre
 const oggiIso = () => new Date().toISOString().slice(0, 10);
 
-export default function SezioneFeedback({ mostra }) {
+export default function SezioneFeedback({ mostra, admin = false }) {
     const [elenco, setElenco] = useState([]);
     const [nome, setNome] = useState('');
     const [voto, setVoto] = useState(0);
