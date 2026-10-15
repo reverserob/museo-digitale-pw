@@ -1,3 +1,5 @@
+import pytest
+
 import models
 from auth import hash_password, verifica_password
 from database import SessionLocal
@@ -8,7 +10,7 @@ DATI = {
     "cognome": "Verdi",
     "email": "Giulia.Verdi@Test.it",
     "telefono": "3471234567",
-    "password": "password-sicura",
+    "password": "Museo2026",
 }
 
 
@@ -27,7 +29,7 @@ def test_password_salvata_solo_come_hash(client):
     db = SessionLocal()
     utente = db.query(models.Utente).one()
     db.close()
-    assert "password-sicura" not in utente.password_hash
+    assert "Museo2026" not in utente.password_hash
     assert utente.password_hash.startswith("pbkdf2_sha256$")
 
 
@@ -38,15 +40,28 @@ def test_email_gia_registrata(client):
     assert "Esiste già" in r.json()["detail"]
 
 
-def test_registrazione_password_corta(client):
-    r = client.post("/api/utenti/registrazione", json={**DATI, "password": "1234"})
+@pytest.mark.parametrize(
+    "password, messaggio",
+    [
+        ("Ab1", "almeno 6 caratteri"),
+        ("museo2026", "lettera maiuscola"),
+        ("MuseoCivico", "almeno un numero"),
+    ],
+)
+def test_registrazione_password_non_valida(client, password, messaggio):
+    r = client.post("/api/utenti/registrazione", json={**DATI, "password": password})
     assert r.status_code == 422
-    assert "almeno 8 caratteri" in r.json()["detail"]
+    assert messaggio in r.json()["detail"]
+
+
+def test_registrazione_password_minima_valida(client):
+    # 6 caratteri con una maiuscola e un numero: il minimo accettato
+    assert client.post("/api/utenti/registrazione", json={**DATI, "password": "Museo1"}).status_code == 201
 
 
 def test_login_corretto(client):
     client.post("/api/utenti/registrazione", json=DATI)
-    r = client.post("/api/utenti/login", json={"email": " GIULIA.verdi@test.it ", "password": "password-sicura"})
+    r = client.post("/api/utenti/login", json={"email": " GIULIA.verdi@test.it ", "password": "Museo2026"})
     assert r.status_code == 200
     assert r.json()["utente"]["nome"] == "Giulia"
 
@@ -54,7 +69,7 @@ def test_login_corretto(client):
 def test_login_errato_stesso_messaggio(client):
     client.post("/api/utenti/registrazione", json=DATI)
     sbagliata = client.post("/api/utenti/login", json={"email": "giulia.verdi@test.it", "password": "sbagliata!"})
-    inesistente = client.post("/api/utenti/login", json={"email": "nessuno@test.it", "password": "password-sicura"})
+    inesistente = client.post("/api/utenti/login", json={"email": "nessuno@test.it", "password": "Museo2026"})
     assert sbagliata.status_code == inesistente.status_code == 401
     # non si rivela se l'email esiste
     assert sbagliata.json()["detail"] == inesistente.json()["detail"] == "Email o password errate."

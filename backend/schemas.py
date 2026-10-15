@@ -59,10 +59,15 @@ class RegistrazioneRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def valida_password(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("La password deve contenere almeno 8 caratteri.")
+        # stessa regola controllata nel form di registrazione
+        if len(v) < 6:
+            raise ValueError("La password deve contenere almeno 6 caratteri.")
         if len(v) > 128:
             raise ValueError("La password può contenere al massimo 128 caratteri.")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("La password deve contenere almeno una lettera maiuscola.")
+        if not re.search(r"\d", v):
+            raise ValueError("La password deve contenere almeno un numero.")
         return v
 
 

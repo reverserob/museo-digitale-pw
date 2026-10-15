@@ -14,6 +14,13 @@ const cardSx = {
 const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
 const campo = { slotProps: { inputLabel: { shrink: true } }, fullWidth: true, sx: inputStyle };
 
+// regole della password (le stesse controllate dal server)
+const REGOLE_PASSWORD = [
+    { testo: 'almeno 6 caratteri', ok: (p) => p.length >= 6 },
+    { testo: 'una lettera maiuscola', ok: (p) => /[A-Z]/.test(p) },
+    { testo: 'un numero', ok: (p) => /\d/.test(p) },
+];
+
 // accetto solo indirizzi interni al sito come destinazione dopo il login
 const destinazioneSicura = (next) => (next && next.startsWith('/') && !next.startsWith('//') ? next : '/profilo');
 
@@ -24,18 +31,23 @@ export default function Accedi() {
     const utente = useUtente();
 
     const [scheda, setScheda] = useState(0);
-    const [dati, setDati] = useState({ nome: '', cognome: '', email: '', telefono: '', password: '' });
+    const [dati, setDati] = useState({ nome: '', cognome: '', email: '', telefono: '', password: '', conferma: '' });
     const [errore, setErrore] = useState('');
     const [invio, setInvio] = useState(false);
 
     const aggiorna = (nomeCampo) => (e) => setDati({ ...dati, [nomeCampo]: e.target.value });
+
+    const requisitiMancanti = REGOLE_PASSWORD.filter((r) => !r.ok(dati.password)).map((r) => r.testo);
+    const passwordValida = requisitiMancanti.length === 0;
+    const confermaErrata = dati.conferma.length > 0 && dati.conferma !== dati.password;
 
     const registrazioneValida =
         dati.nome.trim().length >= 2 &&
         dati.cognome.trim().length >= 2 &&
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dati.email.trim()) &&
         /^\d{6,15}$/.test(dati.telefono.trim()) &&
-        dati.password.length >= 8;
+        passwordValida &&
+        dati.conferma === dati.password;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -154,9 +166,29 @@ export default function Accedi() {
                             autoComplete={scheda === 0 ? 'current-password' : 'new-password'}
                             value={dati.password}
                             onChange={aggiorna('password')}
-                            helperText={scheda === 1 ? 'Almeno 8 caratteri' : ''}
+                            error={scheda === 1 && dati.password.length > 0 && !passwordValida}
+                            helperText={
+                                scheda !== 1
+                                    ? ''
+                                    : passwordValida
+                                      ? 'Password valida'
+                                      : `Serve: ${requisitiMancanti.join(', ')}`
+                            }
                             required
                         />
+                        {scheda === 1 && (
+                            <TextField
+                                {...campo}
+                                label="Conferma password"
+                                type="password"
+                                autoComplete="new-password"
+                                value={dati.conferma}
+                                onChange={aggiorna('conferma')}
+                                error={confermaErrata}
+                                helperText={confermaErrata ? 'Le password non coincidono' : ''}
+                                required
+                            />
+                        )}
                         {errore && <Alert severity="error">{errore}</Alert>}
                         <Button
                             type="submit"

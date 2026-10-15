@@ -32,12 +32,12 @@ describe('Accedi', () => {
         apri('/accedi?next=%2Fprenota%2F3');
 
         await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
-        await user.type(screen.getByLabelText(/Password/), 'password-sicura');
+        await user.type(screen.getByLabelText(/Password/), 'Museo2026');
         await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
 
         expect(api.post).toHaveBeenCalledWith('/api/utenti/login', {
             email: 'mario@test.it',
-            password: 'password-sicura',
+            password: 'Museo2026',
         });
         expect(await screen.findByText('Pagina Prenotazione')).toBeInTheDocument();
         expect(getSessioneUtente()).toEqual({ token: 'token-nuovo', utente: UTENTE });
@@ -48,7 +48,7 @@ describe('Accedi', () => {
         const user = userEvent.setup();
         apri();
         await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
-        await user.type(screen.getByLabelText(/Password/), 'password-sicura');
+        await user.type(screen.getByLabelText(/Password/), 'Museo2026');
         await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
         expect(await screen.findByText('Pagina Profilo')).toBeInTheDocument();
     });
@@ -58,7 +58,7 @@ describe('Accedi', () => {
         const user = userEvent.setup();
         apri('/accedi?next=https%3A%2F%2Fsito-esterno.example');
         await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
-        await user.type(screen.getByLabelText(/Password/), 'password-sicura');
+        await user.type(screen.getByLabelText(/Password/), 'Museo2026');
         await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
         expect(await screen.findByText('Pagina Profilo')).toBeInTheDocument();
     });
@@ -88,19 +88,33 @@ describe('Accedi', () => {
         await user.type(screen.getByLabelText(/Cognome/), 'Rossi');
         await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
         await user.type(screen.getByLabelText(/Telefono/), '3331234567');
-        await user.type(screen.getByLabelText(/Password/), 'corta');
+
+        const password = screen.getByLabelText(/^Password/);
+        await user.type(password, 'museo');
+        expect(screen.getByText('Serve: almeno 6 caratteri, una lettera maiuscola, un numero')).toBeInTheDocument();
+        await user.clear(password);
+        await user.type(password, 'Museo2026');
+        expect(screen.getByText('Password valida')).toBeInTheDocument();
+        expect(pulsante).toBeDisabled(); // manca ancora la conferma
+
+        const conferma = screen.getByLabelText(/Conferma password/);
+        await user.type(conferma, 'Museo2025');
+        expect(screen.getByText('Le password non coincidono')).toBeInTheDocument();
         expect(pulsante).toBeDisabled();
 
-        await user.type(screen.getByLabelText(/Password/), '-e-sicura');
+        await user.clear(conferma);
+        await user.type(conferma, 'Museo2026');
+        expect(screen.queryByText('Le password non coincidono')).not.toBeInTheDocument();
         expect(pulsante).toBeEnabled();
         await user.click(pulsante);
 
+        // la conferma resta nel browser: al server arriva solo la password
         expect(api.post).toHaveBeenCalledWith('/api/utenti/registrazione', {
             nome: 'Mario',
             cognome: 'Rossi',
             email: 'mario@test.it',
             telefono: '3331234567',
-            password: 'corta-e-sicura',
+            password: 'Museo2026',
         });
         expect(await screen.findByText('Pagina Profilo')).toBeInTheDocument();
     });
@@ -114,7 +128,8 @@ describe('Accedi', () => {
         await user.type(screen.getByLabelText(/Cognome/), 'Rossi');
         await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
         await user.type(screen.getByLabelText(/Telefono/), '3331234567');
-        await user.type(screen.getByLabelText(/Password/), 'password-sicura');
+        await user.type(screen.getByLabelText(/^Password/), 'Museo2026');
+        await user.type(screen.getByLabelText(/Conferma password/), 'Museo2026');
         await user.click(screen.getByRole('button', { name: 'CREA ACCOUNT' }));
 
         expect(await screen.findByRole('alert')).toHaveTextContent('Esiste già un account');
