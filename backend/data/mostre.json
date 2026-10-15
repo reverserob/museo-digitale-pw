@@ -6,7 +6,10 @@
       "/static/uploads/caravaggio.webp"
     ],
     "data_inizio": "2026-10-10",
-    "data_fine": "2027-01-15"
+    "data_fine": "2027-01-15",
+    "feedback": [
+      { "nome": "Giulia", "voto": 5, "commento": "Fantastica mostra, super interessante" }
+    ]
   },
   {
     "titolo": "Leonardo: Il Codice Atlantico",

@@ -44,6 +44,10 @@ def database_pulito():
     models.Base.metadata.drop_all(bind=engine)
     models.Base.metadata.create_all(bind=engine)
     inserisci_dati_iniziali()
+    db = SessionLocal()
+    db.query(models.Feedback).delete()
+    db.commit()
+    db.close()
     yield
 
 

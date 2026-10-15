@@ -24,16 +24,20 @@ def inserisci_dati_iniziali():
         if db.query(models.Mostra).count() == 0:
             mostre = leggi_mostre_json()
             for m in mostre:
-                db.add(
-                    models.Mostra(
-                        titolo=m["titolo"],
-                        descrizione=m["descrizione"],
-                        # nel JSON le immagini sono una lista, nel DB una stringa separata da virgole
-                        immagini=",".join(m["immagini"]),
-                        data_inizio=date.fromisoformat(m["data_inizio"]),
-                        data_fine=date.fromisoformat(m["data_fine"]),
-                    )
+                mostra = models.Mostra(
+                    titolo=m["titolo"],
+                    descrizione=m["descrizione"],
+                    # nel JSON le immagini sono una lista, nel DB una stringa separata da virgole
+                    immagini=",".join(m["immagini"]),
+                    data_inizio=date.fromisoformat(m["data_inizio"]),
+                    data_fine=date.fromisoformat(m["data_fine"]),
                 )
+                # feedback iniziali (facoltativi): collegati alla mostra tramite la relazione
+                for f in m.get("feedback", []):
+                    mostra.feedback.append(
+                        models.Feedback(nome=f["nome"], voto=f["voto"], commento=f.get("commento", ""))
+                    )
+                db.add(mostra)
             db.commit()
             logger.info(f"Seeding completato: {len(mostre)} mostre inserite da {SEED_FILE.name}")
     except FileNotFoundError:

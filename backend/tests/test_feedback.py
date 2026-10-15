@@ -77,3 +77,18 @@ def test_eliminando_la_mostra_spariscono_i_feedback(client, auth, mostra_in_cors
     client.post("/api/feedback", json=feedback_valido(mostra_in_corso))
     client.delete(f"/api/mostre/{mostra_in_corso}", headers=auth)
     assert client.get("/api/feedback").json() == []
+
+
+def test_seeding_inserisce_i_feedback_del_json():
+    import models
+    from database import SessionLocal, engine
+    from services.seed_service import inserisci_dati_iniziali, leggi_mostre_json
+
+    attesi = sum(len(m.get("feedback", [])) for m in leggi_mostre_json())
+    models.Base.metadata.drop_all(bind=engine)
+    models.Base.metadata.create_all(bind=engine)
+    inserisci_dati_iniziali()
+
+    db = SessionLocal()
+    assert db.query(models.Feedback).count() == attesi
+    db.close()
