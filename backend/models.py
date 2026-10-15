@@ -31,8 +31,9 @@ class Prenotazione(Base):
     email = Column(String, nullable=False)
     telefono = Column(String, nullable=False)
     creata_il = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-
+    utente_id = Column(Integer, ForeignKey("utenti.id", ondelete="SET NULL"), nullable=True, index=True)
     mostra = relationship("Mostra", back_populates="prenotazioni")
+    utente = relationship("Utente", back_populates="prenotazioni")
 
 
 class Feedback(Base):
@@ -46,5 +47,23 @@ class Feedback(Base):
     voto = Column(Integer, nullable=False)
     commento = Column(Text, nullable=False, default="")
     creato_il = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    utente_id = Column(Integer, ForeignKey("utenti.id", ondelete="SET NULL"), nullable=True, index=True)
 
     mostra = relationship("Mostra", back_populates="feedback")
+    utente = relationship("Utente", back_populates="feedback")
+
+
+class Utente(Base):
+    __tablename__ = "utenti"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, nullable=False)
+    cognome = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True, index=True)
+    telefono = Column(String, nullable=False)
+    # mai la password in chiaro: solo l'hash PBKDF2 con il suo sale
+    password_hash = Column(String, nullable=False)
+    creato_il = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    prenotazioni = relationship("Prenotazione", back_populates="utente")
+    feedback = relationship("Feedback", back_populates="utente")

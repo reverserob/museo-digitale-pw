@@ -197,15 +197,8 @@ def test_elimina_mostra_inesistente(client, auth):
     assert client.delete("/api/mostre/9999", headers=auth).status_code == 404
 
 
-def test_elimina_mostra_cancella_le_prenotazioni(client, auth, mostra_futura):
-    dati = {
-        "mostra_id": mostra_futura,
-        "nome": "Mario",
-        "cognome": "Rossi",
-        "email": "mario@test.it",
-        "telefono": "3331234567",
-    }
-    assert client.post("/api/prenota", json=dati).status_code == 201
+def test_elimina_mostra_cancella_le_prenotazioni(client, auth, utente, mostra_futura):
+    assert client.post("/api/prenota", json={"mostra_id": mostra_futura}, headers=utente).status_code == 201
     assert len(client.get("/api/prenotazioni", headers=auth).json()) == 1
 
     client.delete(f"/api/mostre/{mostra_futura}", headers=auth)

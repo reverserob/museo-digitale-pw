@@ -26,12 +26,41 @@ export const setToken = (token) => {
     }
 };
 
+const UTENTE_KEY = 'utente_sessione';
+export const EVENTO_SESSIONE = 'sessione-utente-cambiata';
+
+export const getSessioneUtente = () => {
+    try {
+        return JSON.parse(localStorage.getItem(UTENTE_KEY)) || null;
+    } catch {
+        return null;
+    }
+};
+
+export const setSessioneUtente = (sessione) => {
+    try {
+        if (sessione) localStorage.setItem(UTENTE_KEY, JSON.stringify(sessione));
+        else localStorage.removeItem(UTENTE_KEY);
+    } catch {
+        /* localStorage non disponibile */
+    }
+    // avvisa i componenti (es. l'header) che la sessione è cambiata
+    window.dispatchEvent(new Event(EVENTO_SESSIONE));
+};
+
+// Le chiamate del visitatore usano il suo token, tutte le altre quello dell'admin
+export const richiestaDelVisitatore = (config) => {
+    const url = config.url || '';
+    const metodo = (config.method || 'get').toLowerCase();
+    return url.startsWith('/api/utenti/me') || url === '/api/prenota' || (url === '/api/feedback' && metodo === 'post');
+};
+
 // axios instance
 export const api = axios.create({ baseURL: API_URL });
 
 // api request logic
 api.interceptors.request.use((config) => {
-    const token = getToken();
+    const token = richiestaDelVisitatore(config) ? getSessioneUtente()?.token : getToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
 });
@@ -40,9 +69,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401 && getToken()) {
-            setToken(null);
-            if (window.location.pathname.startsWith('/admin')) window.location.assign('/admin');
+        if (error.response?.status === 401) {
+            if (error.config && richiestaDelVisitatore(error.config)) {
+                // token del visitatore scaduto o non valido: lo scollego
+                if (getSessioneUtente()) setSessioneUtente(null);
+            } else if (getToken()) {
+                setToken(null);
+                if (window.location.pathname.startsWith('/admin')) window.location.assign('/admin');
+            }
         }
         return Promise.reject(error);
     }

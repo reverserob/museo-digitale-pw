@@ -3,16 +3,17 @@ from datetime import date, datetime
 import models
 from database import SessionLocal
 from services.statistiche_service import stato_mostra
+from tests.conftest import registra_utente
 
 
-def prenota(client, mostra_id):
-    dati = {"mostra_id": mostra_id, "nome": "Mario", "cognome": "Rossi", "email": "m@test.it", "telefono": "3331234567"}
-    assert client.post("/api/prenota", json=dati).status_code == 201
+def prenota(client, mostra_id, utente):
+    assert client.post("/api/prenota", json={"mostra_id": mostra_id}, headers=utente).status_code == 201
 
 
-def recensisci(client, mostra_id, voto):
-    dati = {"mostra_id": mostra_id, "nome": "Giulia", "voto": voto}
-    assert client.post("/api/feedback", json=dati).status_code == 201
+def recensisci(client, mostra_id, voto, email):
+    # un feedback per visitatore: ogni recensione arriva da un account diverso
+    utente = registra_utente(client, email=email)
+    assert client.post("/api/feedback", json={"mostra_id": mostra_id, "voto": voto}, headers=utente).status_code == 201
 
 
 def test_statistiche_richiedono_admin(client):
@@ -29,12 +30,12 @@ def test_statistiche_database_iniziale(client, auth):
     assert s["voto_medio"] is None
 
 
-def test_statistiche_conteggi(client, auth, mostra_futura, mostra_in_corso):
-    prenota(client, mostra_futura)
-    prenota(client, mostra_futura)
-    prenota(client, mostra_in_corso)
-    recensisci(client, mostra_in_corso, 5)
-    recensisci(client, mostra_in_corso, 4)
+def test_statistiche_conteggi(client, auth, utente, mostra_futura, mostra_in_corso):
+    prenota(client, mostra_futura, utente)
+    prenota(client, mostra_futura, utente)
+    prenota(client, mostra_in_corso, utente)
+    recensisci(client, mostra_in_corso, 5, "a@test.it")
+    recensisci(client, mostra_in_corso, 4, "b@test.it")
 
     s = client.get("/api/statistiche", headers=auth).json()
     assert s["totale_prenotazioni"] == 3

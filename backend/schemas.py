@@ -16,38 +16,81 @@ class MostraResponse(BaseModel):
     data_fine: date
 
 
-class PrenotazioneCreate(BaseModel):
-    """Dati inviati dal form di prenotazione, validati lato server."""
+def _valida_nome(v: str, minimo: int = 2) -> str:
+    v = v.strip()
+    if len(v) < minimo:
+        raise ValueError(f"Il campo deve contenere almeno {minimo} caratteri.")
+    if len(v) > 100:
+        raise ValueError("Il campo può contenere al massimo 100 caratteri.")
+    return v
 
-    mostra_id: int
+
+def _valida_telefono(v: str) -> str:
+    v = v.strip()
+    if not re.fullmatch(r"\d{6,15}", v):
+        raise ValueError("Il numero di telefono deve contenere da 6 a 15 cifre.")
+    return v
+
+
+class RegistrazioneRequest(BaseModel):
     nome: str
     cognome: str
     email: EmailStr
     telefono: str
+    password: str
 
     @field_validator("nome", "cognome")
     @classmethod
     def valida_nomi(cls, v: str) -> str:
-        v = v.strip()
-        if len(v) < 3:
-            raise ValueError("Il campo deve contenere almeno 3 caratteri.")
-        if len(v) > 100:
-            raise ValueError("Il campo può contenere al massimo 100 caratteri.")
-        return v
+        return _valida_nome(v)
 
     @field_validator("email")
     @classmethod
     def normalizza_email(cls, v: str) -> str:
-        # Il formato è già verificato da EmailStr: qui normalizziamo soltanto
         return v.strip().lower()
 
     @field_validator("telefono")
     @classmethod
     def valida_telefono(cls, v: str) -> str:
-        v = v.strip()
-        if not re.fullmatch(r"\d{6,15}", v):
-            raise ValueError("Il numero di telefono deve contenere da 6 a 15 cifre.")
+        return _valida_telefono(v)
+
+    @field_validator("password")
+    @classmethod
+    def valida_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("La password deve contenere almeno 8 caratteri.")
+        if len(v) > 128:
+            raise ValueError("La password può contenere al massimo 128 caratteri.")
         return v
+
+
+class UtenteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nome: str
+    cognome: str
+    email: str
+    telefono: str
+
+
+class SessioneUtenteResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    utente: UtenteResponse
+
+
+class PrenotazioneCreate(BaseModel):
+    """Prenotazione di un visitatore registrato: nome, cognome ed email arrivano dal suo account."""
+
+    mostra_id: int
+    # facoltativo: se manca si usa il telefono dell'account
+    telefono: Optional[str] = None
+
+    @field_validator("telefono")
+    @classmethod
+    def valida_telefono(cls, v: Optional[str]) -> Optional[str]:
+        return _valida_telefono(v) if v is not None else None
 
 
 class PrenotazioneResponse(BaseModel):
@@ -64,19 +107,8 @@ class PrenotazioneResponse(BaseModel):
 
 class FeedbackCreate(BaseModel):
     mostra_id: int
-    nome: str
     voto: int
     commento: str = ""
-
-    @field_validator("nome")
-    @classmethod
-    def valida_nome(cls, v: str) -> str:
-        v = v.strip()
-        if len(v) < 2:
-            raise ValueError("Il nome deve contenere almeno 2 caratteri.")
-        if len(v) > 60:
-            raise ValueError("Il nome può contenere al massimo 60 caratteri.")
-        return v
 
     @field_validator("voto")
     @classmethod
@@ -124,6 +156,15 @@ class StatisticheResponse(BaseModel):
     totale_feedback: int
     voto_medio: Optional[float]
     per_mostra: list[StatisticheMostra]
+
+
+class MiaPrenotazioneResponse(BaseModel):
+    id: int
+    mostra_id: int
+    titolo_mostra: str
+    data_inizio: date
+    data_fine: date
+    creata_il: datetime
 
 
 class LoginRequest(BaseModel):

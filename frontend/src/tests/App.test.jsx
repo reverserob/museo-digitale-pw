@@ -36,4 +36,11 @@ describe('App', () => {
         expect(await screen.findByText('Area Riservata - Accesso Admin')).toBeInTheDocument();
         expect(window.location.pathname).toBe('/admin');
     });
+
+    it('la prenotazione senza login rimanda ad Accedi', async () => {
+        apriApp('/prenota/1');
+        expect(await screen.findByRole('tab', { name: 'Registrati' })).toBeInTheDocument();
+        expect(window.location.pathname).toBe('/accedi');
+        expect(window.location.search).toBe('?next=%2Fprenota%2F1');
+    });
 });

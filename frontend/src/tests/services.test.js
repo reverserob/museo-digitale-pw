@@ -5,6 +5,7 @@ import { prenota, getPrenotazioni } from '../services/prenotazioniService';
 import { login, logout, isLoggedIn } from '../services/authService';
 import { inviaFeedback, getFeedback, eliminaFeedback } from '../services/feedbackService';
 import { getStatistiche } from '../services/statisticheService';
+import { registrazione, loginUtente, logoutUtente, getUtente, getMiePrenotazioni } from '../services/utentiService';
 
 vi.mock('../services/api', async (importOriginal) => ({
     ...(await importOriginal()),
@@ -109,5 +110,29 @@ describe('feedbackService e statisticheService', () => {
         risponde('get', { totale_mostre: 6 });
         expect(await getStatistiche()).toEqual({ totale_mostre: 6 });
         expect(api.get).toHaveBeenCalledWith('/api/statistiche');
+    });
+});
+
+describe('utentiService', () => {
+    const SESSIONE = { access_token: 'tok', utente: { id: 1, nome: 'Mario' } };
+
+    it('registrazione e login salvano la sessione del visitatore', async () => {
+        risponde('post', SESSIONE);
+        expect(await registrazione({ nome: 'Mario' })).toEqual(SESSIONE.utente);
+        expect(api.post).toHaveBeenCalledWith('/api/utenti/registrazione', { nome: 'Mario' });
+        expect(getUtente()).toEqual(SESSIONE.utente);
+
+        logoutUtente();
+        expect(getUtente()).toBeNull();
+
+        await loginUtente('m@test.it', 'pw');
+        expect(api.post).toHaveBeenCalledWith('/api/utenti/login', { email: 'm@test.it', password: 'pw' });
+        expect(getUtente()).toEqual(SESSIONE.utente);
+    });
+
+    it('getMiePrenotazioni chiama GET /api/utenti/me/prenotazioni', async () => {
+        risponde('get', []);
+        await getMiePrenotazioni();
+        expect(api.get).toHaveBeenCalledWith('/api/utenti/me/prenotazioni');
     });
 });

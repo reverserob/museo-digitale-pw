@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { setSessioneUtente } from '../services/api';
 
 // attiva già il comportamento di React Router v7 (evita gli avvisi nei test)
 export const FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true };
@@ -13,6 +14,8 @@ export function renderConRouter(elemento, { percorso = '/', indirizzo = '/' } = 
                 <Route path={percorso} element={elemento} />
                 <Route path="/" element={<p>Pagina Home</p>} />
                 <Route path="/admin" element={<p>Pagina Admin</p>} />
+                <Route path="/accedi" element={<p>Pagina Accedi</p>} />
+                <Route path="/profilo" element={<p>Pagina Profilo</p>} />
             </Routes>
         </MemoryRouter>
     );
@@ -31,3 +34,10 @@ export const MOSTRA = {
     data_inizio: '2026-10-10',
     data_fine: '2027-01-15',
 };
+
+export const UTENTE = { id: 7, nome: 'Mario', cognome: 'Rossi', email: 'mario@test.it', telefono: '3331234567' };
+
+// simula un visitatore che ha già fatto il login
+export function collegaUtente(utente = UTENTE) {
+    setSessioneUtente({ token: 'token-utente', utente });
+}

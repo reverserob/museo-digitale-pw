@@ -12,5 +12,6 @@ if (!URL.createObjectURL) {
 afterEach(() => {
     cleanup();
     sessionStorage.clear();
+    localStorage.clear();
     vi.clearAllMocks();
 });

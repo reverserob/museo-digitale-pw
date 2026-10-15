@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { API_URL, api, getToken, setToken, imageUrl, splitImmagini, messaggioErrore } from '../services/api';
+import {
+    API_URL,
+    api,
+    getToken,
+    setToken,
+    imageUrl,
+    splitImmagini,
+    messaggioErrore,
+    richiestaDelVisitatore,
+    getSessioneUtente,
+    setSessioneUtente,
+} from '../services/api';
 
 describe('services/api - immagini', () => {
     it("aggiunge l'indirizzo del backend ai percorsi relativi", () => {
@@ -66,5 +77,24 @@ describe('services/api - token', () => {
         setToken('scaduto');
         await expect(gestisciErrore({ response: { status: 401 } })).rejects.toBeTruthy();
         expect(getToken()).toBeNull();
+    });
+});
+
+describe('token giusto per ogni chiamata', () => {
+    it('le chiamate del visitatore usano il suo token, le altre quello admin', () => {
+        expect(richiestaDelVisitatore({ url: '/api/prenota', method: 'post' })).toBe(true);
+        expect(richiestaDelVisitatore({ url: '/api/feedback', method: 'post' })).toBe(true);
+        expect(richiestaDelVisitatore({ url: '/api/utenti/me/prenotazioni', method: 'get' })).toBe(true);
+        expect(richiestaDelVisitatore({ url: '/api/feedback', method: 'get' })).toBe(false);
+        expect(richiestaDelVisitatore({ url: '/api/prenotazioni', method: 'get' })).toBe(false);
+        expect(richiestaDelVisitatore({ url: '/api/feedback/3', method: 'delete' })).toBe(false);
+        expect(richiestaDelVisitatore({ url: '/api/utenti/login', method: 'post' })).toBe(false);
+    });
+
+    it('la sessione del visitatore si salva e si cancella', () => {
+        setSessioneUtente({ token: 't', utente: { nome: 'Mario' } });
+        expect(getSessioneUtente()).toEqual({ token: 't', utente: { nome: 'Mario' } });
+        setSessioneUtente(null);
+        expect(getSessioneUtente()).toBeNull();
     });
 });

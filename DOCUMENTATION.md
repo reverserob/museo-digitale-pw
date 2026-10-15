@@ -116,17 +116,18 @@ Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una
 
 #### 3.1. Requisiti funzionali
 - **RF1 – Catalogo**: il visitatore consulta l'elenco delle mostre e il dettaglio con la galleria di immagini.
-- **RF2 – Prenotazione**: il visitatore prenota una visita indicando nome, cognome, email e telefono; non è possibile prenotare una mostra già conclusa.
+- **RF2 – Prenotazione**: il visitatore registrato prenota una visita; nome, cognome ed email arrivano dal suo account e può indicare un telefono diverso. Non è possibile prenotare una mostra già conclusa.
 - **RF3 – Conferma**: dopo la prenotazione il visitatore riceve un'email di riepilogo.
-- **RF4 – Feedback**: il visitatore lascia un voto da 1 a 5 e un commento facoltativo su una mostra già iniziata; i feedback sono visibili a tutti nella pagina della mostra.
+- **RF4 – Feedback**: il visitatore registrato lascia un voto da 1 a 5 e un commento facoltativo su una mostra già iniziata (uno per mostra); i feedback sono visibili a tutti, anche senza account, con nome e iniziale del cognome.
 - **RF5 – Accesso riservato**: l'amministratore accede con email e password.
+- **RF10 – Account dei visitatori**: chiunque può consultare il catalogo, ma per prenotare e lasciare feedback deve registrarsi (nome, cognome, email, telefono, password) o accedere. Nell'area personale il visitatore vede le proprie prenotazioni.
 - **RF6 – Gestione catalogo**: l'amministratore pubblica, modifica ed elimina le mostre e ne carica le immagini.
 - **RF7 – Consultazione prenotazioni**: l'amministratore vede le prenotazioni ricevute, suddivise per mostra.
 - **RF8 – Moderazione**: l'amministratore può eliminare i feedback non appropriati.
 - **RF9 – Dashboard**: l'amministratore consulta indicatori di sintesi (prenotazioni totali e degli ultimi 7 giorni, mostre in corso, in arrivo e concluse, numero di feedback e voto medio, prenotazioni per mostra).
 
 #### 3.2. Requisiti non funzionali
-- **Sicurezza**: credenziali fuori dal codice, token firmati, limite ai tentativi di accesso, validazione di tutti i dati in ingresso, controllo dei file caricati.
+- **Sicurezza**: credenziali fuori dal codice, password dei visitatori salvate solo come hash, token firmati con ruolo (amministratore o visitatore), limite ai tentativi di accesso, validazione di tutti i dati in ingresso, controllo dei file caricati.
 - **Usabilità**: interfaccia responsive, messaggi di errore comprensibili, validazione dei form in tempo reale.
 - **Manutenibilità**: codice suddiviso per responsabilità, configurazione tramite variabili d'ambiente, test automatici e integrazione continua.
 - **Portabilità**: il database si può cambiare (SQLite → PostgreSQL) modificando solo la variabile `DATABASE_URL`.
@@ -182,11 +183,12 @@ backend/
 ├── main.py                 → crea l'app, configura CORS, file statici e gestori errori, include i router
 ├── settings.py             → configurazione letta dalle variabili d'ambiente (.env / .env.local)
 ├── database.py             → connessione SQLAlchemy e dipendenza get_db()
-├── models.py               → modelli ORM (Mostra, Prenotazione, Feedback)
+├── models.py               → modelli ORM (Mostra, Prenotazione, Feedback, Utente)
 ├── schemas.py              → schemi Pydantic per la validazione di input e output
-├── auth.py                 → verifica delle credenziali e dei token dell'area riservata
+├── auth.py                 → hash delle password, token con ruolo, controlli di accesso (admin e visitatori)
 ├── routers/
-│   ├── login.py            → POST /api/login
+│   ├── login.py            → POST /api/login (amministratore)
+│   ├── utenti.py           → registrazione, login, profilo e prenotazioni dei visitatori (/api/utenti)
 │   ├── mostre.py           → CRUD delle mostre (/api/mostre)
 │   ├── prenotazioni.py     → POST /api/prenota, GET /api/prenotazioni
 │   ├── feedback.py         → POST, GET e DELETE /api/feedback
@@ -198,6 +200,7 @@ backend/
 │   ├── statistiche_service.py → calcolo degli indicatori per la dashboard
 │   ├── rate_limit_service.py → limite ai tentativi di login (slowapi)
 │   ├── error_service.py    → formattazione degli errori di validazione (422)
+│   ├── migrazioni_service.py → aggiunge al database esistente le colonne introdotte dopo la prima versione
 │   └── seed_service.py     → inserimento delle mostre iniziali lette da data/mostre.json
 ├── data/mostre.json        → dati delle mostre iniziali
 ├── static/uploads/         → immagini delle mostre
@@ -207,13 +210,13 @@ backend/
 I vantaggi di questa organizzazione sono:
 - **Leggibilità**: chi cerca le rotte delle mostre apre `routers/mostre.py`, chi deve modificare il testo dell'email apre `services/email_service.py`.
 - **Riutilizzo**: i servizi sono funzioni indipendenti dalle rotte; ad esempio `trova_mostra` (in `services/mostre_service.py`) è usata dai router delle mostre, delle prenotazioni e dei feedback, senza che un router dipenda dall'altro.
-- **Manutenibilità**: aggiungere una nuova area funzionale significa creare un nuovo router e registrarlo in `main.py` con `app.include_router(...)`, senza toccare il codice esistente. I router `feedback` e `statistiche` sono stati aggiunti proprio in questo modo.
-- **Documentazione**: ogni router ha un proprio tag, quindi nella Swagger UI le rotte compaiono raggruppate in *Area riservata*, *Mostre*, *Prenotazioni* e *Feedback*.
+- **Manutenibilità**: aggiungere una nuova area funzionale significa creare un nuovo router e registrarlo in `main.py` con `app.include_router(...)`, senza toccare il codice esistente. I router `feedback`, `statistiche` e `utenti` sono stati aggiunti proprio in questo modo.
+- **Documentazione**: ogni router ha un proprio tag, quindi nella Swagger UI le rotte compaiono raggruppate in *Area riservata*, *Visitatori*, *Mostre*, *Prenotazioni* e *Feedback*.
 
 ### 5. Modello dei dati
 Il sistema si appoggia a un database relazionale SQLite, interfacciato tramite l'ORM SQLAlchemy per la gestione trasparente delle entità in oggetti Python. Le tabelle vengono create automaticamente all'avvio e, se il database è vuoto, vengono inserite le mostre dimostrative descritte nel file `data/mostre.json` (seeding): per aggiungere o modificare le mostre iniziali basta modificare il file JSON, senza toccare il codice.
 
-Nello stesso file ogni mostra può avere un elenco di `feedback` (nome, voto, commento): 
+Nello stesso file ogni mostra può avere un elenco di `feedback` (nome, voto, commento):
 le recensioni indicate vengono inserite insieme alla mostra e collegate a essa tramite la relazione SQLAlchemy, così l'applicazione parte già con dei dati dimostrativi anche per la sezione delle opinioni e per gli indicatori della dashboard. Nei test automatici questi feedback vengono rimossi prima di ogni test, così i conteggi partono sempre da zero.
 
 #### 5.1. Diagramma Entità-Relazione
@@ -222,6 +225,18 @@ le recensioni indicate vengono inserite insieme alla mostra e collegate a essa t
 erDiagram
     MOSTRE ||--o{ PRENOTAZIONI : "riceve"
     MOSTRE ||--o{ FEEDBACK : "riceve"
+    UTENTI |o--o{ PRENOTAZIONI : "effettua"
+    UTENTI |o--o{ FEEDBACK : "scrive"
+
+    UTENTI {
+        int id PK
+        string nome "2-100 caratteri"
+        string cognome "2-100 caratteri"
+        string email "unica, minuscolo"
+        string telefono "6-15 cifre"
+        string password_hash "PBKDF2-SHA256 con sale"
+        datetime creato_il "UTC"
+    }
 
     MOSTRE {
         int id PK
@@ -234,16 +249,18 @@ erDiagram
     PRENOTAZIONI {
         int id PK
         int mostra_id FK "mostre.id, ON DELETE CASCADE"
-        string nome "3-100 caratteri"
-        string cognome "3-100 caratteri"
-        string email "formato email, minuscolo"
+        int utente_id FK "utenti.id, ON DELETE SET NULL"
+        string nome "copiato dall'account"
+        string cognome "copiato dall'account"
+        string email "copiata dall'account"
         string telefono "6-15 cifre"
         datetime creata_il "UTC"
     }
     FEEDBACK {
         int id PK
         int mostra_id FK "mostre.id, ON DELETE CASCADE"
-        string nome "2-60 caratteri"
+        int utente_id FK "utenti.id, ON DELETE SET NULL"
+        string nome "es. Mario R."
         int voto "da 1 a 5"
         text commento "facoltativo, max 500"
         datetime creato_il "UTC"
@@ -254,17 +271,20 @@ erDiagram
 - **mostre**: memorizza le esposizioni culturali (il catalogo). Le immagini sono salvate su disco e nel database se ne conservano i percorsi relativi (es. `/static/uploads/<file>.webp`).
 - **prenotazioni**: memorizza le prenotazioni effettuate dai visitatori, con data e ora di creazione.
 - **feedback**: memorizza le recensioni dei visitatori, con voto da 1 a 5 e commento facoltativo.
+- **utenti**: memorizza gli account dei visitatori. La password non viene mai salvata: si conserva solo il suo hash PBKDF2-SHA256, calcolato con un sale casuale e 200.000 iterazioni. L'email è unica.
 
-**Relazioni**: una mostra ha zero o più prenotazioni e zero o più feedback (relazioni 1:N); ogni prenotazione e ogni feedback appartengono a una sola mostra. Eliminando una mostra vengono eliminati anche le prenotazioni e i feedback collegati (cascade), così nel database non restano righe "orfane".
+**Relazioni**: una mostra ha zero o più prenotazioni e zero o più feedback (relazioni 1:N); ogni prenotazione e ogni feedback appartengono a una sola mostra. Un utente può avere più prenotazioni e più feedback (al massimo uno per mostra). Nella prenotazione nome, cognome ed email vengono copiati dall'account al momento della prenotazione, così lo storico resta leggibile anche se l'account cambia; `utente_id` è facoltativo perché i feedback dimostrativi del seeding non hanno un autore. Eliminando una mostra vengono eliminati anche le prenotazioni e i feedback collegati (cascade), così nel database non restano righe "orfane".
 
 **Vincoli applicativi**: i dati inseriti dagli utenti vengono validati a livello di schema (Pydantic con espressioni regolari e validatori personalizzati) prima di essere salvati. Non è possibile prenotare una mostra già conclusa, né lasciare un feedback su una mostra non ancora iniziata.
 
-**Indicatori**: i dati delle tre tabelle alimentano la dashboard. Il servizio `statistiche_service.py` calcola i conteggi con query di aggregazione (`COUNT` e `AVG` raggruppati per mostra con `GROUP BY`), invece di caricare in memoria tutte le righe.
+**Aggiornamento dei database esistenti**: `create_all` crea le tabelle nuove ma non aggiunge colonne a quelle già presenti. All'avvio `migrazioni_service.py` controlla lo schema e, se manca, aggiunge la colonna `utente_id` alle tabelle `prenotazioni` e `feedback` con `ALTER TABLE`, così un `museo.db` creato con la versione precedente continua a funzionare senza perdere dati.
+
+**Indicatori**: i dati delle tabelle mostre, prenotazioni e feedback alimentano la dashboard. Il servizio `statistiche_service.py` calcola i conteggi con query di aggregazione (`COUNT` e `AVG` raggruppati per mostra con `GROUP BY`), invece di caricare in memoria tutte le righe.
 
 ### 6. Diagrammi UML
 
 #### 6.1. Diagramma dei casi d'uso
-Gli attori sono il **visitatore** (non registrato), l'**amministratore** (personale del museo) e il **servizio email** esterno.
+Gli attori sono il **visitatore** (che consulta il catalogo senza account e si registra per prenotare e lasciare feedback), l'**amministratore** (personale del museo) e il **servizio email** esterno.
 
 ```mermaid
 flowchart LR
@@ -278,6 +298,8 @@ flowchart LR
         UC3(("Prenotare una visita"))
         UC4(("Ricevere l'email di conferma"))
         UC5(("Lasciare un feedback"))
+        UC11(("Registrarsi o accedere"))
+        UC12(("Vedere le mie prenotazioni"))
         UC6(("Accedere all'area riservata"))
         UC7(("Gestire le mostre<br/>crea, modifica, elimina"))
         UC8(("Consultare le prenotazioni"))
@@ -289,6 +311,11 @@ flowchart LR
     V --- UC2
     V --- UC3
     V --- UC5
+    V --- UC11
+    V --- UC12
+    UC3 -. "richiede" .-> UC11
+    UC5 -. "richiede" .-> UC11
+    UC12 -. "richiede" .-> UC11
     UC3 -. "include" .-> UC4
     UC4 --- EM
     AM --- UC6
@@ -321,6 +348,7 @@ classDiagram
     class Prenotazione {
         +int id
         +int mostra_id
+        +int utente_id
         +str nome
         +str cognome
         +str email
@@ -330,25 +358,30 @@ classDiagram
     class Feedback {
         +int id
         +int mostra_id
+        +int utente_id
         +str nome
         +int voto
         +str commento
         +datetime creato_il
     }
+    class Utente {
+        +int id
+        +str nome
+        +str cognome
+        +str email
+        +str telefono
+        +str password_hash
+        +datetime creato_il
+    }
     class PrenotazioneCreate {
         <<Pydantic>>
         +int mostra_id
-        +str nome
-        +str cognome
-        +EmailStr email
         +str telefono
-        +valida_nomi()
         +valida_telefono()
     }
     class FeedbackCreate {
         <<Pydantic>>
         +int mostra_id
-        +str nome
         +int voto
         +str commento
         +valida_voto()
@@ -373,19 +406,24 @@ classDiagram
     class auth {
         <<module>>
         +verifica_credenziali(email, password) bool
-        +crea_token(email) str
+        +hash_password(password) str
+        +verifica_password(password, hash) bool
+        +crea_token(email, ruolo, utente_id) str
         +richiedi_admin(credenziali) str
+        +richiedi_utente(credenziali, db) Utente
     }
 
     Mostra "1" *-- "0..*" Prenotazione
     Mostra "1" *-- "0..*" Feedback
+    Utente "0..1" o-- "0..*" Prenotazione
+    Utente "0..1" o-- "0..*" Feedback
     PrenotazioneCreate ..> Prenotazione : crea
     FeedbackCreate ..> Feedback : crea
     mostre_service ..> Mostra : usa
     statistiche_service ..> Mostra : aggrega
 ```
 
-Le linee con il rombo pieno indicano una **composizione** tra `Mostra` e le altre due classi (1 a 0..*): prenotazioni e feedback non esistono senza la mostra a cui si riferiscono, e infatti vengono eliminati insieme a essa.
+Le linee con il rombo vuoto indicano un'**aggregazione** tra `Utente` e prenotazioni o feedback: se l'account viene eliminato, prenotazioni e feedback restano (con `utente_id` vuoto). Le linee con il rombo pieno indicano una **composizione** tra `Mostra` e le altre due classi (1 a 0..*): prenotazioni e feedback non esistono senza la mostra a cui si riferiscono, e infatti vengono eliminati insieme a essa.
 
 #### 6.3. Diagramma di sequenza: prenotazione di una visita
 Il diagramma mostra il percorso completo di una prenotazione, dal form fino all'email, evidenziando che l'email viene inviata **dopo** la risposta al browser.
@@ -401,10 +439,14 @@ sequenceDiagram
     participant BG as BackgroundTasks
     participant EM as Brevo / SMTP
 
-    V->>FE: Compila nome, cognome, email, telefono
-    FE->>FE: Validazione in tempo reale (RegEx)
-    V->>FE: Clic su PRENOTA
-    FE->>API: POST /api/prenota (JSON)
+    V->>FE: Clic su PRENOTA da una mostra
+    alt Visitatore non collegato
+        FE-->>V: Pagina Accedi (poi torna alla prenotazione)
+    end
+    FE-->>V: Form con nome, cognome ed email dell'account
+    V->>FE: Conferma o modifica il telefono e invia
+    FE->>API: POST /api/prenota (JSON + token del visitatore)
+    API->>API: richiedi_utente: verifica firma, scadenza e ruolo del token
     API->>PY: Validazione PrenotazioneCreate
     alt Dati non validi
         PY-->>API: ValidationError
@@ -416,7 +458,7 @@ sequenceDiagram
             API-->>FE: 404 oppure 400
             FE-->>V: Alert con l'errore
         else Mostra prenotabile
-            API->>DB: INSERT prenotazione + COMMIT
+            API->>DB: INSERT prenotazione (dati dell'account) + COMMIT
             API->>BG: add_task(invia_email_background)
             API-->>FE: 201 Created
             FE-->>V: "Prenotazione confermata"
@@ -469,20 +511,24 @@ sequenceDiagram
 FastAPI genera in modo automatico e nativo la documentazione interattiva delle API basata sullo standard OpenAPI. All'indirizzo [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) è possibile esplorare e testare gli endpoint in tempo reale (Swagger UI), raggruppati per router. Lo screenshot della Swagger UI è riportato nel README del progetto.
 
 #### 7.1. Elenco degli endpoint
-🔒 = richiede il token dell'area riservata nell'header `Authorization: Bearer <token>`.
+🔒 = richiede il token dell'amministratore; 👤 = richiede il token di un visitatore registrato. Il token si invia nell'header `Authorization: Bearer <token>`; un token del ruolo sbagliato viene rifiutato (401 o 403).
 
 | Router | Metodo e percorso | Descrizione | Risposte principali |
 |---|---|---|---|
 | Area riservata | POST /api/login | Verifica le credenziali dell'amministratore e restituisce un token di accesso firmato a tempo. | 200, 401, 429 |
+| Visitatori | POST /api/utenti/registrazione | Crea l'account del visitatore (password salvata come hash) e restituisce subito il token e il profilo. | 201, 409, 422, 429 |
+| Visitatori | POST /api/utenti/login | Verifica email e password del visitatore e restituisce token e profilo. | 200, 401, 429 |
+| Visitatori | 👤 GET /api/utenti/me | Profilo del visitatore collegato. | 200, 401, 403 |
+| Visitatori | 👤 GET /api/utenti/me/prenotazioni | Prenotazioni del visitatore collegato, con titolo e periodo della mostra. | 200, 401, 403 |
 | Area riservata | 🔒 GET /api/statistiche | Indicatori per la dashboard: conteggi di mostre, prenotazioni e feedback, voto medio, dettaglio per mostra. | 200, 401 |
 | Mostre | GET /api/mostre | Restituisce la lista di tutte le esposizioni, ordinate per data di inizio. | 200 |
 | Mostre | GET /api/mostre/{mostra_id} | Recupera i dettagli di una singola mostra. | 200, 404 |
 | Mostre | 🔒 POST /api/mostre | Caricamento di una nuova mostra e delle relative immagini (multipart/form-data). | 201, 400, 401, 422 |
 | Mostre | 🔒 PUT /api/mostre/{mostra_id} | Aggiornamento di un'esposizione esistente. Il campo `immagini_esistenti` (lista JSON) indica quali immagini attuali tenere; le nuove immagini caricate si aggiungono in coda. Deve restare almeno un'immagine. | 200, 400, 401, 404 |
 | Mostre | 🔒 DELETE /api/mostre/{mostra_id} | Eliminazione di un'esposizione, delle sue prenotazioni e dei suoi feedback. | 200, 401, 404 |
-| Prenotazioni | POST /api/prenota | Salva la prenotazione validata e avvia in background l'invio dell'email di conferma. | 201, 400, 404, 422 |
+| Prenotazioni | 👤 POST /api/prenota | Salva la prenotazione con i dati dell'account e avvia in background l'invio dell'email di conferma. | 201, 400, 401, 403, 404, 422 |
 | Prenotazioni | 🔒 GET /api/prenotazioni | Elenco delle prenotazioni, filtrabile per mostra (`?mostra_id=`). | 200, 401 |
-| Feedback | POST /api/feedback | Salva il feedback di un visitatore su una mostra già iniziata. | 201, 400, 404, 422 |
+| Feedback | 👤 POST /api/feedback | Salva il feedback del visitatore su una mostra già iniziata (uno per mostra). | 201, 400, 401, 403, 404, 409, 422 |
 | Feedback | GET /api/feedback | Elenco pubblico dei feedback, filtrabile per mostra (`?mostra_id=`), dal più recente. | 200 |
 | Feedback | 🔒 DELETE /api/feedback/{feedback_id} | Eliminazione di un feedback (moderazione). | 200, 401, 404 |
 
@@ -490,26 +536,45 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 
 **Prenotazione** – `POST /api/prenota`
 ```json
-// richiesta
-{ "mostra_id": 1, "nome": "Mario", "cognome": "Rossi", "email": "mario.rossi@esempio.it", "telefono": "3331234567" }
+// richiesta (con header Authorization: Bearer <token del visitatore>; il telefono è facoltativo)
+{ "mostra_id": 1, "telefono": "3331234567" }
 
 // risposta 201 Created
 { "message": "Prenotazione effettuata con successo!", "id": 12 }
 
 // risposta 422 Unprocessable Entity (telefono non valido)
 { "detail": "telefono: Il numero di telefono deve contenere da 6 a 15 cifre." }
+
+// risposta 401 Unauthorized (nessun token)
+{ "detail": "Accedi o registrati per continuare." }
 ```
 
 **Feedback** – `POST /api/feedback`
 ```json
-// richiesta (il commento è facoltativo)
-{ "mostra_id": 1, "nome": "Giulia", "voto": 5, "commento": "Allestimento bellissimo" }
+// richiesta (con il token del visitatore; il commento è facoltativo)
+{ "mostra_id": 1, "voto": 5, "commento": "Allestimento bellissimo" }
 
-// risposta 201 Created
-{ "id": 4, "mostra_id": 1, "nome": "Giulia", "voto": 5, "commento": "Allestimento bellissimo", "creato_il": "2026-10-15T09:12:44" }
+// risposta 201 Created (il nome pubblico viene dall'account: nome e iniziale del cognome)
+{ "id": 4, "mostra_id": 1, "nome": "Giulia V.", "voto": 5, "commento": "Allestimento bellissimo", "creato_il": "2026-10-15T09:12:44" }
+
+// risposta 409 Conflict (secondo feedback sulla stessa mostra)
+{ "detail": "Hai già lasciato un feedback su questa mostra." }
 
 // risposta 400 Bad Request (mostra non ancora iniziata)
 { "detail": "La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita." }
+```
+
+**Registrazione di un visitatore** – `POST /api/utenti/registrazione`
+```json
+// richiesta
+{ "nome": "Giulia", "cognome": "Verdi", "email": "giulia.verdi@esempio.it", "telefono": "3471234567", "password": "password-sicura" }
+
+// risposta 201 Created (il visitatore è già collegato)
+{ "access_token": "eyJzdWIiOi...", "token_type": "bearer",
+  "utente": { "id": 3, "nome": "Giulia", "cognome": "Verdi", "email": "giulia.verdi@esempio.it", "telefono": "3471234567" } }
+
+// risposta 409 Conflict
+{ "detail": "Esiste già un account con questa email." }
 ```
 
 **Statistiche** – `GET /api/statistiche` (🔒)
@@ -535,10 +600,12 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 |---|---|
 | 200 OK / 201 Created | Operazione riuscita / risorsa creata |
 | 400 Bad Request | Errore di logica: date incoerenti, mostra conclusa o non iniziata, file non valido o troppo grande, mostra senza immagini |
-| 401 Unauthorized | Credenziali errate, token assente, manomesso o scaduto |
+| 401 Unauthorized | Credenziali errate, token assente, manomesso, scaduto o del ruolo sbagliato per l'area riservata |
+| 403 Forbidden | Token valido ma del ruolo sbagliato: l'amministratore che prova a prenotare o a lasciare un feedback |
 | 404 Not Found | Mostra o feedback inesistente |
+| 409 Conflict | Email già registrata, oppure secondo feedback dello stesso visitatore sulla stessa mostra |
 | 422 Unprocessable Entity | Dati che non rispettano lo schema (con messaggio leggibile) |
-| 429 Too Many Requests | Troppi tentativi di login dallo stesso indirizzo IP |
+| 429 Too Many Requests | Troppi tentativi di login o di registrazione dallo stesso indirizzo IP |
 | 500 Internal Server Error | Errore imprevisto nel salvataggio (la transazione viene annullata con rollback) |
 
 ### 8. Architettura dei calcolatori applicata al progetto
@@ -585,7 +652,8 @@ Gli stessi dati cambiano rappresentazione mentre passano da un componente all'al
 - **Testo**: tutti i messaggi usano la codifica **UTF-8**, che rappresenta anche le lettere accentate e i simboli (es. "è", "★") con sequenze da 1 a 4 byte.
 - **JSON**: formato testuale con cui front-end e back-end si scambiano oggetti. Pydantic converte il JSON in oggetti Python tipizzati (es. stringa `"2026-10-10"` → oggetto `date`) e viceversa.
 - **Date**: nel database le date sono di tipo `DATE` e gli orari di creazione sono salvati in UTC, il riferimento orario universale; il front-end li converte nel fuso orario dell'utente.
-- **Token di accesso**: è composto da due parti codificate in **Base64 URL-safe** e separate da un punto. La prima contiene i dati in JSON (`{"sub": "admin@museo.it", "exp": 1792083836}`, dove `exp` è la scadenza espressa in secondi dal 1° gennaio 1970). La seconda è la **firma HMAC-SHA256**: un'impronta di 256 bit calcolata con la chiave segreta del server. Modificando anche un solo bit del contenuto la firma non corrisponde più e il server rifiuta il token. Base64 è una *codifica*, non una cifratura: il contenuto è leggibile, ma non falsificabile.
+- **Token di accesso**: è composto da due parti codificate in **Base64 URL-safe** e separate da un punto. La prima contiene i dati in JSON (`{"sub": "admin@museo.it", "ruolo": "admin", "exp": 1792083836}`, dove `ruolo` distingue l'amministratore dai visitatori, che hanno anche il proprio identificativo `uid`, dove `exp` è la scadenza espressa in secondi dal 1° gennaio 1970). La seconda è la **firma HMAC-SHA256**: un'impronta di 256 bit calcolata con la chiave segreta del server. Modificando anche un solo bit del contenuto la firma non corrisponde più e il server rifiuta il token. Base64 è una *codifica*, non una cifratura: il contenuto è leggibile, ma non falsificabile.
+- **Password**: le password dei visitatori non vengono memorizzate. Si salva una stringa con algoritmo, numero di iterazioni, **sale** (16 byte casuali) e **hash** PBKDF2-HMAC-SHA256, entrambi in Base64. Ripetere l'hash 200.000 volte rende lento indovinare le password per tentativi, e il sale fa sì che due password uguali producano hash diversi.
 - **File**: le immagini viaggiano come dati binari in richieste `multipart/form-data`; il server ne controlla tipo ed estensione e assegna un nome casuale (UUID, identificatore di 128 bit).
 
 #### 8.5. Compressione dei dati
@@ -615,17 +683,19 @@ Le credenziali del servizio email, quelle dell'amministratore e la chiave di fir
 
 Una variabile assente o lasciata vuota assume un valore di default pensato solo per lo sviluppo locale; all'avvio il server segnala nei log se sono in uso la chiave o la password dimostrative, in modo che vengano sostituite prima della messa online.
 
-#### 9.5. Autenticazione dell'area riservata
+#### 9.5. Autenticazione: area riservata e account dei visitatori
 Il controllo delle credenziali avviene sul server e non nel browser. L'endpoint POST /api/login confronta le credenziali con quelle configurate (con confronto a tempo costante, per evitare attacchi basati sui tempi di risposta) e restituisce un token che contiene la scadenza ed è firmato con HMAC-SHA256 tramite la SECRET_KEY. Il token non è cifrato ma firmato: il server può leggerne il contenuto e verificare che non sia stato alterato. Il client invia il token nell'header `Authorization: Bearer`; le rotte riservate usano la dipendenza FastAPI `richiedi_admin` (modulo `auth.py`), che rifiuta con 401 Unauthorized le richieste senza un token valido o scaduto.
+
+**Account dei visitatori.** Chiunque può consultare mostre e feedback, ma per prenotare o recensire serve un account. Con `POST /api/utenti/registrazione` il visitatore indica nome, cognome, email, telefono e una password di almeno 8 caratteri; la password viene trasformata in un hash PBKDF2-HMAC-SHA256 con sale casuale e 200.000 iterazioni (funzioni `hash_password` e `verifica_password` in `auth.py`, solo libreria standard di Python) e non viene mai salvata in chiaro. Login e registrazione restituiscono un token firmato con lo stesso meccanismo dell'amministratore, ma con `"ruolo": "utente"` e l'identificativo dell'account. Le rotte di prenotazione e feedback usano la dipendenza `richiedi_utente`, che verifica firma, scadenza e ruolo e carica l'account dal database; `richiedi_admin` accetta invece solo il ruolo `admin`, quindi un visitatore non può entrare nell'area riservata e l'amministratore non può prenotare. In caso di login errato il messaggio è lo stesso sia per email inesistente sia per password sbagliata, così non si rivela quali email sono registrate.
 
 #### 9.6. Gestione sicura del caricamento file
 Il caricamento delle immagini è gestito da `services/immagini_service.py`. Le immagini vengono accettate solo se hanno un'estensione e un tipo MIME da immagine (jpg, png, webp, gif) e non superano la dimensione massima configurata. Il nome del file su disco viene generato dal server (UUID), evitando sia la sovrascrittura di file esistenti sia attacchi di tipo path traversal. In modifica il client invia l'elenco delle immagini attuali da mantenere: il server accetta solo percorsi già associati a quella mostra, così dal form non è possibile collegare file arbitrari. Nel database si salvano percorsi relativi: è il frontend ad anteporre l'indirizzo del backend, così l'applicazione funziona sia in locale sia in produzione. I dati inseriti dagli utenti vengono inoltre "escapati" prima di essere inseriti nel corpo HTML dell'email di conferma.
 
 #### 9.7. Limite ai tentativi di accesso
-Per impedire attacchi "a forza bruta" (provare molte password in sequenza), l'endpoint di login è protetto dalla libreria `slowapi`: ogni indirizzo IP può effettuare un numero limitato di tentativi (di default 5 al minuto, configurabile con la variabile `LOGIN_RATE_LIMIT`). Superato il limite il server risponde 429 Too Many Requests con un messaggio leggibile, che il frontend mostra nel form di accesso. Poiché in produzione il backend si trova dietro il proxy di Render, uvicorn viene avviato con l'opzione `--proxy-headers`, così da leggere l'indirizzo IP reale del visitatore.
+Per impedire attacchi "a forza bruta" (provare molte password in sequenza), gli endpoint di login (amministratore e visitatori) e di registrazione sono protetti dalla libreria `slowapi`: ogni indirizzo IP può effettuare un numero limitato di tentativi (di default 5 al minuto, configurabile con la variabile `LOGIN_RATE_LIMIT`). Superato il limite il server risponde 429 Too Many Requests con un messaggio leggibile, che il frontend mostra nel form di accesso. Poiché in produzione il backend si trova dietro il proxy di Render, uvicorn viene avviato con l'opzione `--proxy-headers`, così da leggere l'indirizzo IP reale del visitatore.
 
 #### 9.8. Feedback dei visitatori
-I feedback sono pubblici e non richiedono registrazione, per non scoraggiare i visitatori. Per limitare gli abusi il server accetta solo voti interi da 1 a 5, nomi e commenti di lunghezza limitata e feedback su mostre già iniziate; l'amministratore può eliminare i contenuti non appropriati. Nei feedback non vengono richiesti né mostrati dati di contatto (email o telefono), in linea con il principio di minimizzazione dei dati personali.
+I feedback si leggono senza account, ma per scriverne uno serve il login: così ogni recensione è legata a una persona registrata e si riducono spam e recensioni multiple. Il server accetta solo voti interi da 1 a 5, commenti di lunghezza limitata, feedback su mostre già iniziate e al massimo un feedback per visitatore su ogni mostra (409 al secondo tentativo). Nel feedback pubblico compaiono solo il nome e l'iniziale del cognome (es. "Giulia V."), mai email o telefono, secondo il principio di minimizzazione dei dati personali. L'amministratore può eliminare i contenuti non appropriati.
 
 ### 10. Implementazione del front-end
 #### 10.1. Architettura dei componenti e Single Page Application (SPA)
@@ -635,14 +705,15 @@ Il front-end è stato sviluppato come una Single Page Application (SPA) modulare
 frontend/src/
 ├── App.jsx        → tema, router e rotte
 ├── config/        → routes.json (elenco delle rotte) e background.json (immagine di sfondo)
-├── pages/         → una pagina per rotta: Home, GalleriaMostra, FormPrenotazione, AdminDashboard, AdminForm, NotFound
+├── pages/         → una pagina per rotta: Home, GalleriaMostra, FormPrenotazione, Accedi, AreaPersonale, AdminDashboard, AdminForm, NotFound
 ├── components/    → componenti riutilizzabili: AppHeader, ProtectedRoute, ErrorBoundary, SezioneFeedback, IndicatoriDashboard
-├── services/      → api.js (istanza Axios) e un servizio per area: mostre, prenotazioni, feedback, statistiche, auth
+├── hooks/         → useUtente: il visitatore collegato, aggiornato a ogni login e logout
+├── services/      → api.js (istanza Axios) e un servizio per area: mostre, prenotazioni, feedback, statistiche, auth (admin), utenti (visitatori)
 ├── styles/        → fogli di stile del layout
 └── tests/         → test automatici (Vitest)
 ```
 
-Le rotte non sono scritte nel codice ma lette da `config/routes.json`: ogni rotta indica il percorso e il nome della pagina da mostrare. Le rotte riservate all'amministratore sono contrassegnate con `"protected": true` e vengono racchiuse nel componente `ProtectedRoute`, che rimanda alla pagina di accesso chi non ha effettuato il login. Un indirizzo inesistente mostra la pagina `NotFound` (errore 404), collegata alla rotta jolly `*`.
+Le rotte non sono scritte nel codice ma lette da `config/routes.json`: ogni rotta indica il percorso e il nome della pagina da mostrare. Le rotte riservate all'amministratore sono contrassegnate con `"protected": true` e vengono racchiuse nel componente `ProtectedRoute`, che rimanda alla pagina di accesso chi non ha effettuato il login. Un indirizzo inesistente mostra la pagina `NotFound` (errore 404), collegata alla rotta jolly `*`. Le pagine dei visitatori (prenotazione e area personale) sono contrassegnate con `"protected": "utente"`: chi non ha fatto il login viene mandato alla pagina **Accedi** e, dopo l'accesso o la registrazione, torna automaticamente alla pagina che voleva aprire (parametro `?next=`, accettato solo se punta a un indirizzo interno al sito).
 
 Per alleggerire il primo caricamento, le pagine diverse dalla Home vengono caricate solo quando servono (`React.lazy` e `Suspense`): il browser scarica il codice dell'area riservata solo se l'utente la apre.
 
@@ -650,13 +721,14 @@ Per la progettazione dell'interfaccia grafica è stata adottata la libreria Mate
 
 Le pagine non contengono gli indirizzi delle API: usano le funzioni dei servizi (ad esempio `getMostre()`, `prenota(dati)`, `inviaFeedback(dati)`, `getStatistiche()`), così ogni indirizzo è definito in un solo punto, in modo analogo ai servizi del backend. I servizi si appoggiano a un client Axios centralizzato (`services/api.js`), che:
 - determina l'indirizzo del backend (variabile `VITE_API_URL`, oppure backend locale in sviluppo e Render in produzione);
-- aggiunge automaticamente il token dell'amministratore a ogni richiesta e, se il token è scaduto, riporta l'utente alla pagina di login;
+- aggiunge automaticamente il token giusto a ogni richiesta: quello del visitatore per prenotazioni, invio di feedback e area personale, quello dell'amministratore per le altre rotte riservate; se un token è scaduto lo cancella (e, per l'admin, riporta alla pagina di login);
 - costruisce l'indirizzo completo delle immagini a partire dai percorsi relativi salvati nel database.
 
 Gli stati locali dei componenti (useState, useEffect) garantiscono feedback visivi immediati all'utente, ad esempio gli indicatori di caricamento tramite CircularProgress.
 
 #### 10.2. Feedback e dashboard con indicatori
 - **SezioneFeedback** (pagina di dettaglio della mostra): mostra il voto medio con le stelle (componente `Rating` di MUI), l'elenco delle recensioni e il form per lasciarne una nuova. Dopo l'invio la recensione compare subito in cima alla lista, senza ricaricare la pagina. Per le mostre non ancora iniziate il form è sostituito da un messaggio informativo. Se la pagina è aperta dall'amministratore collegato (pulsante **Vedi** della dashboard), compaiono anche una barra con i comandi **Modifica** ed **Elimina** della mostra e un pulsante **Elimina** accanto a ogni feedback, mentre il form per lasciare un feedback è nascosto (l'amministratore legge e modera, ma non recensisce); i visitatori non vedono questi comandi e, in ogni caso, il server accetta le operazioni solo con un token valido.
+- **Accedi e AreaPersonale**: la pagina Accedi ha due schede, *Accedi* e *Registrati*, con validazione in tempo reale (il pulsante si attiva solo con dati validi). La sessione del visitatore è salvata nel browser (`localStorage`), quindi resta attiva anche chiudendo la scheda; l'header mostra "Accedi" oppure "Ciao, <nome>" con il link all'area personale, dove il visitatore vede le proprie prenotazioni ed esce. Nel form di prenotazione nome, cognome ed email sono quelli dell'account (sola lettura) e resta modificabile solo il telefono; nella sezione dei feedback chi non è collegato vede l'invito ad accedere al posto del form.
 - **IndicatoriDashboard** (area riservata): quattro riquadri con prenotazioni totali (e degli ultimi 7 giorni), mostre in corso (con quelle in arrivo e concluse), numero di feedback e voto medio, seguiti da un grafico a barre orizzontali delle prenotazioni per mostra. Il grafico è realizzato con semplici elementi grafici proporzionati al valore massimo, senza librerie aggiuntive. Sotto ogni mostra l'amministratore può aprire l'elenco delle prenotazioni o dei feedback ed eliminare questi ultimi.
 
 I calcoli degli indicatori sono svolti dal back-end: il front-end riceve numeri già pronti e si limita a mostrarli. In questo modo i dati sono sempre coerenti con il database e la logica è verificabile con i test del server.
@@ -691,11 +763,11 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (89 test) | Vitest + React Testing Library (74 test) |
+| Test automatici | pytest + TestClient di FastAPI (107 test) | Vitest + React Testing Library (92 test) |
 
-**Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
+**Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra, aggiornamento di un database della versione precedente. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 
-**Test del front-end** (cartella `frontend/src/tests/`): montano le pagine in un browser simulato (jsdom) e sostituiscono le risposte del backend con dati finti. Verificano la visualizzazione delle mostre, la validazione dei form, l'invio delle prenotazioni e dei feedback, login e logout dell'area riservata, gli indicatori della dashboard, la protezione delle rotte, la pagina 404 e il caricamento delle pagine "lazy".
+**Test del front-end** (cartella `frontend/src/tests/`): montano le pagine in un browser simulato (jsdom) e sostituiscono le risposte del backend con dati finti. Verificano la visualizzazione delle mostre, la validazione dei form, l'invio delle prenotazioni e dei feedback, login e logout dell'area riservata, registrazione e accesso dei visitatori con ritorno alla pagina richiesta, area personale, scelta del token per ogni chiamata, gli indicatori della dashboard, la protezione delle rotte, la pagina 404 e il caricamento delle pagine "lazy".
 
 **Integrazione continua (GitHub Actions)**: il file `.github/workflows/ci.yml` esegue automaticamente, a ogni push e pull request, linter, controllo della formattazione e test di entrambe le parti, oltre alla build di produzione del front-end. Il back-end viene verificato con due versioni di Python. Se un controllo fallisce, GitHub lo segnala accanto al commit, impedendo che un errore passi inosservato.
 
@@ -720,6 +792,12 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 | TF12 | Pubblicazione di una mostra | Amministratore | "Nuova mostra", compilare il form e aggiungere più immagini, anche in momenti diversi | Le immagini si sommano con anteprima; il pulsante si attiva solo con tutti i campi validi; la mostra compare nel catalogo con tutte le foto | ✅ Superato |
 | TF12b | Modifica delle immagini di una mostra | Amministratore | "Modifica", togliere una foto con ✕ e aggiungerne una nuova, "Salva modifiche" | Il form mostra le foto attuali; dopo il salvataggio restano quelle non tolte più quella nuova | ✅ Superato |
 | TF12c | Mostra vista dall'amministratore | Amministratore | Dalla dashboard premere "Vedi" su una mostra | Compare la barra "Area admin" con Dashboard, Modifica ed Elimina; i feedback si possono leggere ed eliminare ma il form per lasciarne è nascosto | ✅ Superato |
+| TF15 | Prenotazione senza account | Visitatore | Premere "Prenota" senza aver fatto il login | Si apre la pagina Accedi; dopo la registrazione si torna al form di prenotazione | ✅ Superato |
+| TF16 | Registrazione | Visitatore | Scheda "Registrati": nome, cognome, email, telefono, password di almeno 8 caratteri | Il pulsante si attiva solo con dati validi; l'account viene creato e il visitatore è subito collegato | ✅ Superato |
+| TF17 | Prenotazione da visitatore registrato | Visitatore | Aprire il form di prenotazione da collegato | Nome, cognome ed email dell'account non modificabili, telefono proposto; la prenotazione va a buon fine e l'admin la vede con i dati dell'account | ✅ Superato |
+| TF18 | Area personale | Visitatore | "Ciao, <nome>" nell'header | Elenco delle proprie prenotazioni con titolo e periodo della mostra; pulsante "Esci" | ✅ Superato |
+| TF19 | Feedback senza account | Visitatore | Aprire una mostra in corso senza login | Le recensioni sono visibili; al posto del form c'è l'invito ad accedere | ✅ Superato |
+| TF20 | Login visitatore errato | Visitatore | Password sbagliata nella scheda "Accedi" | Messaggio "Email o password errate."; poi con la password giusta si entra nell'area personale | ✅ Superato |
 | TF13 | Accesso diretto a una pagina riservata | Visitatore | Aprire `/admin/nuova` senza login | Si viene reindirizzati alla pagina di accesso | ✅ Superato |
 | TF14 | Troppi tentativi di accesso | Chiunque | Sbagliare la password più di 5 volte in un minuto | Messaggio "Troppi tentativi di accesso. Riprova tra qualche minuto." | ✅ Superato |
 
@@ -770,6 +848,18 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 Nella sezione delle opinioni l'amministratore legge i feedback e può eliminarli, ma non può lasciarne di nuovi.
 ![Feedback visti dall'admin](docs/screenshots/14-mostra-admin-feedback.webp)
 
+**TF16 – Registrazione di un visitatore**
+![Registrazione](docs/screenshots/15-registrazione.webp)
+
+**TF17 – Prenotazione da visitatore registrato**: nome, cognome ed email arrivano dall'account; l'header mostra "Ciao, Giulia".
+![Prenotazione con account](docs/screenshots/16-prenotazione-utente.webp)
+
+**TF18 – Area personale con le proprie prenotazioni**
+![Area personale](docs/screenshots/17-area-personale.webp)
+
+**TF19 – Feedback senza account**: le recensioni restano visibili, ma per scriverne una bisogna accedere. Il feedback "Giulia V." è stato lasciato da un visitatore registrato.
+![Feedback senza login](docs/screenshots/18-feedback-senza-login.webp)
+
 ### 13. Istruzioni per l'esecuzione
 #### 13.1. Prerequisiti
 - Python 3.9 o successivo
@@ -795,7 +885,7 @@ cd museo-digitale-pw/frontend
 npm install
 npm run dev
 ```
-L'applicazione è disponibile su `http://localhost:5173`. In locale, se `ADMIN_EMAIL` e `ADMIN_PASSWORD` non sono impostate, l'area riservata usa le credenziali dimostrative `admin@museo.it` / `admin2026`.
+L'applicazione è disponibile su `http://localhost:5173`. In locale, se `ADMIN_EMAIL` e `ADMIN_PASSWORD` non sono impostate, l'area riservata usa le credenziali dimostrative `admin@museo.it` / `admin2026`. Per provare prenotazioni e feedback basta creare un account visitatore dalla pagina **Accedi → Registrati**.
 
 #### 13.4. Variabili d'ambiente principali
 
@@ -840,7 +930,8 @@ La piattaforma è un prototipo funzionante; alcune semplificazioni sono accettab
 - **Persistenza su Render free**: sul piano gratuito il disco non è persistente; a ogni riavvio il database SQLite e le immagini caricate dall'area riservata vengono azzerati. Le mostre iniziali vengono ricreate automaticamente dal seeding.
 - **Un solo amministratore**: le credenziali sono configurate tramite variabili d'ambiente; non esistono più account né ruoli diversi (es. curatore e biglietteria).
 - **Nessuna gestione dei posti**: la prenotazione non prevede fasce orarie né un numero massimo di visitatori per giorno.
-- **Feedback non verificati**: chiunque può lasciare un feedback, anche senza aver prenotato; la moderazione è manuale.
+- **Feedback non legati alla visita**: per recensire serve un account, ma non si verifica che il visitatore abbia davvero visitato la mostra; la moderazione è manuale.
+- **Account semplici**: l'email del visitatore non viene verificata con un link di conferma e non c'è ancora il recupero della password dimenticata.
 - **Avvio lento del back-end**: sul piano gratuito il servizio va in pausa dopo un periodo di inattività e la prima richiesta può richiedere alcune decine di secondi.
 
 #### 15.2. Sviluppi futuri
@@ -862,7 +953,8 @@ La dashboard attuale mostra indicatori di sintesi. Il passo successivo è l'anal
 Integrare un servizio di pagamento (es. Stripe o PayPal, oppure pagoPA per un ente pubblico) per acquistare il biglietto al momento della prenotazione, con emissione della ricevuta e biglietto con QR code. Richiederebbe una nuova tabella `pagamenti` collegata alle prenotazioni e la gestione delle notifiche di esito inviate dal fornitore.
 
 **Cybersecurity**
-- Tabella `utenti` con password salvate come hash (bcrypt o Argon2) e ruoli distinti (amministratore, curatore, biglietteria).
+- Verifica dell'email in fase di registrazione e recupero della password tramite link temporaneo.
+- Account anche per il personale del museo, nella stessa tabella `utenti`, con ruoli distinti (amministratore, curatore, biglietteria) al posto dell'unico amministratore configurato nelle variabili d'ambiente.
 - Autenticazione a due fattori (2FA) per l'area riservata.
 - Protezione dei form pubblici dallo spam con CAPTCHA e limiti di frequenza anche su prenotazioni e feedback.
 - Conformità al GDPR: informativa privacy e consenso al trattamento nel form, cancellazione automatica delle prenotazioni dopo un periodo definito, possibilità per il visitatore di chiedere la rimozione dei propri dati.

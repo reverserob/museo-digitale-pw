@@ -1,9 +1,18 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { isLoggedIn } from '../services/authService';
+import { getUtente } from '../services/utentiService';
 
-// Mostra la pagina solo se l'amministratore ha fatto il login,
-// altrimenti rimanda alla pagina di accesso dell'area riservata.
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ children, ruolo = 'admin' }) {
+    const location = useLocation();
+
+    if (ruolo === 'utente') {
+        if (!getUtente()) {
+            const destinazione = encodeURIComponent(location.pathname);
+            return <Navigate to={`/accedi?next=${destinazione}`} replace />;
+        }
+        return children;
+    }
+
     if (!isLoggedIn()) {
         return <Navigate to="/admin" replace />;
     }

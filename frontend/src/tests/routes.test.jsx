@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import routes from '../config/routes.json';
 import background from '../config/background.json';
 import AppHeader from '../components/AppHeader';
-import { FUTURE } from './utils';
+import { FUTURE, collegaUtente } from './utils';
+import { logoutUtente } from '../services/utentiService';
 
 describe('configurazione', () => {
     it('ogni rotta di routes.json punta a una pagina esistente', () => {
@@ -17,9 +18,13 @@ describe('configurazione', () => {
         }
     });
 
-    it("le pagine di modifica dell'admin sono protette, quelle pubbliche no", () => {
-        const protette = routes.filter((r) => r.protected).map((r) => r.path);
-        expect(protette).toEqual(['/admin/nuova', '/admin/modifica/:id']);
+    it("le pagine dell'admin e quelle dei visitatori sono protette, quelle pubbliche no", () => {
+        const admin = routes.filter((r) => r.protected === true).map((r) => r.path);
+        const visitatori = routes.filter((r) => r.protected === 'utente').map((r) => r.path);
+        expect(admin).toEqual(['/admin/nuova', '/admin/modifica/:id']);
+        expect(visitatori).toEqual(['/prenota/:id', '/profilo']);
+        const pubbliche = routes.filter((r) => !r.protected).map((r) => r.path);
+        expect(pubbliche).toEqual(expect.arrayContaining(['/', '/esposizione/:id', '/accedi']));
     });
 
     it("l'ultima rotta è quella della pagina 404", () => {
@@ -46,5 +51,28 @@ describe('AppHeader', () => {
         );
         expect(screen.getByRole('link', { name: 'MUSEO CIVICO DIGITALE' })).toHaveAttribute('href', '/');
         expect(screen.getByRole('link', { name: 'Area Riservata' })).toHaveAttribute('href', '/admin');
+        expect(screen.getByRole('link', { name: 'Accedi' })).toHaveAttribute('href', '/accedi');
+    });
+
+    it('con un visitatore collegato mostra il suo nome e il link alla sua area', () => {
+        collegaUtente();
+        render(
+            <MemoryRouter future={FUTURE}>
+                <AppHeader />
+            </MemoryRouter>
+        );
+        expect(screen.getByRole('link', { name: 'Ciao, Mario' })).toHaveAttribute('href', '/profilo');
+        expect(screen.queryByRole('link', { name: 'Accedi' })).not.toBeInTheDocument();
+    });
+
+    it('si aggiorna da solo quando il visitatore esce', () => {
+        collegaUtente();
+        render(
+            <MemoryRouter future={FUTURE}>
+                <AppHeader />
+            </MemoryRouter>
+        );
+        act(() => logoutUtente());
+        expect(screen.getByRole('link', { name: 'Accedi' })).toBeInTheDocument();
     });
 });

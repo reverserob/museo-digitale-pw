@@ -120,3 +120,17 @@ def mostra_conclusa():
 
 # immagine PNG minima valida per i test di upload
 PNG_FINTO = b"\x89PNG\r\n\x1a\n" + b"0" * 100
+
+
+def registra_utente(client, email="mario.rossi@test.it", nome="Mario", cognome="Rossi", telefono="3331234567"):
+    """Registra un visitatore e restituisce l'header con il suo token."""
+    dati = {"nome": nome, "cognome": cognome, "email": email, "telefono": telefono, "password": "password-sicura"}
+    risposta = client.post("/api/utenti/registrazione", json=dati)
+    assert risposta.status_code == 201, risposta.text
+    return {"Authorization": f"Bearer {risposta.json()['access_token']}"}
+
+
+@pytest.fixture
+def utente(client):
+    # header di un visitatore registrato (Mario Rossi)
+    return registra_utente(client)

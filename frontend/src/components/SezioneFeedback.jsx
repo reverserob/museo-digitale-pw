@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Box, Typography, Rating, TextField, Button, Alert, Divider } from '@mui/material';
 import { messaggioErrore } from '../services/api';
 import { getFeedback, inviaFeedback, eliminaFeedback } from '../services/feedbackService';
+import useUtente from '../hooks/useUtente';
 
 const inputStyle = {
     input: { color: 'white' },
@@ -12,8 +14,8 @@ const inputStyle = {
 const oggiIso = () => new Date().toISOString().slice(0, 10);
 
 export default function SezioneFeedback({ mostra, admin = false }) {
+    const utente = useUtente();
     const [elenco, setElenco] = useState([]);
-    const [nome, setNome] = useState('');
     const [voto, setVoto] = useState(0);
     const [commento, setCommento] = useState('');
     const [errore, setErrore] = useState('');
@@ -46,10 +48,9 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             return;
         }
         setInvio(true);
-        inviaFeedback({ mostra_id: mostra.id, nome, voto, commento })
+        inviaFeedback({ mostra_id: mostra.id, voto, commento })
             .then((nuovo) => {
                 setElenco((precedenti) => [nuovo, ...precedenti]);
-                setNome('');
                 setVoto(0);
                 setCommento('');
                 setConferma('Grazie! Il tuo feedback è stato pubblicato.');
@@ -79,13 +80,37 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             )}
 
             {admin ? (
-                <Typography variant="body2" sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
-                    Come amministratore puoi leggere i feedback dei visitatori (ed eliminare quelli non appropriati), ma
-                    non lasciarne di nuovi.
-                </Typography>
+                <>
+                    <Typography variant="body2" sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
+                        Come amministratore puoi leggere i feedback dei visitatori (ed eliminare quelli non
+                        appropriati), ma non lasciarne di nuovi.
+                    </Typography>
+                    {errore && (
+                        <Alert severity="error" sx={{ mb: 3 }}>
+                            {errore}
+                        </Alert>
+                    )}
+                </>
             ) : nonIniziata ? (
                 <Alert severity="info" sx={{ mb: 4 }}>
                     La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita.
+                </Alert>
+            ) : !utente ? (
+                <Alert
+                    severity="info"
+                    sx={{ mb: 4, maxWidth: 560 }}
+                    action={
+                        <Button
+                            component={Link}
+                            to={`/accedi?next=${encodeURIComponent(`/esposizione/${mostra.id}`)}`}
+                            color="inherit"
+                            size="small"
+                        >
+                            Accedi
+                        </Button>
+                    }
+                >
+                    Accedi o registrati per lasciare un feedback su questa mostra.
                 </Alert>
             ) : (
                 <Box
@@ -105,14 +130,9 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                             sx={{ '& .MuiRating-iconEmpty': { color: '#666666' } }}
                         />
                     </Box>
-                    <TextField
-                        label="Nome"
-                        value={nome}
-                        onChange={(e) => setNome(e.target.value)}
-                        required
-                        slotProps={{ inputLabel: { shrink: true }, htmlInput: { maxLength: 60 } }}
-                        sx={inputStyle}
-                    />
+                    <Typography variant="body2" sx={{ color: '#aaaaaa', fontFamily: 'sans-serif' }}>
+                        Il feedback sarà pubblicato come {utente.nome} {utente.cognome.charAt(0).toUpperCase()}.
+                    </Typography>
                     <TextField
                         label="Commento (facoltativo)"
                         value={commento}
