@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { splitImmagini, messaggioErrore } from '../services/api';
 import { getMostra } from '../services/mostreService';
+import SezioneFeedback from '../components/SezioneFeedback';
 
 export default function GalleriaMostra() {
     const { id } = useParams();
@@ -143,6 +144,8 @@ export default function GalleriaMostra() {
                     )}
                 </Grid>
             </Grid>
+
+            <SezioneFeedback mostra={mostra} />
         </Container>
     );
 }

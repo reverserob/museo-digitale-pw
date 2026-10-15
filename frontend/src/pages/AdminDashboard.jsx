@@ -16,6 +16,9 @@ import {
 import { messaggioErrore } from '../services/api';
 import { getMostre, eliminaMostra as eliminaMostraApi } from '../services/mostreService';
 import { getPrenotazioni } from '../services/prenotazioniService';
+import { getFeedback, eliminaFeedback as eliminaFeedbackApi } from '../services/feedbackService';
+import { getStatistiche } from '../services/statisticheService';
+import IndicatoriDashboard from '../components/IndicatoriDashboard';
 import { login, logout, isLoggedIn as utenteLoggato } from '../services/authService';
 
 const cardSx = {
@@ -39,6 +42,9 @@ export default function AdminDashboard() {
 
     const [mostre, setMostre] = useState([]);
     const [prenotazioni, setPrenotazioni] = useState([]);
+    const [feedback, setFeedback] = useState([]);
+    const [statistiche, setStatistiche] = useState(null);
+    // pannello aperto sotto una mostra, es. { id: 3, tipo: 'prenotazioni' }
     const [aperta, setAperta] = useState(null);
     const [messaggio, setMessaggio] = useState('');
     const [errore, setErrore] = useState('');
@@ -46,10 +52,23 @@ export default function AdminDashboard() {
 
     const caricaDati = useCallback(() => {
         setLoading(true);
-        Promise.all([getMostre(), getPrenotazioni()])
-            .then(([elencoMostre, elencoPrenotazioni]) => {
+        const facoltativo = (promessa, valoreDiRiserva) =>
+            promessa.catch((err) => {
+                console.warn('Dati della dashboard non disponibili:', messaggioErrore(err));
+                return valoreDiRiserva;
+            });
+
+        Promise.all([
+            getMostre(),
+            getPrenotazioni(),
+            facoltativo(getFeedback(), []),
+            facoltativo(getStatistiche(), null),
+        ])
+            .then(([elencoMostre, elencoPrenotazioni, elencoFeedback, indicatori]) => {
                 setMostre(elencoMostre);
                 setPrenotazioni(elencoPrenotazioni);
+                setFeedback(elencoFeedback);
+                setStatistiche(indicatori);
             })
             .catch((err) => setErrore(messaggioErrore(err, 'Impossibile caricare i dati.')))
             .finally(() => setLoading(false));
@@ -93,6 +112,16 @@ export default function AdminDashboard() {
             })
             .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione.")));
     };
+
+    const eliminaFeedback = (id) => {
+        if (!window.confirm('Eliminare questo feedback?')) return;
+        setErrore('');
+        eliminaFeedbackApi(id)
+            .then(() => caricaDati())
+            .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione del feedback.")));
+    };
+
+    const apriPannello = (id, tipo) => setAperta(aperta?.id === id && aperta?.tipo === tipo ? null : { id, tipo });
 
     return (
         <Container maxWidth="md" sx={{ mt: { xs: 5, md: 10 }, mb: 10 }}>
@@ -191,6 +220,8 @@ export default function AdminDashboard() {
                             </Alert>
                         )}
 
+                        <IndicatoriDashboard statistiche={statistiche} />
+
                         <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 4 }} />
 
                         {loading && mostre.length === 0 && (
@@ -207,6 +238,7 @@ export default function AdminDashboard() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {mostre.map((m) => {
                                 const elenco = prenotazioni.filter((p) => p.mostra_id === m.id);
+                                const recensioni = feedback.filter((f) => f.mostra_id === m.id);
                                 return (
                                     <Box
                                         key={m.id}
@@ -245,9 +277,17 @@ export default function AdminDashboard() {
                                                     variant="text"
                                                     color="inherit"
                                                     size="small"
-                                                    onClick={() => setAperta(aperta === m.id ? null : m.id)}
+                                                    onClick={() => apriPannello(m.id, 'prenotazioni')}
                                                 >
                                                     Prenotazioni ({elenco.length})
+                                                </Button>
+                                                <Button
+                                                    variant="text"
+                                                    color="inherit"
+                                                    size="small"
+                                                    onClick={() => apriPannello(m.id, 'feedback')}
+                                                >
+                                                    Feedback ({recensioni.length})
                                                 </Button>
                                                 <Button
                                                     component={Link}
@@ -269,7 +309,10 @@ export default function AdminDashboard() {
                                             </Box>
                                         </Box>
 
-                                        <Collapse in={aperta === m.id} unmountOnExit>
+                                        <Collapse
+                                            in={aperta?.id === m.id && aperta?.tipo === 'prenotazioni'}
+                                            unmountOnExit
+                                        >
                                             <Box sx={{ mt: 2, fontFamily: 'sans-serif' }}>
                                                 {elenco.length === 0 ? (
                                                     <Typography variant="body2" sx={{ color: '#888' }}>
@@ -289,6 +332,42 @@ export default function AdminDashboard() {
                                                             {p.nome} {p.cognome} · {p.email} · {p.telefono} ·{' '}
                                                             {new Date(p.creata_il + 'Z').toLocaleString('it-IT')}
                                                         </Typography>
+                                                    ))
+                                                )}
+                                            </Box>
+                                        </Collapse>
+
+                                        <Collapse in={aperta?.id === m.id && aperta?.tipo === 'feedback'} unmountOnExit>
+                                            <Box sx={{ mt: 2, fontFamily: 'sans-serif' }}>
+                                                {recensioni.length === 0 ? (
+                                                    <Typography variant="body2" sx={{ color: '#888' }}>
+                                                        Nessun feedback.
+                                                    </Typography>
+                                                ) : (
+                                                    recensioni.map((f) => (
+                                                        <Box
+                                                            key={f.id}
+                                                            sx={{
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                gap: 2,
+                                                                py: 0.5,
+                                                                borderTop: '1px solid rgba(255,255,255,0.05)',
+                                                            }}
+                                                        >
+                                                            <Typography variant="body2" sx={{ color: '#ddd' }}>
+                                                                {'★'.repeat(f.voto)} · {f.nome}
+                                                                {f.commento && ` · ${f.commento}`}
+                                                            </Typography>
+                                                            <Button
+                                                                size="small"
+                                                                color="error"
+                                                                onClick={() => eliminaFeedback(f.id)}
+                                                            >
+                                                                Elimina
+                                                            </Button>
+                                                        </Box>
                                                     ))
                                                 )}
                                             </Box>

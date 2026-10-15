@@ -105,6 +105,11 @@ def mostra_futura():
 
 
 @pytest.fixture
+def mostra_in_corso():
+    return crea_mostra_nel_db("2000-01-01", "2099-12-31", "Mostra in corso")
+
+
+@pytest.fixture
 def mostra_conclusa():
     return crea_mostra_nel_db("2000-01-01", "2000-02-01", "Mostra conclusa")
 

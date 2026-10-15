@@ -3,6 +3,8 @@ import { api, getToken, setToken } from '../services/api';
 import { getMostre, getMostra, creaMostra, aggiornaMostra, eliminaMostra } from '../services/mostreService';
 import { prenota, getPrenotazioni } from '../services/prenotazioniService';
 import { login, logout, isLoggedIn } from '../services/authService';
+import { inviaFeedback, getFeedback, eliminaFeedback } from '../services/feedbackService';
+import { getStatistiche } from '../services/statisticheService';
 
 vi.mock('../services/api', async (importOriginal) => ({
     ...(await importOriginal()),
@@ -82,5 +84,30 @@ describe('authService', () => {
         setToken('token-123');
         logout();
         expect(isLoggedIn()).toBe(false);
+    });
+});
+
+describe('feedbackService e statisticheService', () => {
+    it('inviaFeedback, getFeedback ed eliminaFeedback chiamano le rotte giuste', async () => {
+        risponde('post', { id: 1 });
+        risponde('get', []);
+        risponde('delete', { message: 'ok' });
+        const dati = { mostra_id: 1, nome: 'Giulia', voto: 5 };
+
+        await inviaFeedback(dati);
+        await getFeedback();
+        await getFeedback(3);
+        await eliminaFeedback(1);
+
+        expect(api.post).toHaveBeenCalledWith('/api/feedback', dati);
+        expect(api.get).toHaveBeenNthCalledWith(1, '/api/feedback', { params: {} });
+        expect(api.get).toHaveBeenNthCalledWith(2, '/api/feedback', { params: { mostra_id: 3 } });
+        expect(api.delete).toHaveBeenCalledWith('/api/feedback/1');
+    });
+
+    it('getStatistiche chiama GET /api/statistiche', async () => {
+        risponde('get', { totale_mostre: 6 });
+        expect(await getStatistiche()).toEqual({ totale_mostre: 6 });
+        expect(api.get).toHaveBeenCalledWith('/api/statistiche');
     });
 });

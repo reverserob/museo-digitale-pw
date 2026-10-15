@@ -22,8 +22,36 @@ const PRENOTAZIONE = {
     creata_il: '2026-10-14T09:00:00',
 };
 
-function rispostaDati() {
-    api.get.mockImplementation((url) => Promise.resolve({ data: url === '/api/mostre' ? [MOSTRA] : [PRENOTAZIONE] }));
+const FEEDBACK = {
+    id: 7,
+    mostra_id: 1,
+    nome: 'Giulia',
+    voto: 4,
+    commento: 'Molto bella',
+    creato_il: '2026-10-14T10:00:00',
+};
+
+const STATISTICHE = {
+    totale_mostre: 1,
+    mostre_in_corso: 1,
+    mostre_future: 0,
+    mostre_concluse: 0,
+    totale_prenotazioni: 1,
+    prenotazioni_ultimi_7_giorni: 1,
+    totale_feedback: 1,
+    voto_medio: 4,
+    per_mostra: [],
+};
+
+// risposte finte del backend, una per indirizzo
+function rispostaDati(statistiche = STATISTICHE) {
+    const risposte = {
+        '/api/mostre': [MOSTRA],
+        '/api/prenotazioni': [PRENOTAZIONE],
+        '/api/feedback': [FEEDBACK],
+        '/api/statistiche': statistiche,
+    };
+    api.get.mockImplementation((url) => Promise.resolve({ data: risposte[url] }));
 }
 
 const apriDashboard = () => renderConRouter(<AdminDashboard />, { percorso: '/admin', indirizzo: '/admin' });
@@ -117,5 +145,75 @@ describe('AdminDashboard - gestione', () => {
 
         expect(getToken()).toBeNull();
         expect(within(document.body).getByText('Area Riservata - Accesso Admin')).toBeInTheDocument();
+    });
+});
+
+describe('AdminDashboard - indicatori e feedback', () => {
+    it('mostra gli indicatori calcolati dal backend', async () => {
+        setToken('token-valido');
+        rispostaDati({
+            ...STATISTICHE,
+            totale_prenotazioni: 12,
+            prenotazioni_ultimi_7_giorni: 5,
+            mostre_future: 2,
+            mostre_concluse: 3,
+            voto_medio: 4.5,
+            per_mostra: [
+                { mostra_id: 1, titolo: 'Mostra A', stato: 'in corso', prenotazioni: 8, feedback: 2, voto_medio: 4.5 },
+                { mostra_id: 2, titolo: 'Mostra B', stato: 'futura', prenotazioni: 4, feedback: 0, voto_medio: null },
+            ],
+        });
+        apriDashboard();
+
+        const indicatori = await screen.findByRole('region', { name: 'Indicatori' });
+        expect(api.get).toHaveBeenCalledWith('/api/statistiche');
+        expect(within(indicatori).getByText('12')).toBeInTheDocument();
+        expect(within(indicatori).getByText('5 negli ultimi 7 giorni')).toBeInTheDocument();
+        expect(within(indicatori).getByText('2 in arrivo · 3 concluse')).toBeInTheDocument();
+        expect(within(indicatori).getByText('4.5')).toBeInTheDocument();
+        // la barra più lunga è quella della mostra con più prenotazioni
+        expect(screen.getByTestId('barra-1')).toHaveStyle({ width: '100%' });
+        expect(screen.getByTestId('barra-2')).toHaveStyle({ width: '50%' });
+    });
+
+    it('senza feedback il voto medio è un trattino', async () => {
+        setToken('token-valido');
+        rispostaDati({ ...STATISTICHE, totale_feedback: 0, voto_medio: null });
+        apriDashboard();
+
+        const indicatori = await screen.findByRole('region', { name: 'Indicatori' });
+        expect(within(indicatori).getByText('–')).toBeInTheDocument();
+    });
+
+    it('elenca i feedback di una mostra e permette di eliminarli', async () => {
+        setToken('token-valido');
+        rispostaDati();
+        api.delete.mockResolvedValue({ data: {} });
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        const user = userEvent.setup();
+        apriDashboard();
+
+        await user.click(await screen.findByRole('button', { name: 'Feedback (1)' }));
+        expect(await screen.findByText('★★★★ · Giulia · Molto bella')).toBeInTheDocument();
+
+        const eliminaButtons = screen.getAllByRole('button', { name: 'Elimina' });
+        await user.click(eliminaButtons[eliminaButtons.length - 1]);
+        expect(api.delete).toHaveBeenCalledWith('/api/feedback/7');
+    });
+
+    it('se feedback e statistiche non rispondono mostra comunque le mostre', async () => {
+        setToken('token-valido');
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+        api.get.mockImplementation((url) => {
+            if (url === '/api/mostre') return Promise.resolve({ data: [MOSTRA] });
+            if (url === '/api/prenotazioni') return Promise.resolve({ data: [PRENOTAZIONE] });
+            return Promise.reject(erroreHttp(404, 'Not Found'));
+        });
+        apriDashboard();
+
+        expect(await screen.findByText(MOSTRA.titolo)).toBeInTheDocument();
+        expect(screen.queryByText('Not Found')).not.toBeInTheDocument();
+        expect(screen.queryByRole('region', { name: 'Indicatori' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Prenotazioni (1)' })).toBeInTheDocument();
     });
 });

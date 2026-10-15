@@ -1,3 +1,4 @@
+import json
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -9,6 +10,26 @@ import settings
 
 def file_presenti(immagini: Optional[list[UploadFile]]) -> list[UploadFile]:
     return [f for f in (immagini or []) if f is not None and f.filename]
+
+
+def immagini_da_tenere(attuali: str, richieste: Optional[str]) -> list[str]:
+    elenco_attuale = [p.strip() for p in (attuali or "").split(",") if p.strip()]
+    if richieste is None:
+        return elenco_attuale
+    try:
+        elenco_richiesto = json.loads(richieste)
+        if not isinstance(elenco_richiesto, list):
+            raise ValueError
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Elenco delle immagini da mantenere non valido."
+        ) from None
+    consentiti = set(elenco_attuale)
+    tenute = []
+    for p in elenco_richiesto:
+        if isinstance(p, str) and p in consentiti and p not in tenute:
+            tenute.append(p)
+    return tenute
 
 
 async def salva_immagini(immagini: list[UploadFile]) -> list[str]:

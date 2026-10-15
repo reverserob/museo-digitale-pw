@@ -18,6 +18,7 @@ class Mostra(Base):
     data_fine = Column(Date, nullable=False)
 
     prenotazioni = relationship("Prenotazione", back_populates="mostra", cascade="all, delete-orphan")
+    feedback = relationship("Feedback", back_populates="mostra", cascade="all, delete-orphan")
 
 
 class Prenotazione(Base):
@@ -32,3 +33,18 @@ class Prenotazione(Base):
     creata_il = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     mostra = relationship("Mostra", back_populates="prenotazioni")
+
+
+class Feedback(Base):
+    """Recensione lasciata da un visitatore su una mostra (voto da 1 a 5 + commento)."""
+
+    __tablename__ = "feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    mostra_id = Column(Integer, ForeignKey("mostre.id", ondelete="CASCADE"), nullable=False, index=True)
+    nome = Column(String, nullable=False)
+    voto = Column(Integer, nullable=False)
+    commento = Column(Text, nullable=False, default="")
+    creato_il = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    mostra = relationship("Mostra", back_populates="feedback")

@@ -1,5 +1,6 @@
 import re
 from datetime import date, datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
@@ -59,6 +60,70 @@ class PrenotazioneResponse(BaseModel):
     email: str
     telefono: str
     creata_il: datetime
+
+
+class FeedbackCreate(BaseModel):
+    mostra_id: int
+    nome: str
+    voto: int
+    commento: str = ""
+
+    @field_validator("nome")
+    @classmethod
+    def valida_nome(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("Il nome deve contenere almeno 2 caratteri.")
+        if len(v) > 60:
+            raise ValueError("Il nome può contenere al massimo 60 caratteri.")
+        return v
+
+    @field_validator("voto")
+    @classmethod
+    def valida_voto(cls, v: int) -> int:
+        if v < 1 or v > 5:
+            raise ValueError("Il voto deve essere compreso tra 1 e 5.")
+        return v
+
+    @field_validator("commento")
+    @classmethod
+    def valida_commento(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) > 500:
+            raise ValueError("Il commento può contenere al massimo 500 caratteri.")
+        return v
+
+
+class FeedbackResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    mostra_id: int
+    nome: str
+    voto: int
+    commento: str
+    creato_il: datetime
+
+
+class StatisticheMostra(BaseModel):
+    mostra_id: int
+    titolo: str
+    stato: str
+    prenotazioni: int
+    feedback: int
+    voto_medio: Optional[float]
+
+
+class StatisticheResponse(BaseModel):
+    totale_mostre: int
+    mostre_in_corso: int
+    mostre_future: int
+    mostre_concluse: int
+    totale_prenotazioni: int
+    prenotazioni_ultimi_7_giorni: int
+    totale_feedback: int
+    voto_medio: Optional[float]
+    per_mostra: list[StatisticheMostra]
 
 
 class LoginRequest(BaseModel):

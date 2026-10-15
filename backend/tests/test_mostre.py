@@ -15,9 +15,7 @@ def immagine(nome="foto.png", contenuto=PNG_FINTO, tipo="image/png"):
     return ("immagini", (nome, contenuto, tipo))
 
 
-# --- lettura (pubblica) ---
-
-
+# read
 def test_elenco_contiene_le_mostre_del_seeding(client):
     attese = json.loads((Path(__file__).parent.parent / "data" / "mostre.json").read_text(encoding="utf-8"))
     r = client.get("/api/mostre")
@@ -49,9 +47,7 @@ def test_dettaglio_mostra_inesistente(client):
     assert r.json()["detail"] == "Mostra non trovata"
 
 
-# --- creazione ---
-
-
+# create
 def test_crea_mostra(client, auth, cartella_upload):
     r = client.post("/api/mostre", data=DATI_MOSTRA, files=[immagine()], headers=auth)
     assert r.status_code == 201
@@ -120,7 +116,7 @@ def test_crea_mostra_senza_immagini(client, auth):
     assert r.status_code == 422
 
 
-# --- modifica ---
+# edit
 def test_modifica_senza_immagini_mantiene_le_vecchie(client, auth):
     prima = client.get("/api/mostre/1").json()
     r = client.put("/api/mostre/1", data={**DATI_MOSTRA, "titolo": "Titolo modificato"}, headers=auth)
@@ -129,11 +125,60 @@ def test_modifica_senza_immagini_mantiene_le_vecchie(client, auth):
     assert r.json()["immagini"] == prima["immagini"]
 
 
-def test_modifica_con_nuove_immagini_le_sostituisce(client, auth):
+def crea_mostra_con_tre_immagini(client, auth):
+    files = [immagine("a.png"), immagine("b.png"), immagine("c.png")]
+    corpo = client.post("/api/mostre", data=DATI_MOSTRA, files=files, headers=auth).json()
+    return corpo["id"], corpo["immagini"].split(",")
+
+
+def test_modifica_con_nuove_immagini_le_aggiunge(client, auth):
+    prima = client.get("/api/mostre/1").json()["immagini"].split(",")
     r = client.put("/api/mostre/1", data=DATI_MOSTRA, files=[immagine()], headers=auth)
     assert r.status_code == 200
-    assert r.json()["immagini"].endswith(".png")
-    assert "caravaggio" not in r.json()["immagini"]
+    dopo = r.json()["immagini"].split(",")
+    # le vecchie restano, la nuova va in coda
+    assert dopo[: len(prima)] == prima
+    assert len(dopo) == len(prima) + 1
+    assert dopo[-1].endswith(".png")
+
+
+def test_modifica_rimuove_solo_le_immagini_non_tenute(client, auth):
+    mostra_id, (a, b, c) = crea_mostra_con_tre_immagini(client, auth)
+    r = client.put(
+        f"/api/mostre/{mostra_id}", data={**DATI_MOSTRA, "immagini_esistenti": json.dumps([a, c])}, headers=auth
+    )
+    assert r.status_code == 200
+    assert r.json()["immagini"].split(",") == [a, c]
+
+
+def test_modifica_tiene_alcune_immagini_e_ne_aggiunge_altre(client, auth):
+    mostra_id, (a, b, c) = crea_mostra_con_tre_immagini(client, auth)
+    r = client.put(
+        f"/api/mostre/{mostra_id}",
+        data={**DATI_MOSTRA, "immagini_esistenti": json.dumps([b])},
+        files=[immagine("d.png")],
+        headers=auth,
+    )
+    nuove = r.json()["immagini"].split(",")
+    assert len(nuove) == 2
+    assert nuove[0] == b
+    assert nuove[1] not in (a, b, c)
+
+
+def test_modifica_ignora_percorsi_non_della_mostra(client, auth):
+    mostra_id, (a, b, c) = crea_mostra_con_tre_immagini(client, auth)
+    dati = {**DATI_MOSTRA, "immagini_esistenti": json.dumps([a, "/static/uploads/altro.png", "../../segreto", a])}
+    r = client.put(f"/api/mostre/{mostra_id}", data=dati, headers=auth)
+    assert r.json()["immagini"] == a
+
+
+def test_modifica_senza_nessuna_immagine_rifiutata(client, auth):
+    mostra_id, _ = crea_mostra_con_tre_immagini(client, auth)
+    r = client.put(f"/api/mostre/{mostra_id}", data={**DATI_MOSTRA, "immagini_esistenti": "[]"}, headers=auth)
+    assert r.status_code == 400
+    assert "almeno un'immagine" in r.json()["detail"]
+    # la mostra non è stata modificata
+    assert len(client.get(f"/api/mostre/{mostra_id}").json()["immagini"].split(",")) == 3
 
 
 def test_modifica_mostra_inesistente(client, auth):
@@ -141,9 +186,7 @@ def test_modifica_mostra_inesistente(client, auth):
     assert r.status_code == 404
 
 
-# --- eliminazione ---
-
-
+# delete
 def test_elimina_mostra(client, auth):
     r = client.delete("/api/mostre/1", headers=auth)
     assert r.status_code == 200
@@ -167,3 +210,8 @@ def test_elimina_mostra_cancella_le_prenotazioni(client, auth, mostra_futura):
 
     client.delete(f"/api/mostre/{mostra_futura}", headers=auth)
     assert client.get("/api/prenotazioni", headers=auth).json() == []
+
+
+def test_modifica_elenco_immagini_non_valido(client, auth):
+    r = client.put("/api/mostre/1", data={**DATI_MOSTRA, "immagini_esistenti": "non-json"}, headers=auth)
+    assert r.status_code == 400

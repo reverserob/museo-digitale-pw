@@ -8,7 +8,7 @@ import models
 import schemas
 from auth import richiedi_admin
 from database import get_db
-from services.immagini_service import file_presenti, salva_immagini
+from services.immagini_service import file_presenti, immagini_da_tenere, salva_immagini
 from services.mostre_service import converti_date, trova_mostra
 
 logger = logging.getLogger("uvicorn.error")
@@ -79,20 +79,23 @@ async def aggiorna_mostra(
     data_inizio: str = Form(...),
     data_fine: str = Form(...),
     immagini: Optional[list[UploadFile]] = File(None),
+    immagini_esistenti: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
     mostra = trova_mostra(db, mostra_id)
     inizio, fine = converti_date(data_inizio, data_fine)
+    da_tenere = immagini_da_tenere(mostra.immagini, immagini_esistenti)
     file_validi = file_presenti(immagini)
-    percorsi = await salva_immagini(file_validi) if file_validi else None
+    if not da_tenere and not file_validi:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra deve avere almeno un'immagine.")
+    nuovi_percorsi = await salva_immagini(file_validi) if file_validi else []
     try:
         mostra.titolo = titolo.strip()
         mostra.descrizione = descrizione.strip()
         mostra.data_inizio = inizio
         mostra.data_fine = fine
-        if percorsi:
-            mostra.immagini = ",".join(percorsi)
+        mostra.immagini = ",".join(da_tenere + nuovi_percorsi)
         db.commit()
         db.refresh(mostra)
         return mostra

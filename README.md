@@ -7,6 +7,15 @@
 ### PW 2 Digitalizzazione dei processi aziendali in un’impresa culturale:
 Progettazione di una piattaforma informatica per la gestione di servizi, dati e utenti
 
+ **Relazione tecnica completa** (contesto, processo AS-IS/TO-BE, architettura, diagrammi UML ed ER, API, test funzionali, sviluppi futuri): [DOCUMENTATION.md](DOCUMENTATION.md)
+
+#### Funzionalità
+- Catalogo delle mostre con galleria di immagini
+- Prenotazione della visita con email di conferma
+- Feedback dei visitatori (voto da 1 a 5 e commento)
+- Area riservata: gestione delle mostre, prenotazioni, moderazione dei feedback
+- Dashboard con indicatori (prenotazioni, mostre in corso, voto medio, prenotazioni per mostra)
+
 #### DASHBOARD
 Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 <img width="988" height="730" alt="image" src="https://github.com/user-attachments/assets/51d487b4-a8a7-449f-956e-012e966d298e" />
