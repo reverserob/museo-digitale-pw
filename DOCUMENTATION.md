@@ -653,7 +653,7 @@ Le pagine non contengono gli indirizzi delle API: usano le funzioni dei servizi 
 Gli stati locali dei componenti (useState, useEffect) garantiscono feedback visivi immediati all'utente, ad esempio gli indicatori di caricamento tramite CircularProgress.
 
 #### 10.2. Feedback e dashboard con indicatori
-- **SezioneFeedback** (pagina di dettaglio della mostra): mostra il voto medio con le stelle (componente `Rating` di MUI), l'elenco delle recensioni e il form per lasciarne una nuova. Dopo l'invio la recensione compare subito in cima alla lista, senza ricaricare la pagina. Per le mostre non ancora iniziate il form è sostituito da un messaggio informativo.
+- **SezioneFeedback** (pagina di dettaglio della mostra): mostra il voto medio con le stelle (componente `Rating` di MUI), l'elenco delle recensioni e il form per lasciarne una nuova. Dopo l'invio la recensione compare subito in cima alla lista, senza ricaricare la pagina. Per le mostre non ancora iniziate il form è sostituito da un messaggio informativo. Se la pagina è aperta dall'amministratore collegato (pulsante **Vedi** della dashboard), compaiono anche una barra con i comandi **Modifica** ed **Elimina** della mostra e un pulsante **Elimina** accanto a ogni feedback; i visitatori non vedono questi comandi e, in ogni caso, il server accetta le operazioni solo con un token valido.
 - **IndicatoriDashboard** (area riservata): quattro riquadri con prenotazioni totali (e degli ultimi 7 giorni), mostre in corso (con quelle in arrivo e concluse), numero di feedback e voto medio, seguiti da un grafico a barre orizzontali delle prenotazioni per mostra. Il grafico è realizzato con semplici elementi grafici proporzionati al valore massimo, senza librerie aggiuntive. Sotto ogni mostra l'amministratore può aprire l'elenco delle prenotazioni o dei feedback ed eliminare questi ultimi.
 
 I calcoli degli indicatori sono svolti dal back-end: il front-end riceve numeri già pronti e si limita a mostrarli. In questo modo i dati sono sempre coerenti con il database e la logica è verificabile con i test del server.
@@ -686,7 +686,7 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (88 test) | Vitest + React Testing Library (67 test) |
+| Test automatici | pytest + TestClient di FastAPI (88 test) | Vitest + React Testing Library (72 test) |
 
 **Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 

@@ -292,6 +292,16 @@ export default function AdminDashboard() {
                                                 </Button>
                                                 <Button
                                                     component={Link}
+                                                    to={`/esposizione/${m.id}`}
+                                                    variant="outlined"
+                                                    color="inherit"
+                                                    size="small"
+                                                    aria-label={`Vedi la mostra ${m.titolo}`}
+                                                >
+                                                    Vedi
+                                                </Button>
+                                                <Button
+                                                    component={Link}
                                                     to={`/admin/modifica/${m.id}`}
                                                     variant="outlined"
                                                     color="primary"

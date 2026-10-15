@@ -30,6 +30,14 @@ export default function SezioneFeedback({ mostra }) {
     const media = elenco.length ? elenco.reduce((somma, f) => somma + f.voto, 0) / elenco.length : null;
     const nonIniziata = mostra.data_inizio > oggiIso();
 
+    const handleElimina = (id) => {
+        if (!window.confirm('Eliminare questo feedback?')) return;
+        setErrore('');
+        eliminaFeedback(id)
+            .then(() => setElenco((precedenti) => precedenti.filter((f) => f.id !== id)))
+            .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione del feedback.")));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         setErrore('');
@@ -134,6 +142,17 @@ export default function SezioneFeedback({ mostra }) {
                         <Typography variant="caption" sx={{ color: '#888888', fontFamily: 'sans-serif' }}>
                             {new Date(f.creato_il + 'Z').toLocaleDateString('it-IT')}
                         </Typography>
+                        {admin && (
+                            <Button
+                                size="small"
+                                color="error"
+                                onClick={() => handleElimina(f.id)}
+                                aria-label={`Elimina il feedback di ${f.nome}`}
+                                sx={{ ml: 'auto' }}
+                            >
+                                Elimina
+                            </Button>
+                        )}
                     </Box>
                     {f.commento && (
                         <Typography sx={{ color: '#cccccc', mt: 0.5, fontFamily: 'sans-serif' }}>

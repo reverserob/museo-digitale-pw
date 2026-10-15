@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import GalleriaMostra from '../pages/GalleriaMostra';
-import { api, API_URL } from '../services/api';
+import { api, API_URL, setToken } from '../services/api';
 import { renderConRouter, erroreHttp, MOSTRA } from './utils';
 
 // vi.mock viene eseguito prima degli import: le chiamate HTTP di axios diventano
@@ -117,5 +117,59 @@ describe('GalleriaMostra - feedback', () => {
 
         expect(await screen.findByText(/potrai lasciare un feedback dopo la visita/)).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Invia feedback' })).not.toBeInTheDocument();
+    });
+});
+
+describe('GalleriaMostra - area admin', () => {
+    const FEEDBACK = [
+        { id: 3, mostra_id: 1, nome: 'Giulia', voto: 5, commento: 'Splendida', creato_il: '2026-10-01T10:00:00' },
+    ];
+
+    it('un visitatore non vede i comandi di gestione', async () => {
+        rispostaMostra(FEEDBACK);
+        apriPagina();
+
+        expect(await screen.findByText('Splendida')).toBeInTheDocument();
+        expect(screen.queryByRole('region', { name: 'Gestione mostra' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Elimina/ })).not.toBeInTheDocument();
+    });
+
+    it("l'admin vede Modifica ed Elimina e i feedback con il pulsante per eliminarli", async () => {
+        setToken('token-valido');
+        rispostaMostra(FEEDBACK);
+        apriPagina();
+
+        const gestione = await screen.findByRole('region', { name: 'Gestione mostra' });
+        expect(gestione).toHaveTextContent('Modifica');
+        expect(screen.getByRole('link', { name: 'Modifica' })).toHaveAttribute('href', '/admin/modifica/1');
+        expect(await screen.findByText('Splendida')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Elimina il feedback di Giulia' })).toBeInTheDocument();
+    });
+
+    it("l'admin elimina un feedback dalla pagina della mostra", async () => {
+        setToken('token-valido');
+        rispostaMostra(FEEDBACK);
+        api.delete.mockResolvedValue({ data: {} });
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        const user = userEvent.setup();
+        apriPagina();
+
+        await user.click(await screen.findByRole('button', { name: 'Elimina il feedback di Giulia' }));
+        expect(api.delete).toHaveBeenCalledWith('/api/feedback/3');
+        expect(screen.queryByText('Splendida')).not.toBeInTheDocument();
+    });
+
+    it("l'admin elimina la mostra e torna alla dashboard", async () => {
+        setToken('token-valido');
+        rispostaMostra([]);
+        api.delete.mockResolvedValue({ data: {} });
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        const user = userEvent.setup();
+        apriPagina();
+
+        const gestione = await screen.findByRole('region', { name: 'Gestione mostra' });
+        await user.click(within(gestione).getByRole('button', { name: 'Elimina' }));
+        expect(api.delete).toHaveBeenCalledWith('/api/mostre/1');
+        expect(await screen.findByText('Pagina Admin')).toBeInTheDocument();
     });
 });

@@ -12,7 +12,8 @@ import {
     Alert,
 } from '@mui/material';
 import { splitImmagini, messaggioErrore } from '../services/api';
-import { getMostra } from '../services/mostreService';
+import { getMostra, eliminaMostra } from '../services/mostreService';
+import { isLoggedIn } from '../services/authService';
 import SezioneFeedback from '../components/SezioneFeedback';
 
 export default function GalleriaMostra() {
@@ -20,6 +21,7 @@ export default function GalleriaMostra() {
     const navigate = useNavigate();
     const [mostra, setMostra] = useState(null);
     const [errore, setErrore] = useState('');
+    const admin = isLoggedIn();
 
     useEffect(() => {
         getMostra(id)
@@ -48,11 +50,62 @@ export default function GalleriaMostra() {
 
     const immaginiGalleria = splitImmagini(mostra.immagini);
 
+    const handleEliminaMostra = () => {
+        if (
+            !window.confirm(
+                'Sei sicuro di voler eliminare questa mostra? Verranno eliminati anche prenotazioni e feedback.'
+            )
+        )
+            return;
+        eliminaMostra(mostra.id)
+            .then(() => navigate('/admin'))
+            .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione.")));
+    };
+
     return (
         <Container maxWidth="lg" sx={{ mt: { xs: 5, md: 10 } }}>
             <Button onClick={() => navigate('/')} sx={{ color: '#bbbbbb', mb: 4, fontFamily: 'sans-serif' }}>
                 ← Torna alle esposizioni
             </Button>
+
+            {admin && (
+                <Box
+                    aria-label="Gestione mostra"
+                    role="region"
+                    sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        p: 2,
+                        mb: 4,
+                        border: '1px solid rgba(197, 160, 89, 0.4)',
+                        backgroundColor: 'rgba(10, 10, 10, 0.75)',
+                    }}
+                >
+                    <Typography
+                        variant="body2"
+                        sx={{ color: '#c5a059', fontFamily: 'sans-serif', mr: 'auto', letterSpacing: 1 }}
+                    >
+                        AREA ADMIN
+                    </Typography>
+                    <Button component={Link} to="/admin" variant="text" color="inherit" size="small">
+                        Dashboard
+                    </Button>
+                    <Button
+                        component={Link}
+                        to={`/admin/modifica/${mostra.id}`}
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                    >
+                        Modifica
+                    </Button>
+                    <Button variant="outlined" color="error" size="small" onClick={handleEliminaMostra}>
+                        Elimina
+                    </Button>
+                </Box>
+            )}
 
             <Grid container spacing={6}>
                 <Grid size={{ xs: 12, md: 5 }}>
@@ -145,7 +198,7 @@ export default function GalleriaMostra() {
                 </Grid>
             </Grid>
 
-            <SezioneFeedback mostra={mostra} />
+            <SezioneFeedback mostra={mostra} admin={admin} />
         </Container>
     );
 }

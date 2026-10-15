@@ -102,6 +102,10 @@ describe('AdminDashboard - gestione', () => {
 
         expect(await screen.findByText(MOSTRA.titolo)).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Modifica' })).toHaveAttribute('href', '/admin/modifica/1');
+        expect(screen.getByRole('link', { name: `Vedi la mostra ${MOSTRA.titolo}` })).toHaveAttribute(
+            'href',
+            '/esposizione/1'
+        );
 
         await user.click(screen.getByRole('button', { name: 'Prenotazioni (1)' }));
         expect(await screen.findByText(/Mario Rossi · mario@test.it · 3331234567/)).toBeInTheDocument();
