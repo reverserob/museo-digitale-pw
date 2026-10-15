@@ -9,6 +9,7 @@ import background from './config/background.json';
 
 import AppHeader from './components/AppHeader';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 
 const GalleriaMostra = lazy(() => import('./pages/GalleriaMostra'));
@@ -41,13 +42,15 @@ function App() {
                             {routes.map((route) => {
                                 const Pagina = pages[route.component];
                                 // le rotte con "protected": true sono visibili solo dopo il login
-                                const elemento = route.protected ? (
+                                const pagina = route.protected ? (
                                     <ProtectedRoute>
                                         <Pagina />
                                     </ProtectedRoute>
                                 ) : (
                                     <Pagina />
                                 );
+                                // un errore in una pagina mostra un messaggio invece dello schermo vuoto
+                                const elemento = <ErrorBoundary key={route.path}>{pagina}</ErrorBoundary>;
                                 return <Route key={route.path} path={route.path} element={elemento} />;
                             })}
                         </Routes>
