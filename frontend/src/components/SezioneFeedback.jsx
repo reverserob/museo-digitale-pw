@@ -78,7 +78,12 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                 </Typography>
             )}
 
-            {nonIniziata ? (
+            {admin ? (
+                <Typography variant="body2" sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
+                    Come amministratore puoi leggere i feedback dei visitatori (ed eliminare quelli non appropriati), ma
+                    non lasciarne di nuovi.
+                </Typography>
+            ) : nonIniziata ? (
                 <Alert severity="info" sx={{ mb: 4 }}>
                     La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita.
                 </Alert>
