@@ -57,10 +57,14 @@ class RegistrazioneRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def valida_password(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("La password deve contenere almeno 8 caratteri.")
+        if len(v) < 6:
+            raise ValueError("La password deve contenere almeno 6 caratteri.")
         if len(v) > 128:
             raise ValueError("La password può contenere al massimo 128 caratteri.")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("La password deve contenere almeno una lettera maiuscola.")
+        if not re.search(r"\d", v):
+            raise ValueError("La password deve contenere almeno un numero.")
         return v
 
 
@@ -81,7 +85,6 @@ class SessioneUtenteResponse(BaseModel):
 
 
 class PrenotazioneCreate(BaseModel):
-    """Prenotazione di un visitatore registrato: nome, cognome ed email arrivano dal suo account."""
 
     mostra_id: int
     # facoltativo: se manca si usa il telefono dell'account
@@ -106,6 +109,7 @@ class PrenotazioneResponse(BaseModel):
 
 
 class FeedbackCreate(BaseModel):
+
     mostra_id: int
     voto: int
     commento: str = ""
@@ -159,6 +163,7 @@ class StatisticheResponse(BaseModel):
 
 
 class MiaPrenotazioneResponse(BaseModel):
+
     id: int
     mostra_id: int
     titolo_mostra: str

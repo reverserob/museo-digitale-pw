@@ -14,6 +14,32 @@ const cardSx = {
 const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
 const campo = { slotProps: { inputLabel: { shrink: true } }, fullWidth: true, sx: inputStyle };
 
+const REGOLE_PASSWORD = [
+    { testo: 'almeno 6 caratteri', ok: (p) => p.length >= 6 },
+    { testo: 'una lettera maiuscola', ok: (p) => /[A-Z]/.test(p) },
+    { testo: 'un numero', ok: (p) => /\d/.test(p) },
+];
+
+function erroreEmail(valore) {
+    const email = valore.trim();
+    if (!email) return '';
+    if (/\s/.test(email)) return "L'email non può contenere spazi";
+    const chiocciole = (email.match(/@/g) || []).length;
+    if (chiocciole === 0) return 'Manca la @ (es. nome@dominio.it)';
+    if (chiocciole > 1) return "L'email deve contenere una sola @";
+    const [locale, dominio] = email.split('@');
+    if (!locale) return 'Manca la parte prima della @';
+    if (!dominio) return 'Manca il dominio dopo la @ (es. gmail.com)';
+    if (!/^[A-Za-z0-9._%+-]+$/.test(locale) || !/^[A-Za-z0-9.-]+$/.test(dominio))
+        return "L'email contiene caratteri non ammessi";
+    if (locale.startsWith('.') || locale.endsWith('.') || email.includes('..')) return "Punti non validi nell'email";
+    if (!/^([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/.test(dominio))
+        return 'Il dominio non è valido (es. gmail.com)';
+    return '';
+}
+
+const erroreNome = (valore) => (valore.length > 0 && valore.trim().length < 3 ? 'Inserisci almeno 3 caratteri' : '');
+
 // accetto solo indirizzi interni al sito come destinazione dopo il login
 const destinazioneSicura = (next) => (next && next.startsWith('/') && !next.startsWith('//') ? next : '/profilo');
 
@@ -24,18 +50,31 @@ export default function Accedi() {
     const utente = useUtente();
 
     const [scheda, setScheda] = useState(0);
-    const [dati, setDati] = useState({ nome: '', cognome: '', email: '', telefono: '', password: '' });
+    const [dati, setDati] = useState({ nome: '', cognome: '', email: '', telefono: '', password: '', conferma: '' });
     const [errore, setErrore] = useState('');
     const [invio, setInvio] = useState(false);
 
     const aggiorna = (nomeCampo) => (e) => setDati({ ...dati, [nomeCampo]: e.target.value });
 
+    const requisitiMancanti = REGOLE_PASSWORD.filter((r) => !r.ok(dati.password)).map((r) => r.testo);
+    const passwordValida = requisitiMancanti.length === 0;
+    const confermaErrata = dati.conferma.length > 0 && dati.conferma !== dati.password;
+
+    const errori = {
+        nome: erroreNome(dati.nome),
+        cognome: erroreNome(dati.cognome),
+        email: erroreEmail(dati.email),
+        telefono: dati.telefono && !/^\d{6,15}$/.test(dati.telefono.trim()) ? 'Solo cifre, da 6 a 15' : '',
+    };
+
     const registrazioneValida =
-        dati.nome.trim().length >= 2 &&
-        dati.cognome.trim().length >= 2 &&
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dati.email.trim()) &&
+        dati.nome.trim().length >= 3 &&
+        dati.cognome.trim().length >= 3 &&
+        dati.email.trim() !== '' &&
+        !errori.email &&
         /^\d{6,15}$/.test(dati.telefono.trim()) &&
-        dati.password.length >= 8;
+        passwordValida &&
+        dati.conferma === dati.password;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -45,12 +84,12 @@ export default function Accedi() {
             scheda === 0
                 ? loginUtente(dati.email.trim(), dati.password)
                 : registrazione({
-                      nome: dati.nome.trim(),
-                      cognome: dati.cognome.trim(),
-                      email: dati.email.trim(),
-                      telefono: dati.telefono.trim(),
-                      password: dati.password,
-                  });
+                    nome: dati.nome.trim(),
+                    cognome: dati.cognome.trim(),
+                    email: dati.email.trim(),
+                    telefono: dati.telefono.trim(),
+                    password: dati.password,
+                });
         richiesta
             .then(() => navigate(next, { replace: true }))
             .catch((err) => setErrore(messaggioErrore(err, 'Operazione non riuscita. Riprova.')))
@@ -110,12 +149,14 @@ export default function Accedi() {
                         sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}
                     >
                         {scheda === 1 && (
-                            <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                                 <TextField
                                     {...campo}
                                     label="Nome"
                                     value={dati.nome}
                                     onChange={aggiorna('nome')}
+                                    error={Boolean(errori.nome)}
+                                    helperText={errori.nome}
                                     required
                                 />
                                 <TextField
@@ -123,6 +164,8 @@ export default function Accedi() {
                                     label="Cognome"
                                     value={dati.cognome}
                                     onChange={aggiorna('cognome')}
+                                    error={Boolean(errori.cognome)}
+                                    helperText={errori.cognome}
                                     required
                                 />
                             </Box>
@@ -134,6 +177,8 @@ export default function Accedi() {
                             autoComplete="email"
                             value={dati.email}
                             onChange={aggiorna('email')}
+                            error={Boolean(errori.email)}
+                            helperText={errori.email}
                             required
                         />
                         {scheda === 1 && (
@@ -143,7 +188,8 @@ export default function Accedi() {
                                 autoComplete="tel"
                                 value={dati.telefono}
                                 onChange={aggiorna('telefono')}
-                                helperText="Solo cifre, da 6 a 15"
+                                error={Boolean(errori.telefono)}
+                                helperText={errori.telefono || 'Solo cifre, da 6 a 15'}
                                 required
                             />
                         )}
@@ -154,9 +200,29 @@ export default function Accedi() {
                             autoComplete={scheda === 0 ? 'current-password' : 'new-password'}
                             value={dati.password}
                             onChange={aggiorna('password')}
-                            helperText={scheda === 1 ? 'Almeno 8 caratteri' : ''}
+                            error={scheda === 1 && dati.password.length > 0 && !passwordValida}
+                            helperText={
+                                scheda !== 1
+                                    ? ''
+                                    : passwordValida
+                                        ? 'Password valida'
+                                        : `Serve: ${requisitiMancanti.join(', ')}`
+                            }
                             required
                         />
+                        {scheda === 1 && (
+                            <TextField
+                                {...campo}
+                                label="Conferma password"
+                                type="password"
+                                autoComplete="new-password"
+                                value={dati.conferma}
+                                onChange={aggiorna('conferma')}
+                                error={confermaErrata}
+                                helperText={confermaErrata ? 'Le password non coincidono' : ''}
+                                required
+                            />
+                        )}
                         {errore && <Alert severity="error">{errore}</Alert>}
                         <Button
                             type="submit"
