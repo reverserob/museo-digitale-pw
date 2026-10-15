@@ -141,4 +141,46 @@ describe('Accedi', () => {
         expect(screen.getByText('Sei già collegato come Mario Rossi')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'ACCEDI' })).not.toBeInTheDocument();
     });
+
+    it("mostra un messaggio diverso per ogni errore nell'email", async () => {
+        const user = userEvent.setup();
+        apri();
+        await user.click(screen.getByRole('tab', { name: 'Registrati' }));
+        const email = screen.getByLabelText(/Email/);
+
+        const casi = [
+            ['mario rossi@test.it', "L'email non può contenere spazi"],
+            ['mario.test.it', 'Manca la @ (es. nome@dominio.it)'],
+            ['mario@@test.it', "L'email deve contenere una sola @"],
+            ['@test.it', 'Manca la parte prima della @'],
+            ['mario@', 'Manca il dominio dopo la @ (es. gmail.com)'],
+            ['mario#1@test.it', "L'email contiene caratteri non ammessi"],
+            ['mario..rossi@test.it', "Punti non validi nell'email"],
+            ['mario@test', 'Il dominio non è valido (es. gmail.com)'],
+            ['mario@test.i', 'Il dominio non è valido (es. gmail.com)'],
+        ];
+        for (const [valore, messaggio] of casi) {
+            await user.clear(email);
+            await user.type(email, valore);
+            expect(screen.getByText(messaggio), valore).toBeInTheDocument();
+        }
+
+        await user.clear(email);
+        await user.type(email, 'mario.rossi+museo@posta.example.it');
+        expect(email).not.toHaveAttribute('aria-invalid', 'true');
+    });
+
+    it('nome e cognome devono avere almeno 3 caratteri', async () => {
+        const user = userEvent.setup();
+        apri();
+        await user.click(screen.getByRole('tab', { name: 'Registrati' }));
+
+        await user.type(screen.getByLabelText(/^Nome/), 'Al');
+        await user.type(screen.getByLabelText(/Cognome/), ' Ro ');
+        expect(screen.getAllByText('Inserisci almeno 3 caratteri')).toHaveLength(2);
+
+        await user.type(screen.getByLabelText(/^Nome/), 'do');
+        expect(screen.getAllByText('Inserisci almeno 3 caratteri')).toHaveLength(1);
+        expect(screen.getByRole('button', { name: 'CREA ACCOUNT' })).toBeDisabled();
+    });
 });
