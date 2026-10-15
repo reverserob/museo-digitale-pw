@@ -213,6 +213,9 @@ I vantaggi di questa organizzazione sono:
 ### 5. Modello dei dati
 Il sistema si appoggia a un database relazionale SQLite, interfacciato tramite l'ORM SQLAlchemy per la gestione trasparente delle entità in oggetti Python. Le tabelle vengono create automaticamente all'avvio e, se il database è vuoto, vengono inserite le mostre dimostrative descritte nel file `data/mostre.json` (seeding): per aggiungere o modificare le mostre iniziali basta modificare il file JSON, senza toccare il codice.
 
+Nello stesso file ogni mostra può avere un elenco di `feedback` (nome, voto, commento): 
+le recensioni indicate vengono inserite insieme alla mostra e collegate a essa tramite la relazione SQLAlchemy, così l'applicazione parte già con dei dati dimostrativi anche per la sezione delle opinioni e per gli indicatori della dashboard. Nei test automatici questi feedback vengono rimossi prima di ogni test, così i conteggi partono sempre da zero.
+
 #### 5.1. Diagramma Entità-Relazione
 
 ```mermaid
@@ -633,7 +636,7 @@ frontend/src/
 ├── App.jsx        → tema, router e rotte
 ├── config/        → routes.json (elenco delle rotte) e background.json (immagine di sfondo)
 ├── pages/         → una pagina per rotta: Home, GalleriaMostra, FormPrenotazione, AdminDashboard, AdminForm, NotFound
-├── components/    → componenti riutilizzabili: AppHeader, ProtectedRoute, SezioneFeedback, IndicatoriDashboard
+├── components/    → componenti riutilizzabili: AppHeader, ProtectedRoute, ErrorBoundary, SezioneFeedback, IndicatoriDashboard
 ├── services/      → api.js (istanza Axios) e un servizio per area: mostre, prenotazioni, feedback, statistiche, auth
 ├── styles/        → fogli di stile del layout
 └── tests/         → test automatici (Vitest)
@@ -653,7 +656,7 @@ Le pagine non contengono gli indirizzi delle API: usano le funzioni dei servizi 
 Gli stati locali dei componenti (useState, useEffect) garantiscono feedback visivi immediati all'utente, ad esempio gli indicatori di caricamento tramite CircularProgress.
 
 #### 10.2. Feedback e dashboard con indicatori
-- **SezioneFeedback** (pagina di dettaglio della mostra): mostra il voto medio con le stelle (componente `Rating` di MUI), l'elenco delle recensioni e il form per lasciarne una nuova. Dopo l'invio la recensione compare subito in cima alla lista, senza ricaricare la pagina. Per le mostre non ancora iniziate il form è sostituito da un messaggio informativo. Se la pagina è aperta dall'amministratore collegato (pulsante **Vedi** della dashboard), compaiono anche una barra con i comandi **Modifica** ed **Elimina** della mostra e un pulsante **Elimina** accanto a ogni feedback; i visitatori non vedono questi comandi e, in ogni caso, il server accetta le operazioni solo con un token valido.
+- **SezioneFeedback** (pagina di dettaglio della mostra): mostra il voto medio con le stelle (componente `Rating` di MUI), l'elenco delle recensioni e il form per lasciarne una nuova. Dopo l'invio la recensione compare subito in cima alla lista, senza ricaricare la pagina. Per le mostre non ancora iniziate il form è sostituito da un messaggio informativo. Se la pagina è aperta dall'amministratore collegato (pulsante **Vedi** della dashboard), compaiono anche una barra con i comandi **Modifica** ed **Elimina** della mostra e un pulsante **Elimina** accanto a ogni feedback, mentre il form per lasciare un feedback è nascosto (l'amministratore legge e modera, ma non recensisce); i visitatori non vedono questi comandi e, in ogni caso, il server accetta le operazioni solo con un token valido.
 - **IndicatoriDashboard** (area riservata): quattro riquadri con prenotazioni totali (e degli ultimi 7 giorni), mostre in corso (con quelle in arrivo e concluse), numero di feedback e voto medio, seguiti da un grafico a barre orizzontali delle prenotazioni per mostra. Il grafico è realizzato con semplici elementi grafici proporzionati al valore massimo, senza librerie aggiuntive. Sotto ogni mostra l'amministratore può aprire l'elenco delle prenotazioni o dei feedback ed eliminare questi ultimi.
 
 I calcoli degli indicatori sono svolti dal back-end: il front-end riceve numeri già pronti e si limita a mostrarli. In questo modo i dati sono sempre coerenti con il database e la logica è verificabile con i test del server.
@@ -679,6 +682,8 @@ Indipendentemente dai controlli effettuati nel browser, il payload ricevuto vien
 #### 10.4. Gestione globale degli errori nel client
 Al fine di evitare schermate bloccate o silenziose in caso di problemi di rete o disservizi del server, le chiamate asincrone sono protette dal metodo .catch() di Axios, che intercetta i codici di errore HTTP restituiti dal back-end (401, 404, 422, 429, 500). È stato implementato un sistema di notifica basato sul componente Alert di Material-UI: in caso di errori di connessione o fallimenti nelle operazioni di scrittura, un messaggio descrittivo compare in modo dinamico all'utente, migliorando sensibilmente la resilienza e l'usabilità complessiva dell'applicazione.
 
+Ogni pagina è inoltre racchiusa in un componente `ErrorBoundary`: se durante la visualizzazione si verifica un errore imprevisto (ad esempio dati non coerenti), al posto di una pagina bianca compare un messaggio con il dettaglio dell'errore e il pulsante per tornare alla home.
+
 ### 11. Qualità del codice e test automatici
 Per mantenere il codice uniforme e individuare gli errori prima della pubblicazione sono stati adottati strumenti di controllo automatico:
 
@@ -686,7 +691,7 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (88 test) | Vitest + React Testing Library (72 test) |
+| Test automatici | pytest + TestClient di FastAPI (89 test) | Vitest + React Testing Library (74 test) |
 
 **Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 
@@ -714,6 +719,7 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 | TF11 | Moderazione dei feedback | Amministratore | Clic su "Feedback (n)" e poi su "Elimina" | Il feedback viene rimosso dopo la conferma | ✅ Superato |
 | TF12 | Pubblicazione di una mostra | Amministratore | "Nuova mostra", compilare il form e aggiungere più immagini, anche in momenti diversi | Le immagini si sommano con anteprima; il pulsante si attiva solo con tutti i campi validi; la mostra compare nel catalogo con tutte le foto | ✅ Superato |
 | TF12b | Modifica delle immagini di una mostra | Amministratore | "Modifica", togliere una foto con ✕ e aggiungerne una nuova, "Salva modifiche" | Il form mostra le foto attuali; dopo il salvataggio restano quelle non tolte più quella nuova | ✅ Superato |
+| TF12c | Mostra vista dall'amministratore | Amministratore | Dalla dashboard premere "Vedi" su una mostra | Compare la barra "Area admin" con Dashboard, Modifica ed Elimina; i feedback si possono leggere ed eliminare ma il form per lasciarne è nascosto | ✅ Superato |
 | TF13 | Accesso diretto a una pagina riservata | Visitatore | Aprire `/admin/nuova` senza login | Si viene reindirizzati alla pagina di accesso | ✅ Superato |
 | TF14 | Troppi tentativi di accesso | Chiunque | Sbagliare la password più di 5 volte in un minuto | Messaggio "Troppi tentativi di accesso. Riprova tra qualche minuto." | ✅ Superato |
 
@@ -757,6 +763,12 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 
 **TF12b – Modifica delle immagini di una mostra**: il form mostra le foto già salvate; si possono togliere singolarmente e aggiungerne di nuove.
 ![Modifica delle immagini](docs/screenshots/12-modifica-mostra.webp)
+
+**TF12c – Mostra vista dall'amministratore**: dalla dashboard, con il pulsante "Vedi", l'amministratore apre la pagina pubblica della mostra con in più la barra di gestione.
+![Pagina della mostra vista dall'admin](docs/screenshots/13-mostra-admin.webp)
+
+Nella sezione delle opinioni l'amministratore legge i feedback e può eliminarli, ma non può lasciarne di nuovi.
+![Feedback visti dall'admin](docs/screenshots/14-mostra-admin-feedback.webp)
 
 ### 13. Istruzioni per l'esecuzione
 #### 13.1. Prerequisiti
