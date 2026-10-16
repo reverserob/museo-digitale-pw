@@ -3,6 +3,7 @@
   { "path": "/esposizioni", "component": "Esposizioni" },
   { "path": "/esposizione/:id", "component": "GalleriaMostra" },
   { "path": "/prenota/:id", "component": "FormPrenotazione", "protected": "utente" },
+  { "path": "/contatti", "component": "Contatti" },
   { "path": "/accedi", "component": "Accedi" },
   { "path": "/password-dimenticata", "component": "PasswordDimenticata" },
   { "path": "/reimposta-password", "component": "ReimpostaPassword" },

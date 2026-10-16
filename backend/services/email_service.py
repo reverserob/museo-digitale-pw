@@ -7,6 +7,7 @@ import urllib.request
 from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from typing import Optional
 
 import settings
 
@@ -84,7 +85,9 @@ def crea_html_reset_password(nome: str, link: str, minuti: int) -> str:
     """)
 
 
-def invia_con_brevo(destinatario: str, nome: str, oggetto: str, html_content: str) -> None:
+def invia_con_brevo(
+    destinatario: str, nome: str, oggetto: str, html_content: str, rispondi_a: Optional[str] = None
+) -> None:
     # API di Brevo: una richiesta HTTPS (porta 443), quindi funziona anche dove SMTP è bloccato
     dati = {
         "sender": {"name": settings.EMAIL_MITTENTE_NOME, "email": settings.EMAIL_MITTENTE},
@@ -92,6 +95,9 @@ def invia_con_brevo(destinatario: str, nome: str, oggetto: str, html_content: st
         "subject": oggetto,
         "htmlContent": html_content,
     }
+    if rispondi_a:
+        # "Rispondi" nel programma di posta scrive direttamente a chi ha inviato la richiesta
+        dati["replyTo"] = {"email": rispondi_a}
     richiesta = urllib.request.Request(
         BREVO_URL,
         data=json.dumps(dati).encode("utf-8"),
@@ -111,11 +117,13 @@ def invia_con_brevo(destinatario: str, nome: str, oggetto: str, html_content: st
         raise RuntimeError(f"Brevo ha risposto {e.code}: {dettaglio}") from e
 
 
-def invia_con_smtp(destinatario: str, oggetto: str, html_content: str) -> None:
+def invia_con_smtp(destinatario: str, oggetto: str, html_content: str, rispondi_a: Optional[str] = None) -> None:
     msg = MIMEMultipart()
     msg["From"] = settings.SMTP_USER
     msg["To"] = destinatario
     msg["Subject"] = oggetto
+    if rispondi_a:
+        msg["Reply-To"] = rispondi_a
     msg.attach(MIMEText(html_content, "html"))
 
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as server:
@@ -124,22 +132,49 @@ def invia_con_smtp(destinatario: str, oggetto: str, html_content: str) -> None:
         server.sendmail(settings.SMTP_USER, destinatario, msg.as_string())
 
 
-def _invia(destinatario: str, nome: str, oggetto: str, html_content: str) -> bool:
+def email_configurata() -> bool:
+    return bool(settings.BREVO_API_KEY) or bool(settings.SMTP_USER and settings.SMTP_PASSWORD)
+
+
+def _invia(destinatario: str, nome: str, oggetto: str, html_content: str, rispondi_a: Optional[str] = None) -> bool:
     """Invia con Brevo (se configurato) o con SMTP. Non solleva eccezioni: restituisce True se l'email è partita."""
     usa_brevo = bool(settings.BREVO_API_KEY)
-    if not usa_brevo and not (settings.SMTP_USER and settings.SMTP_PASSWORD):
+    if not email_configurata():
         logger.warning(f"Email non configurata (né BREVO_API_KEY né SMTP): '{oggetto}' per {destinatario} non inviata.")
         return False
     try:
         if usa_brevo:
-            invia_con_brevo(destinatario, nome, oggetto, html_content)
+            invia_con_brevo(destinatario, nome, oggetto, html_content, rispondi_a)
         else:
-            invia_con_smtp(destinatario, oggetto, html_content)
+            invia_con_smtp(destinatario, oggetto, html_content, rispondi_a)
         logger.info(f"Email '{oggetto}' inviata a {destinatario} tramite {'Brevo' if usa_brevo else 'SMTP'}")
         return True
     except Exception as e:
         logger.error(f"Errore invio email a {destinatario}: {e}")
         return False
+
+
+def crea_html_contatto(dati: dict) -> str:
+    # tutti i campi arrivano dall'utente: vengono "escapati" prima di finire nell'HTML
+    e = {k: html.escape(str(v)) for k, v in dati.items()}
+    descrizione = e["descrizione"].replace("\n", "<br>")
+    return _layout(f"""
+            <p style="color: #fff;">Nuova richiesta dal modulo <b>Contatti</b> del sito.</p>
+            <div style="background: #1a1a1a; padding: 15px; border-left: 4px solid #c5a059; margin: 20px 0;">
+                <h3 style="margin: 0 0 10px 0; color: #c5a059;">{e["titolo"]}</h3>
+                <p style="margin: 0; color: #ddd;">{descrizione}</p>
+            </div>
+            <p style="color: #ccc; margin: 0;"><b>Nome:</b> {e["nome"]} {e["cognome"]}</p>
+            <p style="color: #ccc; margin: 0;"><b>Email:</b> {e["email"]}</p>
+            <p style="color: #ccc; margin: 0 0 15px 0;"><b>Telefono:</b> {e["telefono"]}</p>
+            <p style="color: #aaa;">Per rispondere usa "Rispondi": il messaggio arriverà direttamente al visitatore.</p>
+    """)
+
+
+# SEND MAIL MODULO CONTATTI (alla casella del museo)
+def invia_email_contatto(dati: dict) -> bool:
+    oggetto = f"[Contatti] {dati['titolo']}"
+    return _invia(settings.CONTATTI_EMAIL, "Museo Civico Digitale", oggetto, crea_html_contatto(dati), dati["email"])
 
 
 # SEND MAIL PRENOTAZIONE

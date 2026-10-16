@@ -9,6 +9,8 @@ const it = {
     'header.ciaoAdmin': 'Ciao, Admin',
     'header.esci': 'Esci',
     'header.esposizioni': 'Esposizioni',
+    'header.home': 'Home',
+    'header.contatti': 'Contatti',
     'lingua.etichetta': 'Lingua',
 
     // comuni
@@ -175,6 +177,25 @@ const it = {
     'profilo.confermaAnnulla': 'Vuoi annullare la prenotazione per "{titolo}"? Riceverai un\'email di conferma.',
     'profilo.erroreAnnulla': 'Impossibile annullare la prenotazione.',
 
+    // modulo contatti
+    'contatti.titolo': 'Contatti',
+    'contatti.intro':
+        "Hai una domanda sul museo, sulle mostre o sulle visite? Scrivici: ti risponderemo all'indirizzo email indicato.",
+    'contatti.soloRegistrati': 'Il modulo è riservato agli utenti registrati: accedi o crea un account per scriverci.',
+    'contatti.admin': 'Il modulo Contatti è riservato ai visitatori registrati.',
+    'contatti.form': 'Modulo contatti',
+    'contatti.campoTitolo': 'Titolo',
+    'contatti.campoDescrizione': 'Descrizione',
+    'contatti.titoloCorto': 'Almeno 3 caratteri',
+    'contatti.descrizioneCorta': 'Almeno 10 caratteri',
+    'contatti.caratteri': '{numero}/2000 caratteri',
+    'contatti.invia': 'INVIA RICHIESTA',
+    'contatti.invio': 'Invio in corso...',
+    'contatti.inviata': "Richiesta inviata. Ti risponderemo all'indirizzo email indicato.",
+    'contatti.nuova': "Scrivi un'altra richiesta",
+    'contatti.errore': 'Impossibile inviare la richiesta. Riprova.',
+    'contatti.emailNonValida': 'Inserisci un indirizzo email valido',
+
     // footer
     'footer.orariTitolo': 'Orari',
     'footer.giorni': 'Dal lunedì al sabato',
@@ -184,9 +205,9 @@ const it = {
     'footer.indirizzo1': 'Piazza delle Arti 7',
     'footer.indirizzo2': '20121 Milano (MI)',
     'footer.prenotazioniTitolo': 'Prenotazioni',
-    'footer.telefono': 'Tel. +39 02 1234 5678',
-    'footer.email': 'prenotazioni@museocivicodigitale.it',
-    'footer.online': 'oppure online dalla pagina delle esposizioni',
+    'footer.soloOnline': 'Le visite si prenotano solo online, con il pulsante PRENOTA nella pagina di ogni mostra.',
+    'footer.vaiEsposizioni': 'Vai alle esposizioni',
+    'footer.domande': 'Hai una domanda? Scrivici dal modulo Contatti',
     'footer.diritti': '© {anno} Museo Civico Digitale · Progetto didattico',
 
     // pagine di errore
@@ -203,6 +224,8 @@ const en = {
     'header.ciaoAdmin': 'Hi, Admin',
     'header.esci': 'Sign out',
     'header.esposizioni': 'Exhibitions',
+    'header.home': 'Home',
+    'header.contatti': 'Contact',
     'lingua.etichetta': 'Language',
 
     'comune.prenota': 'BOOK',
@@ -357,6 +380,25 @@ const en = {
         'Do you want to cancel your booking for "{titolo}"? You will receive a confirmation email.',
     'profilo.erroreAnnulla': 'Unable to cancel the booking.',
 
+    'contatti.titolo': 'Contact',
+    'contatti.intro':
+        'Do you have a question about the museum, the exhibitions or visits? Write to us: we will reply to the email address you provide.',
+    'contatti.soloRegistrati':
+        'The form is reserved for registered users: sign in or create an account to write to us.',
+    'contatti.admin': 'The Contact form is reserved for registered visitors.',
+    'contatti.form': 'Contact form',
+    'contatti.campoTitolo': 'Title',
+    'contatti.campoDescrizione': 'Description',
+    'contatti.titoloCorto': 'At least 3 characters',
+    'contatti.descrizioneCorta': 'At least 10 characters',
+    'contatti.caratteri': '{numero}/2000 characters',
+    'contatti.invia': 'SEND REQUEST',
+    'contatti.invio': 'Sending...',
+    'contatti.inviata': 'Request sent. We will reply to the email address you provided.',
+    'contatti.nuova': 'Write another request',
+    'contatti.errore': 'Unable to send the request. Please try again.',
+    'contatti.emailNonValida': 'Enter a valid email address',
+
     'footer.orariTitolo': 'Opening hours',
     'footer.giorni': 'Monday to Saturday',
     'footer.orario': '9:00 am – 6:30 pm',
@@ -365,9 +407,9 @@ const en = {
     'footer.indirizzo1': 'Piazza delle Arti 7',
     'footer.indirizzo2': '20121 Milan (MI), Italy',
     'footer.prenotazioniTitolo': 'Bookings',
-    'footer.telefono': 'Phone +39 02 1234 5678',
-    'footer.email': 'prenotazioni@museocivicodigitale.it',
-    'footer.online': 'or online from the exhibitions page',
+    'footer.soloOnline': 'Visits can only be booked online, with the BOOK button on each exhibition page.',
+    'footer.vaiEsposizioni': 'Go to exhibitions',
+    'footer.domande': 'Have a question? Write to us using the Contact form',
     'footer.diritti': '© {anno} Digital Civic Museum · Educational project',
 
     'notfound.titolo': 'Page not found',
@@ -418,4 +460,13 @@ export const MESSAGGI_SERVER_EN = {
         'The password must contain at least one uppercase letter.',
     'La password deve contenere almeno un numero.': 'The password must contain at least one number.',
     'Dati non validi.': 'Invalid data.',
+    'Il campo deve contenere almeno 2 caratteri.': 'The field must contain at least 2 characters.',
+    "Richiesta inviata. Ti risponderemo all'indirizzo email indicato.":
+        'Request sent. We will reply to the email address you provided.',
+    'Al momento non è possibile inviare la richiesta. Riprova più tardi.':
+        'The request cannot be sent at the moment. Please try again later.',
+    'Il titolo deve contenere almeno 3 caratteri.': 'The title must contain at least 3 characters.',
+    'Il titolo può contenere al massimo 120 caratteri.': 'The title can contain at most 120 characters.',
+    'La descrizione deve contenere almeno 10 caratteri.': 'The description must contain at least 10 characters.',
+    'La descrizione può contenere al massimo 2000 caratteri.': 'The description can contain at most 2000 characters.',
 };

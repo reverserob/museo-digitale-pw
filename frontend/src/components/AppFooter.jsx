@@ -5,7 +5,7 @@ import useLingua from '../hooks/useLingua';
 const titolo = { color: '#c5a059', mb: 1.5, letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '0.85rem' };
 const riga = { color: '#cccccc', fontSize: '0.95rem', lineHeight: 1.8 };
 
-// Footer con orari, indirizzo e contatti per le prenotazioni (dati di esempio del progetto)
+// Footer con orari, indirizzo (di esempio) e indicazioni per le prenotazioni, che avvengono solo online
 export default function AppFooter() {
     const { t } = useLingua();
     return (
@@ -45,19 +45,16 @@ export default function AppFooter() {
                             <Typography variant="h6" component="h2" sx={titolo}>
                                 {t('footer.prenotazioniTitolo')}
                             </Typography>
+                            {/* le prenotazioni avvengono solo dal pulsante PRENOTA della mostra */}
+                            <Typography sx={riga}>{t('footer.soloOnline')}</Typography>
                             <Typography sx={riga}>
-                                <a href="tel:+390212345678" style={{ color: 'inherit' }}>
-                                    {t('footer.telefono')}
-                                </a>
-                            </Typography>
-                            <Typography sx={riga}>
-                                <a href={`mailto:${t('footer.email')}`} style={{ color: '#c5a059' }}>
-                                    {t('footer.email')}
-                                </a>
+                                <Link to="/esposizioni" style={{ color: '#c5a059' }}>
+                                    {t('footer.vaiEsposizioni')}
+                                </Link>
                             </Typography>
                             <Typography sx={{ ...riga, color: '#999999' }}>
-                                <Link to="/esposizioni" style={{ color: 'inherit' }}>
-                                    {t('footer.online')}
+                                <Link to="/contatti" style={{ color: 'inherit' }}>
+                                    {t('footer.domande')}
                                 </Link>
                             </Typography>
                         </Grid>

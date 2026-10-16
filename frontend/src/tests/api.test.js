@@ -84,6 +84,7 @@ describe('token giusto per ogni chiamata', () => {
     it('le chiamate del visitatore usano il suo token, le altre quello admin', () => {
         expect(richiestaDelVisitatore({ url: '/api/prenota', method: 'post' })).toBe(true);
         expect(richiestaDelVisitatore({ url: '/api/feedback', method: 'post' })).toBe(true);
+        expect(richiestaDelVisitatore({ url: '/api/contatti', method: 'post' })).toBe(true);
         expect(richiestaDelVisitatore({ url: '/api/utenti/me/prenotazioni', method: 'get' })).toBe(true);
         expect(richiestaDelVisitatore({ url: '/api/feedback', method: 'get' })).toBe(false);
         expect(richiestaDelVisitatore({ url: '/api/prenotazioni', method: 'get' })).toBe(false);

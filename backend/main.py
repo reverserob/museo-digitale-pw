@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 import models
 import settings
 from database import engine
-from routers import feedback, login, mostre, prenotazioni, statistiche, utenti
+from routers import contatti, feedback, login, mostre, prenotazioni, statistiche, utenti
 from services.error_service import errore_validazione
 from services.migrazioni_service import aggiorna_schema
 from services.rate_limit_service import limiter, troppe_richieste
@@ -60,3 +60,4 @@ app.include_router(mostre.router)
 app.include_router(prenotazioni.router)
 app.include_router(feedback.router)
 app.include_router(statistiche.router)
+app.include_router(contatti.router)

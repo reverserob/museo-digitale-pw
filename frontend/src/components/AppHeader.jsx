@@ -49,8 +49,14 @@ export default function AppHeader() {
                     <Link to="/">MUSEO CIVICO DIGITALE</Link>
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Button component={Link} to="/" color="inherit" className="app-header__button">
+                        {t('header.home')}
+                    </Button>
                     <Button component={Link} to="/esposizioni" color="inherit" className="app-header__button">
                         {t('header.esposizioni')}
+                    </Button>
+                    <Button component={Link} to="/contatti" color="inherit" className="app-header__button">
+                        {t('header.contatti')}
                     </Button>
                     {admin ? (
                         // amministratore collegato: niente Accedi/Registrati dei visitatori

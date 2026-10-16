@@ -121,4 +121,15 @@ describe('AppHeader', () => {
         act(() => setToken('token-admin'));
         expect(screen.getByRole('link', { name: 'Ciao, Admin' })).toBeInTheDocument();
     });
+
+    it('il menu contiene Home, Esposizioni e Contatti', () => {
+        render(
+            <MemoryRouter future={FUTURE}>
+                <AppHeader />
+            </MemoryRouter>
+        );
+        expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+        expect(screen.getByRole('link', { name: 'Esposizioni' })).toHaveAttribute('href', '/esposizioni');
+        expect(screen.getByRole('link', { name: 'Contatti' })).toHaveAttribute('href', '/contatti');
+    });
 });

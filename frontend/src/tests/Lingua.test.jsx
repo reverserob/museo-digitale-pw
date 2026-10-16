@@ -129,14 +129,19 @@ describe('AppFooter', () => {
         expect(orari).toHaveTextContent('09:00 – 18:30');
         expect(within(footer).getByRole('region', { name: 'Dove siamo' })).toHaveTextContent('Piazza delle Arti 7');
         const prenotazioni = within(footer).getByRole('region', { name: 'Prenotazioni' });
-        expect(within(prenotazioni).getByRole('link', { name: /\+39 02 1234 5678/ })).toHaveAttribute(
+        expect(prenotazioni).toHaveTextContent('solo online, con il pulsante PRENOTA');
+        expect(within(prenotazioni).getByRole('link', { name: 'Vai alle esposizioni' })).toHaveAttribute(
             'href',
-            'tel:+390212345678'
+            '/esposizioni'
         );
-        expect(within(prenotazioni).getByRole('link', { name: 'prenotazioni@museocivicodigitale.it' })).toHaveAttribute(
+        expect(within(prenotazioni).getByRole('link', { name: /modulo Contatti/ })).toHaveAttribute(
             'href',
-            'mailto:prenotazioni@museocivicodigitale.it'
+            '/contatti'
         );
+        // nessun indirizzo email o numero di telefono per le prenotazioni
+        expect(footer.querySelector('a[href^="mailto:"]')).toBeNull();
+        expect(footer.querySelector('a[href^="tel:"]')).toBeNull();
+        expect(footer).not.toHaveTextContent('@');
     });
 
     it('in inglese', () => {
