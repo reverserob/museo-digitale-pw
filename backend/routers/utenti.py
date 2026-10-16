@@ -18,6 +18,7 @@ from auth import (
 )
 from database import get_db
 from services.email_service import (
+    invia_email_annullamento,
     invia_email_gia_registrato,
     invia_email_registrazione,
     invia_email_reset_password,
@@ -173,3 +174,33 @@ def miei_feedback(utente: models.Utente = Depends(richiedi_utente), db: Session 
         .order_by(models.Feedback.creato_il.desc())
         .all()
     )
+
+
+# API DELETE ANNULLA UNA MIA PRENOTAZIONE (con email di conferma dell'annullamento)
+@router.delete("/me/prenotazioni/{prenotazione_id}")
+def annulla_prenotazione(
+    prenotazione_id: int,
+    background_tasks: BackgroundTasks,
+    utente: models.Utente = Depends(richiedi_utente),
+    db: Session = Depends(get_db),
+):
+    prenotazione = (
+        db.query(models.Prenotazione)
+        .filter(models.Prenotazione.id == prenotazione_id, models.Prenotazione.utente_id == utente.id)
+        .first()
+    )
+    # anche la prenotazione di un altro visitatore risulta "non trovata": non si rivela che esiste
+    if prenotazione is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prenotazione non trovata.")
+    mostra = prenotazione.mostra
+    db.delete(prenotazione)
+    db.commit()
+    background_tasks.add_task(
+        invia_email_annullamento,
+        destinatario=utente.email,
+        nome=utente.nome,
+        titolo_mostra=mostra.titolo,
+        data_inizio=mostra.data_inizio,
+        data_fine=mostra.data_fine,
+    )
+    return {"message": "Prenotazione annullata. Ti abbiamo inviato un'email di conferma."}

@@ -4,6 +4,8 @@ import { Container, Card, CardContent, Typography, Box, TextField, Button, Alert
 import { messaggioErrore } from '../services/api';
 import { reimpostaPassword } from '../services/utentiService';
 import { requisitiMancanti } from '../utils/password';
+import { traduciServer } from '../i18n/lingua';
+import useLingua from '../hooks/useLingua';
 
 const cardSx = {
     backdropFilter: 'blur(12px)',
@@ -19,6 +21,7 @@ const campo = {
 
 export default function ReimpostaPassword() {
     const [parametri] = useSearchParams();
+    const { t } = useLingua();
     const token = parametri.get('token') || '';
     const [password, setPassword] = useState('');
     const [conferma, setConferma] = useState('');
@@ -26,7 +29,7 @@ export default function ReimpostaPassword() {
     const [fatto, setFatto] = useState('');
     const [invio, setInvio] = useState(false);
 
-    const mancanti = requisitiMancanti(password);
+    const mancanti = requisitiMancanti(password).map((chiave) => t(chiave));
     const confermaErrata = conferma.length > 0 && conferma !== password;
     const valida = mancanti.length === 0 && conferma === password;
 
@@ -35,8 +38,8 @@ export default function ReimpostaPassword() {
         setErrore('');
         setInvio(true);
         reimpostaPassword(token, password)
-            .then(setFatto)
-            .catch((err) => setErrore(messaggioErrore(err, 'Impossibile aggiornare la password.')))
+            .then((testo) => setFatto(traduciServer(testo)))
+            .catch((err) => setErrore(messaggioErrore(err, t('reset.erroreSalva'))))
             .finally(() => setInvio(false));
     };
 
@@ -45,13 +48,13 @@ export default function ReimpostaPassword() {
             <Card elevation={0} sx={cardSx}>
                 <CardContent>
                     <Typography variant="h4" sx={{ color: '#c5a059', mb: 3 }}>
-                        Nuova password
+                        {t('reset.nuovaTitolo')}
                     </Typography>
 
                     {!token ? (
                         <Alert severity="error">
-                            Link non valido: apri il link ricevuto per email oppure{' '}
-                            <Link to="/password-dimenticata">richiedine uno nuovo</Link>.
+                            {t('reset.linkNonValido')}{' '}
+                            <Link to="/password-dimenticata">{t('reset.richiedineUno')}</Link>.
                         </Alert>
                     ) : fatto ? (
                         <>
@@ -59,7 +62,7 @@ export default function ReimpostaPassword() {
                                 {fatto}
                             </Alert>
                             <Button component={Link} to="/accedi" variant="contained" sx={{ borderRadius: 0 }}>
-                                Vai all&apos;accesso
+                                {t('reset.vaiAccesso')}
                             </Button>
                         </>
                     ) : (
@@ -70,31 +73,35 @@ export default function ReimpostaPassword() {
                         >
                             <TextField
                                 {...campo}
-                                label="Nuova password"
+                                label={t('reset.nuova')}
                                 type="password"
                                 autoComplete="new-password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 error={password.length > 0 && mancanti.length > 0}
-                                helperText={mancanti.length === 0 ? 'Password valida' : `Serve: ${mancanti.join(', ')}`}
+                                helperText={
+                                    mancanti.length === 0
+                                        ? t('comune.passwordValida')
+                                        : t('comune.serve', { elenco: mancanti.join(', ') })
+                                }
                                 required
                             />
                             <TextField
                                 {...campo}
-                                label="Conferma password"
+                                label={t('comune.confermaPassword')}
                                 type="password"
                                 autoComplete="new-password"
                                 value={conferma}
                                 onChange={(e) => setConferma(e.target.value)}
                                 error={confermaErrata}
-                                helperText={confermaErrata ? 'Le password non coincidono' : ''}
+                                helperText={confermaErrata ? t('comune.passwordNonCoincidono') : ''}
                                 required
                             />
                             {errore && (
                                 <Alert severity="error">
                                     {errore}{' '}
                                     <Link to="/password-dimenticata" style={{ color: 'inherit' }}>
-                                        Richiedi un nuovo link
+                                        {t('reset.richiediNuovo')}
                                     </Link>
                                 </Alert>
                             )}
@@ -105,7 +112,7 @@ export default function ReimpostaPassword() {
                                 disabled={invio || !valida}
                                 sx={{ borderRadius: 0, py: 1.5, fontWeight: 'bold' }}
                             >
-                                {invio ? 'Attendere...' : 'SALVA LA NUOVA PASSWORD'}
+                                {invio ? t('comune.attendere') : t('reset.salva')}
                             </Button>
                         </Box>
                     )}

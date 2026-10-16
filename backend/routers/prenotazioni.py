@@ -32,6 +32,15 @@ def crea_prenotazione(
             status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra è già conclusa: non è più possibile prenotare."
         )
 
+    # ogni visitatore può prenotarsi una sola volta a ciascuna mostra
+    gia_prenotato = (
+        db.query(models.Prenotazione)
+        .filter(models.Prenotazione.mostra_id == mostra.id, models.Prenotazione.utente_id == utente.id)
+        .first()
+    )
+    if gia_prenotato:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ti sei già prenotato a questa mostra.")
+
     try:
         prenotazione = models.Prenotazione(
             mostra_id=mostra.id,

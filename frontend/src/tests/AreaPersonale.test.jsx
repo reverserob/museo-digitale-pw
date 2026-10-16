@@ -67,4 +67,55 @@ describe('AreaPersonale', () => {
         ).toBeInTheDocument();
         expect(await screen.findByText(/Non hai ancora prenotato/)).toBeInTheDocument();
     });
+
+    it("annulla una prenotazione dopo la conferma e mostra il messaggio dell'email", async () => {
+        collegaUtente();
+        api.get.mockResolvedValue({
+            data: [
+                {
+                    id: 3,
+                    mostra_id: 1,
+                    titolo_mostra: 'Caravaggio e il suo tempo',
+                    data_inizio: '2026-10-10',
+                    data_fine: '2027-01-15',
+                    creata_il: '2026-10-15T09:00:00',
+                },
+            ],
+        });
+        api.delete.mockResolvedValue({
+            data: { message: "Prenotazione annullata. Ti abbiamo inviato un'email di conferma." },
+        });
+        const conferma = vi.spyOn(window, 'confirm').mockReturnValue(true);
+        const user = userEvent.setup();
+        apri();
+
+        await user.click(
+            await screen.findByRole('button', { name: 'Annulla la prenotazione di Caravaggio e il suo tempo' })
+        );
+        expect(conferma).toHaveBeenCalledWith(expect.stringContaining('Caravaggio e il suo tempo'));
+        expect(api.delete).toHaveBeenCalledWith('/api/utenti/me/prenotazioni/3');
+        expect(await screen.findByText(/Prenotazione annullata/)).toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Caravaggio e il suo tempo' })).not.toBeInTheDocument();
+    });
+
+    it("se l'utente non conferma la prenotazione non viene annullata", async () => {
+        collegaUtente();
+        api.get.mockResolvedValue({
+            data: [
+                {
+                    id: 3,
+                    mostra_id: 1,
+                    titolo_mostra: 'Monet',
+                    data_inizio: 'a',
+                    data_fine: 'b',
+                    creata_il: '2026-10-15T09:00:00',
+                },
+            ],
+        });
+        vi.spyOn(window, 'confirm').mockReturnValue(false);
+        const user = userEvent.setup();
+        apri();
+        await user.click(await screen.findByRole('button', { name: 'Annulla la prenotazione di Monet' }));
+        expect(api.delete).not.toHaveBeenCalled();
+    });
 });

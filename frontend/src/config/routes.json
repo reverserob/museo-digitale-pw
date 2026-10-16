@@ -1,5 +1,6 @@
 [
   { "path": "/", "component": "Home" },
+  { "path": "/esposizioni", "component": "Esposizioni" },
   { "path": "/esposizione/:id", "component": "GalleriaMostra" },
   { "path": "/prenota/:id", "component": "FormPrenotazione", "protected": "utente" },
   { "path": "/accedi", "component": "Accedi" },

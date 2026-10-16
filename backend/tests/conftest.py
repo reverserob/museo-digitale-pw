@@ -84,6 +84,13 @@ def email_gia_registrato(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def email_annullamento(monkeypatch):
+    chiamate = []
+    monkeypatch.setattr("routers.utenti.invia_email_annullamento", lambda **dati: chiamate.append(dati))
+    return chiamate
+
+
+@pytest.fixture(autouse=True)
 def email_reset(monkeypatch):
     chiamate = []
     monkeypatch.setattr("routers.utenti.invia_email_reset_password", lambda **dati: chiamate.append(dati))

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { traduci, traduciServer } from '../i18n/lingua';
 
 // backend address
 const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
@@ -100,10 +101,11 @@ export const splitImmagini = (immagini) =>
         .map(imageUrl);
 
 // api axios error message
-export const messaggioErrore = (err, fallback = 'Si è verificato un errore. Riprova.') => {
-    if (!err.response) return 'Impossibile contattare il server. Controlla la connessione.';
+// (i messaggi del server vengono tradotti in inglese se l'utente ha scelto EN)
+export const messaggioErrore = (err, fallback = traduci('comune.erroreGenerico')) => {
+    if (!err.response) return traduci('comune.erroreRete');
     const detail = err.response.data?.detail;
-    if (typeof detail === 'string') return detail;
-    if (Array.isArray(detail)) return detail.map((d) => d.msg).join(' · ');
+    if (typeof detail === 'string') return traduciServer(detail);
+    if (Array.isArray(detail)) return traduciServer(detail.map((d) => d.msg).join(' · '));
     return fallback;
 };

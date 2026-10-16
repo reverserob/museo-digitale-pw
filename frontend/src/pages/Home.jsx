@@ -1,149 +1,124 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-    Container,
-    Typography,
-    Grid,
-    Card,
-    CardContent,
-    CardActions,
-    Button,
-    Box,
-    CircularProgress,
-    Alert,
-} from '@mui/material';
-import { messaggioErrore } from '../services/api';
-import { getMostre } from '../services/mostreService';
-import useAdmin from '../hooks/useAdmin';
+import { Container, Typography, Grid, Box, Button, Card, CardContent } from '@mui/material';
+import useLingua from '../hooks/useLingua';
 
+const PUNTI = [
+    { icona: '🖼️', titolo: 'home.puntoMostreTitolo', testo: 'home.puntoMostre' },
+    { icona: '🎟️', titolo: 'home.puntoPrenotaTitolo', testo: 'home.puntoPrenota' },
+    { icona: '⭐', titolo: 'home.puntoOpinioniTitolo', testo: 'home.puntoOpinioni' },
+];
+
+const quadro = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    borderRadius: 8,
+    border: '1px solid rgba(197, 160, 89, 0.35)',
+    display: 'block',
+};
+
+// Pagina iniziale: presenta il museo e porta alle esposizioni correnti
 export default function Home() {
-    const admin = useAdmin();
-    const [mostre, setMostre] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [errore, setErrore] = useState('');
+    const { t } = useLingua();
 
-    useEffect(() => {
-        getMostre()
-            .then(setMostre)
-            .catch((err) => setErrore(messaggioErrore(err, 'Impossibile caricare le esposizioni.')))
-            .finally(() => setLoading(false));
-    }, []);
+    const pulsante = (
+        <Button
+            component={Link}
+            to="/esposizioni"
+            variant="contained"
+            color="primary"
+            size="large"
+            sx={{ borderRadius: 0, px: 5, py: 1.8, fontWeight: 700 }}
+        >
+            {t('home.vaiEsposizioni')} →
+        </Button>
+    );
 
     return (
-        <Container maxWidth="lg" sx={{ mt: { xs: 5, md: 10 }, mb: 10 }}>
-            <Box sx={{ textAlign: 'center', mb: 8 }}>
-                <Typography
-                    variant="h3"
-                    component="h1"
-                    gutterBottom
-                    sx={{ color: '#ffffff', fontSize: { xs: '2rem', md: '3rem' } }}
-                >
-                    Esposizioni Correnti
-                </Typography>
-                <Typography
-                    variant="h6"
-                    sx={{
-                        color: '#bbbbbb',
-                        maxWidth: '700px',
-                        mx: 'auto',
-                        mt: 2,
-                        fontWeight: 300,
-                        fontFamily: 'sans-serif',
-                    }}
-                >
-                    Scopri le nostre collezioni esclusive e prenota la tua visita.
-                </Typography>
+        <Container maxWidth="lg" sx={{ mt: { xs: 5, md: 10 } }}>
+            {/* apertura */}
+            <Grid container spacing={{ xs: 5, md: 8 }} sx={{ alignItems: 'center' }}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <Typography variant="overline" sx={{ color: '#c5a059', fontSize: '0.85rem' }}>
+                        {t('home.sopratitolo')}
+                    </Typography>
+                    <Typography
+                        variant="h2"
+                        component="h1"
+                        sx={{ color: '#ffffff', fontSize: { xs: '2.6rem', md: '4rem' }, lineHeight: 1.05, mb: 3 }}
+                    >
+                        {t('home.titolo')}
+                    </Typography>
+                    <Typography sx={{ color: '#cccccc', fontSize: '1.15rem', lineHeight: 1.8, mb: 5, maxWidth: 520 }}>
+                        {t('home.sottotitolo')}
+                    </Typography>
+                    {pulsante}
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: '1.3fr 1fr',
+                            gridTemplateRows: { xs: '150px 150px', md: '210px 210px' },
+                            gap: 2,
+                        }}
+                        aria-hidden="true"
+                    >
+                        <Box sx={{ gridRow: 'span 2' }}>
+                            <img src="/images/home/caravaggio.webp" alt="" style={quadro} />
+                        </Box>
+                        <img src="/images/home/monet.webp" alt="" style={quadro} />
+                        <img src="/images/home/leonardo-da-vinci.webp" alt="" style={quadro} />
+                    </Box>
+                </Grid>
+            </Grid>
+
+            {/* il museo */}
+            <Box
+                component="section"
+                aria-labelledby="titolo-museo"
+                sx={{ mt: { xs: 8, md: 12 }, pt: 6, borderTop: '1px solid rgba(197, 160, 89, 0.3)' }}
+            >
+                <Grid container spacing={{ xs: 3, md: 8 }}>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                        <Typography id="titolo-museo" variant="h4" component="h2" sx={{ color: '#c5a059' }}>
+                            {t('home.chiSiamoTitolo')}
+                        </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 8 }}>
+                        <Typography sx={{ color: '#dddddd', fontSize: '1.05rem', lineHeight: 1.9, mb: 2 }}>
+                            {t('home.chiSiamo1')}
+                        </Typography>
+                        <Typography sx={{ color: '#bbbbbb', fontSize: '1.05rem', lineHeight: 1.9 }}>
+                            {t('home.chiSiamo2')}
+                        </Typography>
+                    </Grid>
+                </Grid>
             </Box>
 
-            {loading && (
-                <Box sx={{ textAlign: 'center' }}>
-                    <CircularProgress color="primary" />
-                </Box>
-            )}
-            {errore && (
-                <Alert severity="error" sx={{ mb: 4 }}>
-                    {errore}
-                </Alert>
-            )}
-            {!loading && !errore && mostre.length === 0 && (
-                <Typography sx={{ textAlign: 'center', color: '#bbbbbb', fontFamily: 'sans-serif' }}>
-                    Nessuna esposizione in programma al momento.
-                </Typography>
-            )}
-
-            <Grid container spacing={4} sx={{ alignItems: 'stretch' }}>
-                {mostre.map((mostra) => (
-                    <Grid key={mostra.id} size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
+            {/* cosa offre */}
+            <Grid container spacing={3} sx={{ mt: { xs: 6, md: 8 } }}>
+                {PUNTI.map((punto) => (
+                    <Grid key={punto.titolo} size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
                         <Card
                             elevation={0}
-                            sx={{
-                                flex: 1,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                backdropFilter: 'blur(12px)',
-                                border: '1px solid rgba(197, 160, 89, 0.3)',
-                                transition: 'transform 0.3s ease',
-                                '&:hover': { transform: 'translateY(-10px)', borderColor: '#c5a059' },
-                            }}
+                            sx={{ flex: 1, backdropFilter: 'blur(12px)', border: '1px solid rgba(197, 160, 89, 0.25)' }}
                         >
-                            <CardContent sx={{ flexGrow: 1, p: 4 }}>
-                                <Typography variant="h5" gutterBottom sx={{ color: '#c5a059' }}>
-                                    {mostra.titolo}
+                            <CardContent sx={{ p: 4 }}>
+                                <Typography sx={{ fontSize: '1.8rem', mb: 1 }} aria-hidden="true">
+                                    {punto.icona}
                                 </Typography>
-
-                                <Typography
-                                    variant="caption"
-                                    sx={{
-                                        color: '#e0e0e0',
-                                        display: 'block',
-                                        mb: 2,
-                                        fontWeight: 'bold',
-                                        fontFamily: 'sans-serif',
-                                        letterSpacing: 0.5,
-                                    }}
-                                >
-                                    📅 Dal {mostra.data_inizio} al {mostra.data_fine}
+                                <Typography variant="h6" component="h3" sx={{ color: '#ffffff', mb: 1 }}>
+                                    {t(punto.titolo)}
                                 </Typography>
-
-                                {/* Testo tagliato a 75 caratteri per mantenere le card della stessa altezza */}
-                                <Typography
-                                    variant="body1"
-                                    sx={{ color: '#cccccc', mt: 1, mb: 3, lineHeight: 1.7, fontFamily: 'sans-serif' }}
-                                >
-                                    {mostra.descrizione.length > 75
-                                        ? `${mostra.descrizione.substring(0, 75)}...`
-                                        : mostra.descrizione}
-                                </Typography>
+                                <Typography sx={{ color: '#bbbbbb', lineHeight: 1.7 }}>{t(punto.testo)}</Typography>
                             </CardContent>
-                            <CardActions sx={{ p: 3, pt: 0, display: 'flex', gap: 2 }}>
-                                <Button
-                                    component={Link}
-                                    to={`/esposizione/${mostra.id}`}
-                                    variant="text"
-                                    color="primary"
-                                    fullWidth
-                                    sx={{ letterSpacing: 1 }}
-                                >
-                                    SCOPRI DI PIÙ
-                                </Button>
-                                {/* l'amministratore non prenota: il pulsante è solo per i visitatori */}
-                                {!admin && (
-                                    <Button
-                                        component={Link}
-                                        to={`/prenota/${mostra.id}`}
-                                        variant="outlined"
-                                        color="primary"
-                                        fullWidth
-                                        sx={{ borderRadius: 0, borderWidth: 2, letterSpacing: 1 }}
-                                    >
-                                        PRENOTA
-                                    </Button>
-                                )}
-                            </CardActions>
                         </Card>
                     </Grid>
                 ))}
             </Grid>
+
+            <Box sx={{ textAlign: 'center', mt: { xs: 6, md: 9 } }}>{pulsante}</Box>
         </Container>
     );
 }

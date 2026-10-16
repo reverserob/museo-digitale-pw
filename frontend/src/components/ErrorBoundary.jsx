@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import { Container, Alert, Button, Typography } from '@mui/material';
+import { traduci } from '../i18n/lingua';
 
 export default class ErrorBoundary extends Component {
     constructor(props) {
@@ -20,7 +21,7 @@ export default class ErrorBoundary extends Component {
         return (
             <Container maxWidth="md" sx={{ mt: 10 }}>
                 <Alert severity="error" sx={{ mb: 3 }}>
-                    Si è verificato un errore durante la visualizzazione della pagina.
+                    {traduci('errore.pagina')}
                 </Alert>
                 <Typography
                     component="pre"
@@ -29,7 +30,7 @@ export default class ErrorBoundary extends Component {
                     {String(this.state.errore?.message || this.state.errore)}
                 </Typography>
                 <Button variant="outlined" onClick={() => window.location.assign('/')}>
-                    Torna alla home
+                    {traduci('errore.tornaHome')}
                 </Button>
             </Container>
         );

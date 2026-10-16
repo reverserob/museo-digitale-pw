@@ -1,9 +1,10 @@
 .app-container {
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
-    padding-bottom: 64px;
 }
 
 .app-header.app-header {

@@ -122,3 +122,56 @@ def test_prenotazione_senza_account_rifiutata(client, mostra_futura, email_finta
     r = client.post("/api/prenota", json={"mostra_id": mostra_futura})
     assert r.status_code == 401
     assert email_finta == []
+
+
+def test_una_sola_prenotazione_per_mostra(client, auth, utente, mostra_futura, mostra_in_corso, email_finta):
+    assert client.post("/api/prenota", json={"mostra_id": mostra_futura}, headers=utente).status_code == 201
+    r = client.post("/api/prenota", json={"mostra_id": mostra_futura}, headers=utente)
+    assert r.status_code == 409
+    assert r.json()["detail"] == "Ti sei già prenotato a questa mostra."
+    # nessuna seconda prenotazione e nessuna seconda email; su un'altra mostra invece si può
+    assert len(client.get("/api/prenotazioni", headers=auth).json()) == 1
+    assert len(email_finta) == 1
+    assert client.post("/api/prenota", json={"mostra_id": mostra_in_corso}, headers=utente).status_code == 201
+
+
+# --- annullamento da parte del visitatore ---
+def _prenota(client, headers, mostra_id):
+    r = client.post("/api/prenota", json={"mostra_id": mostra_id}, headers=headers)
+    assert r.status_code == 201
+    return r.json()["id"]
+
+
+def test_annulla_prenotazione_invia_email(client, auth, utente, mostra_futura, email_annullamento):
+    pid = _prenota(client, utente, mostra_futura)
+    r = client.delete(f"/api/utenti/me/prenotazioni/{pid}", headers=utente)
+    assert r.status_code == 200
+    assert "annullata" in r.json()["message"]
+    assert client.get("/api/utenti/me/prenotazioni", headers=utente).json() == []
+    assert client.get("/api/prenotazioni", headers=auth).json() == []
+    assert len(email_annullamento) == 1
+    assert email_annullamento[0]["destinatario"] == "mario.rossi@test.it"
+    assert email_annullamento[0]["titolo_mostra"] == "Mostra futura"
+
+
+def test_dopo_l_annullamento_ci_si_puo_riprenotare(client, utente, mostra_futura):
+    pid = _prenota(client, utente, mostra_futura)
+    client.delete(f"/api/utenti/me/prenotazioni/{pid}", headers=utente)
+    assert client.post("/api/prenota", json={"mostra_id": mostra_futura}, headers=utente).status_code == 201
+
+
+def test_non_si_annulla_la_prenotazione_di_un_altro(client, utente, mostra_futura, email_annullamento):
+    from tests.conftest import registra_utente
+
+    pid = _prenota(client, utente, mostra_futura)
+    anna = registra_utente(client, email="anna@test.it", nome="Anna", cognome="Bianchi")
+    assert client.delete(f"/api/utenti/me/prenotazioni/{pid}", headers=anna).status_code == 404
+    assert len(client.get("/api/utenti/me/prenotazioni", headers=utente).json()) == 1
+    assert email_annullamento == []
+
+
+def test_annullamento_richiede_visitatore(client, auth, utente, mostra_futura):
+    pid = _prenota(client, utente, mostra_futura)
+    assert client.delete(f"/api/utenti/me/prenotazioni/{pid}").status_code == 401
+    assert client.delete(f"/api/utenti/me/prenotazioni/{pid}", headers=auth).status_code == 403
+    assert client.delete("/api/utenti/me/prenotazioni/9999", headers=utente).status_code == 404

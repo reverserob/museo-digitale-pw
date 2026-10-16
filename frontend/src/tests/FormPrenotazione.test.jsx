@@ -12,8 +12,15 @@ vi.mock('../services/api', async (importOriginal) => ({
     api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
 
+// GET /api/mostre/1 -> la mostra; GET /api/utenti/me/prenotazioni -> le prenotazioni del visitatore
+function risposte(miePrenotazioni = []) {
+    api.get.mockImplementation((url) =>
+        Promise.resolve({ data: url === '/api/utenti/me/prenotazioni' ? miePrenotazioni : MOSTRA })
+    );
+}
+
 async function apriForm() {
-    api.get.mockResolvedValue({ data: MOSTRA });
+    risposte();
     renderConRouter(<FormPrenotazione />, { percorso: '/prenota/:id', indirizzo: '/prenota/1' });
     await screen.findByText(`Prenotazione: ${MOSTRA.titolo}`);
     return { telefono: screen.getByLabelText('Telefono'), pulsante: screen.getByRole('button', { name: 'PRENOTA' }) };
@@ -54,7 +61,7 @@ describe('FormPrenotazione', () => {
 
         expect(api.post).toHaveBeenCalledWith('/api/prenota', { mostra_id: 1, telefono: '0612345678' });
         expect(await screen.findByText('Prenotazione confermata con successo!')).toBeInTheDocument();
-        expect(screen.getByText('mario@test.it')).toBeInTheDocument();
+        expect(screen.getByText(/mario@test\.it/)).toBeInTheDocument();
     });
 
     it("mostra l'errore restituito dal backend", async () => {
@@ -65,6 +72,15 @@ describe('FormPrenotazione', () => {
 
         expect(await screen.findByRole('alert')).toHaveTextContent('già conclusa');
         expect(screen.queryByText('Prenotazione confermata con successo!')).not.toBeInTheDocument();
+    });
+
+    it('se il visitatore è già prenotato non mostra il form ma il link alle sue prenotazioni', async () => {
+        risposte([{ id: 4, mostra_id: 1, titolo_mostra: MOSTRA.titolo }]);
+        renderConRouter(<FormPrenotazione />, { percorso: '/prenota/:id', indirizzo: '/prenota/1' });
+
+        expect(await screen.findByText(/Ti sei già prenotato a questa mostra/)).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Gestisci le mie prenotazioni' })).toHaveAttribute('href', '/profilo');
+        expect(screen.queryByRole('button', { name: 'PRENOTA' })).not.toBeInTheDocument();
     });
 
     it("mostra l'errore se la mostra non esiste", async () => {
