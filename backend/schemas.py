@@ -85,7 +85,6 @@ class SessioneUtenteResponse(BaseModel):
 
 
 class PrenotazioneCreate(BaseModel):
-
     mostra_id: int
     # facoltativo: se manca si usa il telefono dell'account
     telefono: Optional[str] = None
@@ -109,7 +108,6 @@ class PrenotazioneResponse(BaseModel):
 
 
 class FeedbackCreate(BaseModel):
-
     mostra_id: int
     voto: int
     commento: str = ""
@@ -163,7 +161,6 @@ class StatisticheResponse(BaseModel):
 
 
 class MiaPrenotazioneResponse(BaseModel):
-
     id: int
     mostra_id: int
     titolo_mostra: str

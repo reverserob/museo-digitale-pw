@@ -41,6 +41,7 @@ def verifica_credenziali(email: str, password: str) -> bool:
 # passwords users
 ITERAZIONI_PASSWORD = 200_000
 
+
 def hash_password(password: str) -> str:
     sale = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), sale, ITERAZIONI_PASSWORD)

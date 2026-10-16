@@ -84,12 +84,12 @@ export default function Accedi() {
             scheda === 0
                 ? loginUtente(dati.email.trim(), dati.password)
                 : registrazione({
-                    nome: dati.nome.trim(),
-                    cognome: dati.cognome.trim(),
-                    email: dati.email.trim(),
-                    telefono: dati.telefono.trim(),
-                    password: dati.password,
-                });
+                      nome: dati.nome.trim(),
+                      cognome: dati.cognome.trim(),
+                      email: dati.email.trim(),
+                      telefono: dati.telefono.trim(),
+                      password: dati.password,
+                  });
         richiesta
             .then(() => navigate(next, { replace: true }))
             .catch((err) => setErrore(messaggioErrore(err, 'Operazione non riuscita. Riprova.')))
@@ -205,8 +205,8 @@ export default function Accedi() {
                                 scheda !== 1
                                     ? ''
                                     : passwordValida
-                                        ? 'Password valida'
-                                        : `Serve: ${requisitiMancanti.join(', ')}`
+                                      ? 'Password valida'
+                                      : `Serve: ${requisitiMancanti.join(', ')}`
                             }
                             required
                         />

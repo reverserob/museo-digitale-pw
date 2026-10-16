@@ -23,7 +23,7 @@ def test_date_formato_errato(data):
 
 def test_registrazione_pulisce_spazi_e_maiuscole():
     r = RegistrazioneRequest(
-        nome=" Anna ", cognome="Bianchi", email="ANNA@Test.IT", telefono=" 0612345678 ", password="password-sicura"
+        nome=" Anna ", cognome="Bianchi", email="ANNA@Test.IT", telefono=" 0612345678 ", password="Museo2026"
     )
     assert r.nome == "Anna"
     assert r.email == "anna@test.it"
@@ -40,7 +40,7 @@ def test_registrazione_dati_non_validi(campo, valore):
         "cognome": "Bianchi",
         "email": "anna@test.it",
         "telefono": "0612345678",
-        "password": "password-sicura",
+        "password": "Museo2026",
     }
     dati[campo] = valore
     with pytest.raises(ValidationError):

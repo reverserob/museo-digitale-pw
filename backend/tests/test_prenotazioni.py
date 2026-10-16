@@ -2,6 +2,7 @@ import pytest
 
 from tests.conftest import registra_utente
 
+
 def dati_validi(mostra_id, **modifiche):
     dati = {
         "mostra_id": mostra_id,
@@ -12,6 +13,7 @@ def dati_validi(mostra_id, **modifiche):
     }
     dati.update(modifiche)
     return dati
+
 
 def test_prenotazione_valida(client, auth, utente, mostra_futura):
     r = client.post("/api/prenota", json={"mostra_id": mostra_futura}, headers=utente)
