@@ -247,7 +247,7 @@ describe('GalleriaMostra - prenotazione unica', () => {
         });
         apriPagina();
 
-        expect(await screen.findByText('Sei già prenotato a questa mostra.')).toBeInTheDocument();
+        expect(await screen.findByText('Mostra prenotata: sei già prenotato a questa mostra.')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Le mie prenotazioni' })).toHaveAttribute('href', '/profilo');
         expect(screen.queryByRole('link', { name: 'PRENOTA' })).not.toBeInTheDocument();
     });

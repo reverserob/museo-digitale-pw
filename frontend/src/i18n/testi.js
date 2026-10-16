@@ -60,7 +60,7 @@ const it = {
     'esposizioni.sottotitolo': 'Scopri le nostre collezioni esclusive e prenota la tua visita.',
     'esposizioni.vuoto': 'Nessuna esposizione in programma al momento.',
     'esposizioni.errore': 'Impossibile caricare le esposizioni.',
-    'esposizioni.giaPrenotato': 'GIÀ PRENOTATO',
+    'esposizioni.giaPrenotato': 'MOSTRA PRENOTATA',
 
     // dettaglio mostra
     'mostra.indietro': '← Torna alle esposizioni',
@@ -68,7 +68,7 @@ const it = {
         "Il percorso espositivo è curato per offrire un'esperienza immersiva unica, gestita interamente tramite i sistemi digitali dell'ente.",
     'mostra.periodo': 'Periodo Espositivo',
     'mostra.dettaglio': '{titolo} - dettaglio {numero}',
-    'mostra.giaPrenotato': 'Sei già prenotato a questa mostra.',
+    'mostra.giaPrenotato': 'Mostra prenotata: sei già prenotato a questa mostra.',
     'mostra.vediPrenotazioni': 'Le mie prenotazioni',
     'mostra.gestione': 'Gestione mostra',
     'mostra.areaAdmin': 'AREA ADMIN',
@@ -250,14 +250,14 @@ const en = {
     'esposizioni.sottotitolo': 'Discover our exclusive collections and book your visit.',
     'esposizioni.vuoto': 'No exhibitions scheduled at the moment.',
     'esposizioni.errore': 'Unable to load the exhibitions.',
-    'esposizioni.giaPrenotato': 'ALREADY BOOKED',
+    'esposizioni.giaPrenotato': 'EXHIBITION BOOKED',
 
     'mostra.indietro': '← Back to exhibitions',
     'mostra.percorso':
         "The exhibition route is designed to offer a unique immersive experience, managed entirely through the museum's digital systems.",
     'mostra.periodo': 'Exhibition dates',
     'mostra.dettaglio': '{titolo} - detail {numero}',
-    'mostra.giaPrenotato': 'You have already booked this exhibition.',
+    'mostra.giaPrenotato': 'Exhibition booked: you have already booked this exhibition.',
     'mostra.vediPrenotazioni': 'My bookings',
     'mostra.gestione': 'Exhibition management',
     'mostra.areaAdmin': 'ADMIN AREA',
