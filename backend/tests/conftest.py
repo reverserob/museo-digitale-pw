@@ -69,6 +69,27 @@ def email_finta(monkeypatch):
     return chiamate
 
 
+@pytest.fixture(autouse=True)
+def email_registrazione(monkeypatch):
+    chiamate = []
+    monkeypatch.setattr("routers.utenti.invia_email_registrazione", lambda **dati: chiamate.append(dati))
+    return chiamate
+
+
+@pytest.fixture(autouse=True)
+def email_gia_registrato(monkeypatch):
+    chiamate = []
+    monkeypatch.setattr("routers.utenti.invia_email_gia_registrato", lambda **dati: chiamate.append(dati))
+    return chiamate
+
+
+@pytest.fixture(autouse=True)
+def email_reset(monkeypatch):
+    chiamate = []
+    monkeypatch.setattr("routers.utenti.invia_email_reset_password", lambda **dati: chiamate.append(dati))
+    return chiamate
+
+
 @pytest.fixture
 def client():
     return TestClient(app)
@@ -134,3 +155,21 @@ def registra_utente(client, email="mario.rossi@test.it", nome="Mario", cognome="
 def utente(client):
     # header di un visitatore registrato (Mario Rossi)
     return registra_utente(client)
+
+
+def prenota_nel_db(mostra_id, email="mario.rossi@test.it"):
+    """Crea direttamente nel DB la prenotazione del visitatore (serve anche per le mostre già concluse)."""
+    db = SessionLocal()
+    utente = db.query(models.Utente).filter(models.Utente.email == email).one()
+    db.add(
+        models.Prenotazione(
+            mostra_id=mostra_id,
+            utente_id=utente.id,
+            nome=utente.nome,
+            cognome=utente.cognome,
+            email=utente.email,
+            telefono=utente.telefono,
+        )
+    )
+    db.commit()
+    db.close()

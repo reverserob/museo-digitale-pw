@@ -39,6 +39,11 @@ ADMIN_PASSWORD = _env("ADMIN_PASSWORD", "admin2026")
 SECRET_KEY = _env("SECRET_KEY", "dev-secret-cambiami")
 TOKEN_DURATA_ORE = int(_env("TOKEN_DURATA_ORE", "8"))
 
+# Reset password: durata del link e indirizzo del frontend da usare nel link
+# (se la richiesta arriva da uno dei CORS_ORIGINS si usa direttamente quell'indirizzo)
+RESET_PASSWORD_MINUTI = int(_env("RESET_PASSWORD_MINUTI", "30"))
+FRONTEND_URL = _env("FRONTEND_URL", "https://museo-digitale-pw-azure.vercel.app").rstrip("/")
+
 # login try limit
 LOGIN_RATE_LIMIT = _env("LOGIN_RATE_LIMIT", "5/minute")
 

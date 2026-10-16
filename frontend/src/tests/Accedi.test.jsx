@@ -183,4 +183,12 @@ describe('Accedi', () => {
         expect(screen.getAllByText('Inserisci almeno 3 caratteri')).toHaveLength(1);
         expect(screen.getByRole('button', { name: 'CREA ACCOUNT' })).toBeDisabled();
     });
+
+    it('nella scheda Accedi c\'è il link "Password dimenticata?"', () => {
+        apri();
+        expect(screen.getByRole('link', { name: 'Password dimenticata?' })).toHaveAttribute(
+            'href',
+            '/password-dimenticata'
+        );
+    });
 });

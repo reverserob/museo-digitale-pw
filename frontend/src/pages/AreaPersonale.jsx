@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Container, Card, CardContent, Typography, Box, Button, Alert, CircularProgress, Divider } from '@mui/material';
 import { messaggioErrore } from '../services/api';
 import { getMiePrenotazioni, logoutUtente } from '../services/utentiService';
@@ -14,6 +14,7 @@ const cardSx = {
 
 export default function AreaPersonale() {
     const navigate = useNavigate();
+    const location = useLocation();
     const utente = useUtente();
     const [prenotazioni, setPrenotazioni] = useState(null);
     const [errore, setErrore] = useState('');
@@ -54,6 +55,12 @@ export default function AreaPersonale() {
                     <Typography sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mt: 1 }}>
                         {utente.nome} {utente.cognome} · {utente.email} · {utente.telefono}
                     </Typography>
+
+                    {location.state?.registrato && (
+                        <Alert severity="success" sx={{ mt: 3 }}>
+                            Registrazione completata! Ti abbiamo inviato un&apos;email di conferma.
+                        </Alert>
+                    )}
 
                     <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: 3 }} />
 

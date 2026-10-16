@@ -1,6 +1,17 @@
 import pytest
 
-from tests.conftest import registra_utente
+from tests.conftest import prenota_nel_db, registra_utente
+
+
+@pytest.fixture(autouse=True)
+def mario_prenotato(client, request):
+    """Nei test che usano il visitatore Mario, Mario risulta prenotato alle mostre di test."""
+    if "utente" not in request.fixturenames:
+        return
+    request.getfixturevalue("utente")
+    for nome in ("mostra_in_corso", "mostra_conclusa", "mostra_futura"):
+        if nome in request.fixturenames:
+            prenota_nel_db(request.getfixturevalue(nome))
 
 
 def feedback_valido(mostra_id, **modifiche):
@@ -37,6 +48,27 @@ def test_un_solo_feedback_per_mostra(client, utente, mostra_in_corso, mostra_con
     assert "già lasciato" in r.json()["detail"]
     # su un'altra mostra invece si può
     assert client.post("/api/feedback", json=feedback_valido(mostra_conclusa), headers=utente).status_code == 201
+
+
+def test_feedback_senza_prenotazione_rifiutato(client, mostra_in_corso):
+    giulia = registra_utente(client, email="giulia@test.it", nome="Giulia", cognome="Verdi")
+    r = client.post("/api/feedback", json=feedback_valido(mostra_in_corso), headers=giulia)
+    assert r.status_code == 403
+    assert "ti sei prenotato" in r.json()["detail"]
+
+
+def test_prenotazione_a_un_altra_mostra_non_basta(client, mostra_in_corso, mostra_conclusa):
+    giulia = registra_utente(client, email="giulia@test.it", nome="Giulia", cognome="Verdi")
+    prenota_nel_db(mostra_conclusa, email="giulia@test.it")
+    r = client.post("/api/feedback", json=feedback_valido(mostra_in_corso), headers=giulia)
+    assert r.status_code == 403
+
+
+def test_dopo_la_prenotazione_dal_sito_si_puo_commentare(client, mostra_in_corso):
+    giulia = registra_utente(client, email="giulia@test.it", nome="Giulia", cognome="Verdi")
+    assert client.post("/api/feedback", json=feedback_valido(mostra_in_corso), headers=giulia).status_code == 403
+    assert client.post("/api/prenota", json={"mostra_id": mostra_in_corso}, headers=giulia).status_code == 201
+    assert client.post("/api/feedback", json=feedback_valido(mostra_in_corso), headers=giulia).status_code == 201
 
 
 def test_feedback_su_mostra_conclusa_consentito(client, utente, mostra_conclusa):
@@ -77,6 +109,7 @@ def test_feedback_dati_non_validi(client, utente, mostra_in_corso, campo, valore
 
 def test_lista_feedback_pubblica_e_filtrata(client, utente, mostra_in_corso, mostra_conclusa):
     anna = registra_utente(client, email="anna@test.it", nome="Anna", cognome="Bianchi")
+    prenota_nel_db(mostra_in_corso, email="anna@test.it")
     client.post("/api/feedback", json=feedback_valido(mostra_in_corso), headers=utente)
     client.post("/api/feedback", json=feedback_valido(mostra_in_corso, voto=3), headers=anna)
     client.post("/api/feedback", json=feedback_valido(mostra_conclusa), headers=utente)

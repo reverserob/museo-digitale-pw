@@ -19,7 +19,9 @@ import { getPrenotazioni } from '../services/prenotazioniService';
 import { getFeedback, eliminaFeedback as eliminaFeedbackApi } from '../services/feedbackService';
 import { getStatistiche } from '../services/statisticheService';
 import IndicatoriDashboard from '../components/IndicatoriDashboard';
-import { login, logout, isLoggedIn as utenteLoggato } from '../services/authService';
+import { login, logout, isLoggedIn as utenteLoggato, MESSAGGIO_VISITATORE_COLLEGATO } from '../services/authService';
+import { logoutUtente } from '../services/utentiService';
+import useUtente from '../hooks/useUtente';
 
 const cardSx = {
     backdropFilter: 'blur(12px)',
@@ -34,6 +36,8 @@ export default function AdminDashboard() {
 
     // Il login è valido solo se il backend ha rilasciato un token
     const [isLoggedIn, setIsLoggedIn] = useState(utenteLoggato);
+    // un visitatore collegato deve prima fare il logout per entrare nell'area riservata
+    const visitatore = useUtente();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -88,7 +92,13 @@ export default function AdminDashboard() {
                 setIsLoggedIn(true);
                 setPassword('');
             })
-            .catch((err) => setErroreLogin(messaggioErrore(err, 'Credenziali errate.')))
+            .catch((err) =>
+                setErroreLogin(
+                    err.message === MESSAGGIO_VISITATORE_COLLEGATO
+                        ? err.message
+                        : messaggioErrore(err, 'Credenziali errate.')
+                )
+            )
             .finally(() => setLoginInCorso(false));
     };
 
@@ -130,7 +140,27 @@ export default function AdminDashboard() {
                 ← Torna alla Home
             </Button>
 
-            {!isLoggedIn ? (
+            {visitatore ? (
+                <Card elevation={0} sx={cardSx}>
+                    <CardContent>
+                        <Typography variant="h4" gutterBottom sx={{ color: '#c5a059', mb: 3 }}>
+                            Area Riservata
+                        </Typography>
+                        <Alert severity="warning" sx={{ mb: 3 }}>
+                            Sei collegato come visitatore ({visitatore.nome} {visitatore.cognome}). Per accedere
+                            all&apos;area riservata devi prima uscire dal tuo account.
+                        </Alert>
+                        <Button
+                            onClick={logoutUtente}
+                            variant="contained"
+                            color="primary"
+                            sx={{ borderRadius: 0, fontWeight: 'bold' }}
+                        >
+                            Esci dall&apos;account visitatore
+                        </Button>
+                    </CardContent>
+                </Card>
+            ) : !isLoggedIn ? (
                 <Card elevation={0} sx={cardSx}>
                     <CardContent>
                         <Typography variant="h4" gutterBottom sx={{ color: '#c5a059', mb: 4 }}>

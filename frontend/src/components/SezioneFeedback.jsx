@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, Rating, TextField, Button, Alert, Divider } from '@mui/material';
 import { messaggioErrore } from '../services/api';
-import { getFeedback, inviaFeedback, eliminaFeedback } from '../services/feedbackService';
+import { getFeedback, inviaFeedback } from '../services/feedbackService';
+import { getMiePrenotazioni } from '../services/utentiService';
 import useUtente from '../hooks/useUtente';
 
 const inputStyle = {
@@ -13,6 +14,8 @@ const inputStyle = {
 
 const oggiIso = () => new Date().toISOString().slice(0, 10);
 
+// admin = true quando la pagina è aperta dall'amministratore: può solo leggere i feedback
+// (si eliminano dalla dashboard dell'area riservata).
 export default function SezioneFeedback({ mostra, admin = false }) {
     const utente = useUtente();
     const [elenco, setElenco] = useState([]);
@@ -21,6 +24,8 @@ export default function SezioneFeedback({ mostra, admin = false }) {
     const [errore, setErrore] = useState('');
     const [conferma, setConferma] = useState('');
     const [invio, setInvio] = useState(false);
+    // null = verifica in corso; true/false = il visitatore è prenotato a questa mostra
+    const [prenotato, setPrenotato] = useState(null);
 
     useEffect(() => {
         getFeedback(mostra.id)
@@ -28,16 +33,20 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             .catch(() => setElenco([]));
     }, [mostra.id]);
 
+    // solo chi si è prenotato a questa mostra può lasciare un feedback
+    useEffect(() => {
+        if (!utente) {
+            setPrenotato(null);
+            return;
+        }
+        getMiePrenotazioni()
+            .then((elencoPrenotazioni) => setPrenotato(elencoPrenotazioni.some((p) => p.mostra_id === mostra.id)))
+            .catch(() => setPrenotato(false));
+    }, [utente, mostra.id]);
+
     const media = elenco.length ? elenco.reduce((somma, f) => somma + f.voto, 0) / elenco.length : null;
     const nonIniziata = mostra.data_inizio > oggiIso();
-
-    const handleElimina = (id) => {
-        if (!window.confirm('Eliminare questo feedback?')) return;
-        setErrore('');
-        eliminaFeedback(id)
-            .then(() => setElenco((precedenti) => precedenti.filter((f) => f.id !== id)))
-            .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione del feedback.")));
-    };
+    const conclusa = mostra.data_fine < oggiIso();
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -80,17 +89,10 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             )}
 
             {admin ? (
-                <>
-                    <Typography variant="body2" sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
-                        Come amministratore puoi leggere i feedback dei visitatori (ed eliminare quelli non
-                        appropriati), ma non lasciarne di nuovi.
-                    </Typography>
-                    {errore && (
-                        <Alert severity="error" sx={{ mb: 3 }}>
-                            {errore}
-                        </Alert>
-                    )}
-                </>
+                <Typography variant="body2" sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
+                    Come amministratore puoi leggere i feedback dei visitatori. Per eliminarli usa la dashboard
+                    dell&apos;area riservata.
+                </Typography>
             ) : nonIniziata ? (
                 <Alert severity="info" sx={{ mb: 4 }}>
                     La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita.
@@ -111,6 +113,20 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                     }
                 >
                     Accedi o registrati per lasciare un feedback su questa mostra.
+                </Alert>
+            ) : prenotato === null ? null : !prenotato ? (
+                <Alert
+                    severity="info"
+                    sx={{ mb: 4, maxWidth: 560 }}
+                    action={
+                        !conclusa && (
+                            <Button component={Link} to={`/prenota/${mostra.id}`} color="inherit" size="small">
+                                Prenota
+                            </Button>
+                        )
+                    }
+                >
+                    Puoi lasciare un feedback solo sulle mostre a cui ti sei prenotato.
                 </Alert>
             ) : (
                 <Box
@@ -166,17 +182,6 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                         <Typography variant="caption" sx={{ color: '#888888', fontFamily: 'sans-serif' }}>
                             {new Date(f.creato_il + 'Z').toLocaleDateString('it-IT')}
                         </Typography>
-                        {admin && (
-                            <Button
-                                size="small"
-                                color="error"
-                                onClick={() => handleElimina(f.id)}
-                                aria-label={`Elimina il feedback di ${f.nome}`}
-                                sx={{ ml: 'auto' }}
-                            >
-                                Elimina
-                            </Button>
-                        )}
                     </Box>
                     {f.commento && (
                         <Typography sx={{ color: '#cccccc', mt: 0.5, fontFamily: 'sans-serif' }}>

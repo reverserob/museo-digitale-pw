@@ -35,7 +35,7 @@ def test_email_gia_registrata(client):
     assert client.post("/api/utenti/registrazione", json=DATI).status_code == 201
     r = client.post("/api/utenti/registrazione", json={**DATI, "email": "giulia.verdi@test.it"})
     assert r.status_code == 409
-    assert "Esiste già" in r.json()["detail"]
+    assert "Utente già registrato" in r.json()["detail"]
 
 
 def test_registrazione_password_corta(client):
@@ -98,3 +98,112 @@ def test_hash_e_verifica_password():
     assert not verifica_password("segreta123", "formato-non-valido")
     # due hash della stessa password sono diversi (sale casuale)
     assert hash_password("segreta123") != h
+
+
+# --- email di registrazione ---
+def test_registrazione_invia_email_di_conferma(client, email_registrazione):
+    client.post("/api/utenti/registrazione", json=DATI)
+    assert email_registrazione == [{"destinatario": "giulia.verdi@test.it", "nome": "Giulia"}]
+
+
+def test_registrazione_doppia_avvisa_il_titolare(client, email_registrazione, email_gia_registrato):
+    client.post("/api/utenti/registrazione", json=DATI)
+    r = client.post("/api/utenti/registrazione", json={**DATI, "email": " Giulia.Verdi@test.it "})
+    assert r.status_code == 409
+    # nessun secondo account e nessuna seconda email di benvenuto, ma un avviso al titolare
+    assert len(email_registrazione) == 1
+    assert email_gia_registrato == [{"destinatario": "giulia.verdi@test.it", "nome": "Giulia"}]
+
+
+def test_registrazione_non_valida_non_invia_email(client, email_registrazione):
+    client.post("/api/utenti/registrazione", json={**DATI, "password": "corta"})
+    assert email_registrazione == []
+
+
+# --- password dimenticata ---
+def _richiedi_link(client, email_reset, email="giulia.verdi@test.it"):
+    client.post("/api/utenti/registrazione", json=DATI)
+    r = client.post("/api/utenti/password-dimenticata", json={"email": email})
+    assert r.status_code == 200
+    return email_reset[-1]["link"].split("token=")[1] if email_reset else None
+
+
+def test_password_dimenticata_invia_il_link(client, email_reset):
+    token = _richiedi_link(client, email_reset, email=" GIULIA.verdi@test.it ")
+    assert token
+    assert email_reset[0]["destinatario"] == "giulia.verdi@test.it"
+    assert email_reset[0]["link"].startswith("https://museo-digitale-pw-azure.vercel.app/reimposta-password?token=")
+
+
+def test_link_usa_il_sito_di_provenienza(client, email_reset):
+    client.post("/api/utenti/registrazione", json=DATI)
+    client.post(
+        "/api/utenti/password-dimenticata",
+        json={"email": "giulia.verdi@test.it"},
+        headers={"Origin": "http://localhost:5173"},
+    )
+    assert email_reset[0]["link"].startswith("http://localhost:5173/reimposta-password?token=")
+
+
+def test_password_dimenticata_email_sconosciuta_stessa_risposta(client, email_reset):
+    client.post("/api/utenti/registrazione", json=DATI)
+    nota = client.post("/api/utenti/password-dimenticata", json={"email": "giulia.verdi@test.it"})
+    ignota = client.post("/api/utenti/password-dimenticata", json={"email": "nessuno@test.it"})
+    assert nota.status_code == ignota.status_code == 200
+    assert nota.json() == ignota.json()
+    assert len(email_reset) == 1
+
+
+def test_reimposta_password(client, email_reset):
+    token = _richiedi_link(client, email_reset)
+    r = client.post("/api/utenti/reimposta-password", json={"token": token, "password": "NuovaPass1"})
+    assert r.status_code == 200
+    vecchia = client.post("/api/utenti/login", json={"email": "giulia.verdi@test.it", "password": "Museo2026"})
+    nuova = client.post("/api/utenti/login", json={"email": "giulia.verdi@test.it", "password": "NuovaPass1"})
+    assert vecchia.status_code == 401
+    assert nuova.status_code == 200
+
+
+def test_link_di_reset_usabile_una_sola_volta(client, email_reset):
+    token = _richiedi_link(client, email_reset)
+    assert (
+        client.post("/api/utenti/reimposta-password", json={"token": token, "password": "NuovaPass1"}).status_code
+        == 200
+    )
+    r = client.post("/api/utenti/reimposta-password", json={"token": token, "password": "AltraPass2"})
+    assert r.status_code == 400
+    assert "non è valido o è scaduto" in r.json()["detail"]
+
+
+def test_link_di_reset_scaduto(client, email_reset, monkeypatch):
+    import time
+
+    token = _richiedi_link(client, email_reset)
+    adesso = time.time()
+    monkeypatch.setattr(time, "time", lambda: adesso + 31 * 60)
+    r = client.post("/api/utenti/reimposta-password", json={"token": token, "password": "NuovaPass1"})
+    assert r.status_code == 400
+
+
+def test_reset_con_token_non_valido(client):
+    r = client.post("/api/utenti/reimposta-password", json={"token": "abc.def", "password": "NuovaPass1"})
+    assert r.status_code == 400
+
+
+def test_reset_rispetta_la_regola_della_password(client, email_reset):
+    token = _richiedi_link(client, email_reset)
+    r = client.post("/api/utenti/reimposta-password", json={"token": token, "password": "senzamaiuscole1"})
+    assert r.status_code == 422
+    assert "maiuscola" in r.json()["detail"]
+
+
+def test_token_di_reset_non_vale_come_accesso(client, email_reset):
+    token = _richiedi_link(client, email_reset)
+    assert client.get("/api/utenti/me", headers={"Authorization": f"Bearer {token}"}).status_code == 403
+    assert client.get("/api/prenotazioni", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+
+
+def test_token_di_accesso_non_vale_come_reset(client):
+    corpo = client.post("/api/utenti/registrazione", json=DATI).json()
+    r = client.post("/api/utenti/reimposta-password", json={"token": corpo["access_token"], "password": "NuovaPass1"})
+    assert r.status_code == 400

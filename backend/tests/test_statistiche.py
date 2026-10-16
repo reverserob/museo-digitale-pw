@@ -12,7 +12,9 @@ def prenota(client, mostra_id, utente):
 
 def recensisci(client, mostra_id, voto, email):
     # un feedback per visitatore: ogni recensione arriva da un account diverso
+    # (e per recensire bisogna essersi prenotati: anche queste prenotazioni vengono contate)
     utente = registra_utente(client, email=email)
+    prenota(client, mostra_id, utente)
     assert client.post("/api/feedback", json={"mostra_id": mostra_id, "voto": voto}, headers=utente).status_code == 201
 
 
@@ -38,8 +40,8 @@ def test_statistiche_conteggi(client, auth, utente, mostra_futura, mostra_in_cor
     recensisci(client, mostra_in_corso, 4, "b@test.it")
 
     s = client.get("/api/statistiche", headers=auth).json()
-    assert s["totale_prenotazioni"] == 3
-    assert s["prenotazioni_ultimi_7_giorni"] == 3
+    assert s["totale_prenotazioni"] == 5
+    assert s["prenotazioni_ultimi_7_giorni"] == 5
     assert s["totale_feedback"] == 2
     assert s["voto_medio"] == 4.5
 
@@ -47,7 +49,7 @@ def test_statistiche_conteggi(client, auth, utente, mostra_futura, mostra_in_cor
     assert per_id[mostra_futura]["prenotazioni"] == 2
     assert per_id[mostra_futura]["stato"] == "futura"
     assert per_id[mostra_futura]["voto_medio"] is None
-    assert per_id[mostra_in_corso]["prenotazioni"] == 1
+    assert per_id[mostra_in_corso]["prenotazioni"] == 3
     assert per_id[mostra_in_corso]["feedback"] == 2
     assert per_id[mostra_in_corso]["stato"] == "in corso"
 

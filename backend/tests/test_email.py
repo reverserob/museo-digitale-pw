@@ -91,3 +91,39 @@ def test_errore_di_brevo_non_blocca_il_server(monkeypatch):
 
     monkeypatch.setattr(email_service.urllib.request, "urlopen", urlopen_errore)
     email_service.invia_email_background(**DATI)
+
+
+# --- nuove email: registrazione, registrazione doppia, reset password ---
+def test_html_registrazione_escapa_il_nome():
+    corpo = email_service.crea_html_registrazione("Anna <script>")
+    assert "Anna &lt;script&gt;" in corpo
+    assert "<script>" not in corpo
+    assert "registrazione" in corpo
+
+
+def test_html_gia_registrato():
+    corpo = email_service.crea_html_gia_registrato("Anna")
+    assert "già registrato" in corpo
+
+
+def test_html_reset_contiene_il_link_e_la_durata():
+    corpo = email_service.crea_html_reset_password("Anna", "https://sito.it/reimposta-password?token=a.b", 30)
+    assert 'href="https://sito.it/reimposta-password?token=a.b"' in corpo
+    assert "30 minuti" in corpo
+
+
+def test_reset_senza_servizio_email_scrive_il_link_nel_log(monkeypatch, caplog):
+    monkeypatch.setattr(settings, "BREVO_API_KEY", "")
+    monkeypatch.setattr(settings, "SMTP_USER", "")
+    with caplog.at_level("WARNING", logger="uvicorn.error"):
+        email_service.invia_email_reset_password("anna@test.it", "Anna", "https://sito.it/x?token=t", 30)
+    assert "https://sito.it/x?token=t" in caplog.text
+
+
+def test_registrazione_inviata_con_brevo(monkeypatch, richieste_brevo):
+    monkeypatch.setattr(settings, "BREVO_API_KEY", "chiave")
+    email_service.invia_email_registrazione("anna@test.it", "Anna")
+    assert len(richieste_brevo) == 1
+    corpo = json.loads(richieste_brevo[0].data)
+    assert corpo["subject"] == "Registrazione completata"
+    assert corpo["to"][0]["email"] == "anna@test.it"

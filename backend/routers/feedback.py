@@ -32,6 +32,18 @@ def crea_feedback(
             detail="La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita.",
         )
 
+    # può lasciare un feedback solo chi si è prenotato a questa mostra
+    prenotato = (
+        db.query(models.Prenotazione)
+        .filter(models.Prenotazione.mostra_id == mostra.id, models.Prenotazione.utente_id == utente.id)
+        .first()
+    )
+    if prenotato is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Puoi lasciare un feedback solo sulle mostre a cui ti sei prenotato.",
+        )
+
     # un solo feedback per visitatore su ogni mostra
     gia_presente = (
         db.query(models.Feedback)
