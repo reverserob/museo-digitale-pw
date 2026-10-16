@@ -116,3 +116,9 @@ def test_elenco_prenotazioni_dalla_piu_recente(client, auth, mostra_futura):
     client.post("/api/prenota", json={"mostra_id": mostra_futura}, headers=secondo)
     nomi = [p["nome"] for p in client.get("/api/prenotazioni", headers=auth).json()]
     assert nomi == ["Secondo", "Primo"]
+
+
+def test_prenotazione_senza_account_rifiutata(client, mostra_futura, email_finta):
+    r = client.post("/api/prenota", json={"mostra_id": mostra_futura})
+    assert r.status_code == 401
+    assert email_finta == []

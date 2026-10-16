@@ -20,6 +20,8 @@ export const getUtente = () => getSessioneUtente()?.utente || null;
 
 export const getMiePrenotazioni = () => api.get('/api/utenti/me/prenotazioni').then((res) => res.data);
 
+export const getMieiFeedback = () => api.get('/api/utenti/me/feedback').then((res) => res.data);
+
 // password dimenticata: il backend invia per email un link con un token valido per poco tempo
 export const passwordDimenticata = (email) =>
     api.post('/api/utenti/password-dimenticata', { email }).then((res) => res.data.message);

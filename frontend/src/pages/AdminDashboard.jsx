@@ -19,9 +19,10 @@ import { getPrenotazioni } from '../services/prenotazioniService';
 import { getFeedback, eliminaFeedback as eliminaFeedbackApi } from '../services/feedbackService';
 import { getStatistiche } from '../services/statisticheService';
 import IndicatoriDashboard from '../components/IndicatoriDashboard';
-import { login, logout, isLoggedIn as utenteLoggato, MESSAGGIO_VISITATORE_COLLEGATO } from '../services/authService';
+import { login, logout, MESSAGGIO_VISITATORE_COLLEGATO } from '../services/authService';
 import { logoutUtente } from '../services/utentiService';
 import useUtente from '../hooks/useUtente';
+import useAdmin from '../hooks/useAdmin';
 
 const cardSx = {
     backdropFilter: 'blur(12px)',
@@ -35,7 +36,7 @@ export default function AdminDashboard() {
     const navigate = useNavigate();
 
     // Il login è valido solo se il backend ha rilasciato un token
-    const [isLoggedIn, setIsLoggedIn] = useState(utenteLoggato);
+    const isLoggedIn = useAdmin();
     // un visitatore collegato deve prima fare il logout per entrare nell'area riservata
     const visitatore = useUtente();
 
@@ -89,7 +90,6 @@ export default function AdminDashboard() {
         setErroreLogin('');
         login(email, password)
             .then(() => {
-                setIsLoggedIn(true);
                 setPassword('');
             })
             .catch((err) =>
@@ -104,7 +104,6 @@ export default function AdminDashboard() {
 
     const handleLogout = () => {
         logout();
-        setIsLoggedIn(false);
     };
 
     const eliminaMostra = (id) => {

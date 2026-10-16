@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import Home from '../pages/Home';
-import { api } from '../services/api';
+import { api, setToken } from '../services/api';
 import { renderConRouter, erroreHttp, MOSTRA } from './utils';
 
 // vi.mock viene eseguito prima degli import: le chiamate HTTP di axios diventano
@@ -23,6 +23,16 @@ describe('Home', () => {
         const prenota = screen.getAllByRole('link', { name: 'PRENOTA' });
         expect(prenota[0]).toHaveAttribute('href', '/prenota/1');
         expect(screen.getAllByRole('link', { name: 'SCOPRI DI PIÙ' })[1]).toHaveAttribute('href', '/esposizione/2');
+    });
+
+    it("con l'admin collegato il pulsante PRENOTA non compare", async () => {
+        setToken('token-admin');
+        api.get.mockResolvedValue({ data: [MOSTRA] });
+        renderConRouter(<Home />);
+
+        expect(await screen.findByText('Caravaggio e il suo tempo')).toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'PRENOTA' })).not.toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'SCOPRI DI PIÙ' })).toBeInTheDocument();
     });
 
     it('taglia le descrizioni più lunghe di 75 caratteri', async () => {

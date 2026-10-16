@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, Rating, TextField, Button, Alert, Divider } from '@mui/material';
 import { messaggioErrore } from '../services/api';
-import { getFeedback, inviaFeedback } from '../services/feedbackService';
-import { getMiePrenotazioni } from '../services/utentiService';
+import { getFeedback, inviaFeedback, eliminaFeedback } from '../services/feedbackService';
+import { getMiePrenotazioni, getMieiFeedback } from '../services/utentiService';
 import useUtente from '../hooks/useUtente';
 
 const inputStyle = {
@@ -14,8 +14,7 @@ const inputStyle = {
 
 const oggiIso = () => new Date().toISOString().slice(0, 10);
 
-// admin = true quando la pagina è aperta dall'amministratore: può solo leggere i feedback
-// (si eliminano dalla dashboard dell'area riservata).
+// admin = true quando la pagina è aperta dall'amministratore: legge ed elimina i feedback, ma non ne scrive.
 export default function SezioneFeedback({ mostra, admin = false }) {
     const utente = useUtente();
     const [elenco, setElenco] = useState([]);
@@ -26,6 +25,8 @@ export default function SezioneFeedback({ mostra, admin = false }) {
     const [invio, setInvio] = useState(false);
     // null = verifica in corso; true/false = il visitatore è prenotato a questa mostra
     const [prenotato, setPrenotato] = useState(null);
+    // true se il visitatore ha già lasciato il suo (unico) feedback su questa mostra
+    const [giaRecensito, setGiaRecensito] = useState(false);
 
     useEffect(() => {
         getFeedback(mostra.id)
@@ -33,20 +34,32 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             .catch(() => setElenco([]));
     }, [mostra.id]);
 
-    // solo chi si è prenotato a questa mostra può lasciare un feedback
+    // solo chi si è prenotato a questa mostra può lasciare un feedback, e uno soltanto
     useEffect(() => {
-        if (!utente) {
+        if (!utente || admin) {
             setPrenotato(null);
+            setGiaRecensito(false);
             return;
         }
-        getMiePrenotazioni()
-            .then((elencoPrenotazioni) => setPrenotato(elencoPrenotazioni.some((p) => p.mostra_id === mostra.id)))
+        Promise.all([getMiePrenotazioni(), getMieiFeedback().catch(() => [])])
+            .then(([miePrenotazioni, mieiFeedback]) => {
+                setGiaRecensito(mieiFeedback.some((f) => f.mostra_id === mostra.id));
+                setPrenotato(miePrenotazioni.some((p) => p.mostra_id === mostra.id));
+            })
             .catch(() => setPrenotato(false));
-    }, [utente, mostra.id]);
+    }, [utente, admin, mostra.id]);
 
     const media = elenco.length ? elenco.reduce((somma, f) => somma + f.voto, 0) / elenco.length : null;
     const nonIniziata = mostra.data_inizio > oggiIso();
     const conclusa = mostra.data_fine < oggiIso();
+
+    const handleElimina = (id) => {
+        if (!window.confirm('Eliminare questo feedback?')) return;
+        setErrore('');
+        eliminaFeedback(id)
+            .then(() => setElenco((precedenti) => precedenti.filter((f) => f.id !== id)))
+            .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione del feedback.")));
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -63,6 +76,7 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                 setVoto(0);
                 setCommento('');
                 setConferma('Grazie! Il tuo feedback è stato pubblicato.');
+                setGiaRecensito(true);
             })
             .catch((err) => setErrore(messaggioErrore(err, 'Impossibile inviare il feedback.')))
             .finally(() => setInvio(false));
@@ -89,10 +103,17 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             )}
 
             {admin ? (
-                <Typography variant="body2" sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
-                    Come amministratore puoi leggere i feedback dei visitatori. Per eliminarli usa la dashboard
-                    dell&apos;area riservata.
-                </Typography>
+                <>
+                    <Typography variant="body2" sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
+                        Come amministratore puoi leggere ed eliminare i feedback dei visitatori, ma non lasciarne di
+                        nuovi.
+                    </Typography>
+                    {errore && (
+                        <Alert severity="error" sx={{ mb: 3 }}>
+                            {errore}
+                        </Alert>
+                    )}
+                </>
             ) : nonIniziata ? (
                 <Alert severity="info" sx={{ mb: 4 }}>
                     La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita.
@@ -114,7 +135,11 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                 >
                     Accedi o registrati per lasciare un feedback su questa mostra.
                 </Alert>
-            ) : prenotato === null ? null : !prenotato ? (
+            ) : prenotato === null ? null : giaRecensito ? (
+                <Alert severity={conferma ? 'success' : 'info'} sx={{ mb: 4, maxWidth: 560 }}>
+                    {conferma || 'Hai già lasciato il tuo feedback su questa mostra: se ne può lasciare uno solo.'}
+                </Alert>
+            ) : !prenotato ? (
                 <Alert
                     severity="info"
                     sx={{ mb: 4, maxWidth: 560 }}
@@ -159,7 +184,6 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                         sx={inputStyle}
                     />
                     {errore && <Alert severity="error">{errore}</Alert>}
-                    {conferma && <Alert severity="success">{conferma}</Alert>}
                     <Button
                         type="submit"
                         variant="outlined"
@@ -182,6 +206,17 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                         <Typography variant="caption" sx={{ color: '#888888', fontFamily: 'sans-serif' }}>
                             {new Date(f.creato_il + 'Z').toLocaleDateString('it-IT')}
                         </Typography>
+                        {admin && (
+                            <Button
+                                size="small"
+                                color="error"
+                                onClick={() => handleElimina(f.id)}
+                                aria-label={`Elimina il feedback di ${f.nome}`}
+                                sx={{ ml: 'auto' }}
+                            >
+                                Elimina
+                            </Button>
+                        )}
                     </Box>
                     {f.commento && (
                         <Typography sx={{ color: '#cccccc', mt: 0.5, fontFamily: 'sans-serif' }}>

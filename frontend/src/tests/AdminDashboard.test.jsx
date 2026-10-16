@@ -60,7 +60,6 @@ const apriDashboard = () => renderConRouter(<AdminDashboard />, { percorso: '/ad
 describe('AdminDashboard - login', () => {
     it("con un visitatore collegato chiede di uscire prima di entrare nell'area riservata", async () => {
         collegaUtente();
-        setToken('token-valido');
         const user = userEvent.setup();
         apriDashboard();
 

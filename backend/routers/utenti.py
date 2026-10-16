@@ -162,3 +162,14 @@ def mie_prenotazioni(utente: models.Utente = Depends(richiedi_utente), db: Sessi
         }
         for p in prenotazioni
     ]
+
+
+# API GET I MIEI FEEDBACK (serve al frontend per nascondere il form dove ho già recensito)
+@router.get("/me/feedback", response_model=list[schemas.FeedbackResponse])
+def miei_feedback(utente: models.Utente = Depends(richiedi_utente), db: Session = Depends(get_db)):
+    return (
+        db.query(models.Feedback)
+        .filter(models.Feedback.utente_id == utente.id)
+        .order_by(models.Feedback.creato_il.desc())
+        .all()
+    )

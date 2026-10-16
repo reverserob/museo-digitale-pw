@@ -4,6 +4,8 @@ import { Container, Card, CardContent, Typography, Tabs, Tab, Box, TextField, Bu
 import { messaggioErrore } from '../services/api';
 import { loginUtente, registrazione } from '../services/utentiService';
 import useUtente from '../hooks/useUtente';
+import useAdmin from '../hooks/useAdmin';
+import { logout } from '../services/authService';
 import { REGOLE_PASSWORD } from '../utils/password';
 
 const cardSx = {
@@ -43,6 +45,7 @@ export default function Accedi() {
     const [parametri] = useSearchParams();
     const next = destinazioneSicura(parametri.get('next'));
     const utente = useUtente();
+    const admin = useAdmin();
 
     const [scheda, setScheda] = useState(0);
     const [dati, setDati] = useState({ nome: '', cognome: '', email: '', telefono: '', password: '', conferma: '' });
@@ -91,6 +94,32 @@ export default function Accedi() {
             .catch((err) => setErrore(messaggioErrore(err, 'Operazione non riuscita. Riprova.')))
             .finally(() => setInvio(false));
     };
+
+    if (admin) {
+        return (
+            <Container maxWidth="sm" sx={{ mt: { xs: 5, md: 10 } }}>
+                <Card elevation={0} sx={cardSx}>
+                    <CardContent>
+                        <Typography variant="h5" sx={{ color: '#c5a059', mb: 2 }}>
+                            Sei collegato come amministratore
+                        </Typography>
+                        <Alert severity="info" sx={{ mb: 3 }}>
+                            Accesso e registrazione sono riservati ai visitatori. Per usarli esci prima dall&apos;area
+                            riservata.
+                        </Alert>
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                            <Button component={Link} to="/admin" variant="contained" sx={{ borderRadius: 0 }}>
+                                Torna alla dashboard
+                            </Button>
+                            <Button onClick={logout} variant="outlined" sx={{ borderRadius: 0 }}>
+                                Esci dall&apos;area riservata
+                            </Button>
+                        </Box>
+                    </CardContent>
+                </Card>
+            </Container>
+        );
+    }
 
     if (utente) {
         return (

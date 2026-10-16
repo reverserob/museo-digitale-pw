@@ -14,10 +14,11 @@ vi.mock('../services/api', async (importOriginal) => ({
 
 // GET /api/mostre/1 restituisce la mostra, GET /api/feedback i feedback indicati,
 // GET /api/utenti/me/prenotazioni le prenotazioni del visitatore collegato
-function rispostaMostra(feedback, mostra = MOSTRA, miePrenotazioni = []) {
+function rispostaMostra(feedback, mostra = MOSTRA, miePrenotazioni = [], mieiFeedback = []) {
     api.get.mockImplementation((url) => {
         if (url === '/api/feedback') return Promise.resolve({ data: feedback });
         if (url === '/api/utenti/me/prenotazioni') return Promise.resolve({ data: miePrenotazioni });
+        if (url === '/api/utenti/me/feedback') return Promise.resolve({ data: mieiFeedback });
         return Promise.resolve({ data: mostra });
     });
 }
@@ -102,6 +103,18 @@ describe('GalleriaMostra - feedback', () => {
         expect(api.post).toHaveBeenCalledWith('/api/feedback', { mostra_id: 1, voto: 3, commento: 'Carina' });
         expect(await screen.findByText('Grazie! Il tuo feedback è stato pubblicato.')).toBeInTheDocument();
         expect(screen.getByText('Carina')).toBeInTheDocument();
+        // un solo feedback per mostra: dopo l'invio il form sparisce
+        expect(screen.queryByRole('button', { name: 'Invia feedback' })).not.toBeInTheDocument();
+    });
+
+    it('se il visitatore ha già lasciato un feedback su questa mostra il form non compare', async () => {
+        collegaUtente();
+        rispostaMostra(FEEDBACK, IN_CORSO, PRENOTATO, [{ id: 1, mostra_id: 1, voto: 5 }]);
+        apriPagina();
+
+        expect(await screen.findByText(/Hai già lasciato il tuo feedback su questa mostra/)).toBeInTheDocument();
+        expect(api.get).toHaveBeenCalledWith('/api/utenti/me/feedback');
+        expect(screen.queryByRole('button', { name: 'Invia feedback' })).not.toBeInTheDocument();
     });
 
     it('senza voto non invia nulla', async () => {
@@ -172,7 +185,7 @@ describe('GalleriaMostra - area admin', () => {
         expect(screen.queryByRole('button', { name: /Elimina/ })).not.toBeInTheDocument();
     });
 
-    it("l'admin vede Modifica ed Elimina della mostra; i feedback sono in sola lettura", async () => {
+    it("l'admin vede Modifica ed Elimina, i feedback con il pulsante per eliminarli e nessun PRENOTA", async () => {
         setToken('token-valido');
         rispostaMostra(FEEDBACK);
         apriPagina();
@@ -181,9 +194,22 @@ describe('GalleriaMostra - area admin', () => {
         expect(gestione).toHaveTextContent('Modifica');
         expect(screen.getByRole('link', { name: 'Modifica' })).toHaveAttribute('href', '/admin/modifica/1');
         expect(await screen.findByText('Splendida')).toBeInTheDocument();
-        // i feedback si eliminano solo dalla dashboard dell'area riservata
-        expect(screen.queryByRole('button', { name: /Elimina il feedback/ })).not.toBeInTheDocument();
-        expect(screen.getByText(/Per eliminarli usa la dashboard/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Elimina il feedback di Giulia' })).toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'PRENOTA' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Invia feedback' })).not.toBeInTheDocument();
+    });
+
+    it("l'admin elimina un feedback dalla pagina della mostra", async () => {
+        setToken('token-valido');
+        rispostaMostra(FEEDBACK);
+        api.delete.mockResolvedValue({ data: {} });
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        const user = userEvent.setup();
+        apriPagina();
+
+        await user.click(await screen.findByRole('button', { name: 'Elimina il feedback di Giulia' }));
+        expect(api.delete).toHaveBeenCalledWith('/api/feedback/3');
+        expect(screen.queryByText('Splendida')).not.toBeInTheDocument();
     });
 
     it('con un visitatore collegato i comandi admin non compaiono anche se è rimasto il token admin', async () => {

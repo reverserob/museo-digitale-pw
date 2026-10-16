@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Accedi from '../pages/Accedi';
-import { api, getSessioneUtente } from '../services/api';
+import { api, getSessioneUtente, setToken, getToken } from '../services/api';
 import { FUTURE, UTENTE, collegaUtente, erroreHttp } from './utils';
 
 vi.mock('../services/api', async (importOriginal) => ({
@@ -190,5 +190,16 @@ describe('Accedi', () => {
             'href',
             '/password-dimenticata'
         );
+    });
+
+    it("con l'admin collegato non mostra accesso e registrazione dei visitatori", async () => {
+        setToken('token-admin');
+        const user = userEvent.setup();
+        apri();
+        expect(screen.getByText('Sei collegato come amministratore')).toBeInTheDocument();
+        expect(screen.queryByRole('tab', { name: 'Registrati' })).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: "Esci dall'area riservata" }));
+        expect(getToken()).toBeNull();
+        expect(screen.getByRole('tab', { name: 'Registrati' })).toBeInTheDocument();
     });
 });
