@@ -7,6 +7,7 @@ import background from '../config/background.json';
 import AppHeader from '../components/AppHeader';
 import { FUTURE, collegaUtente } from './utils';
 import { logoutUtente, getUtente } from '../services/utentiService';
+import { setToken, getToken } from '../services/api';
 
 describe('configurazione', () => {
     it('ogni rotta di routes.json punta a una pagina esistente', () => {
@@ -92,5 +93,32 @@ describe('AppHeader', () => {
         await user.click(screen.getByRole('button', { name: 'Esci' }));
         expect(getUtente()).toBeNull();
         expect(screen.getByRole('link', { name: 'Area Riservata' })).toBeInTheDocument();
+    });
+
+    it('con l\'admin collegato mostra "Ciao, Admin" e nasconde Accedi e Area Riservata', async () => {
+        setToken('token-admin');
+        const user = userEvent.setup();
+        render(
+            <MemoryRouter future={FUTURE}>
+                <AppHeader />
+            </MemoryRouter>
+        );
+        expect(screen.getByRole('link', { name: 'Ciao, Admin' })).toHaveAttribute('href', '/admin');
+        expect(screen.queryByRole('link', { name: 'Accedi' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Area Riservata' })).not.toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: 'Esci' }));
+        expect(getToken()).toBeNull();
+        expect(screen.getByRole('link', { name: 'Accedi' })).toBeInTheDocument();
+    });
+
+    it("si aggiorna da solo quando l'admin fa login", () => {
+        render(
+            <MemoryRouter future={FUTURE}>
+                <AppHeader />
+            </MemoryRouter>
+        );
+        act(() => setToken('token-admin'));
+        expect(screen.getByRole('link', { name: 'Ciao, Admin' })).toBeInTheDocument();
     });
 });

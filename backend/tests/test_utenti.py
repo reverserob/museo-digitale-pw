@@ -207,3 +207,24 @@ def test_token_di_accesso_non_vale_come_reset(client):
     corpo = client.post("/api/utenti/registrazione", json=DATI).json()
     r = client.post("/api/utenti/reimposta-password", json={"token": corpo["access_token"], "password": "NuovaPass1"})
     assert r.status_code == 400
+
+
+# --- i miei feedback ---
+def test_miei_feedback(client, mostra_in_corso):
+    from tests.conftest import prenota_nel_db, registra_utente
+
+    mario = registra_utente(client)
+    anna = registra_utente(client, email="anna@test.it", nome="Anna", cognome="Bianchi")
+    prenota_nel_db(mostra_in_corso)
+    prenota_nel_db(mostra_in_corso, email="anna@test.it")
+    assert client.get("/api/utenti/me/feedback", headers=mario).json() == []
+
+    client.post("/api/feedback", json={"mostra_id": mostra_in_corso, "voto": 4}, headers=mario)
+    client.post("/api/feedback", json={"mostra_id": mostra_in_corso, "voto": 2}, headers=anna)
+    miei = client.get("/api/utenti/me/feedback", headers=mario).json()
+    assert [(f["mostra_id"], f["voto"]) for f in miei] == [(mostra_in_corso, 4)]
+
+
+def test_miei_feedback_richiede_visitatore(client, auth):
+    assert client.get("/api/utenti/me/feedback").status_code == 401
+    assert client.get("/api/utenti/me/feedback", headers=auth).status_code == 403

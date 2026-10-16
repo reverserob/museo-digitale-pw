@@ -14,8 +14,10 @@ import {
 } from '@mui/material';
 import { messaggioErrore } from '../services/api';
 import { getMostre } from '../services/mostreService';
+import useAdmin from '../hooks/useAdmin';
 
 export default function Home() {
+    const admin = useAdmin();
     const [mostre, setMostre] = useState([]);
     const [loading, setLoading] = useState(true);
     const [errore, setErrore] = useState('');
@@ -124,16 +126,19 @@ export default function Home() {
                                 >
                                     SCOPRI DI PIÙ
                                 </Button>
-                                <Button
-                                    component={Link}
-                                    to={`/prenota/${mostra.id}`}
-                                    variant="outlined"
-                                    color="primary"
-                                    fullWidth
-                                    sx={{ borderRadius: 0, borderWidth: 2, letterSpacing: 1 }}
-                                >
-                                    PRENOTA
-                                </Button>
+                                {/* l'amministratore non prenota: il pulsante è solo per i visitatori */}
+                                {!admin && (
+                                    <Button
+                                        component={Link}
+                                        to={`/prenota/${mostra.id}`}
+                                        variant="outlined"
+                                        color="primary"
+                                        fullWidth
+                                        sx={{ borderRadius: 0, borderWidth: 2, letterSpacing: 1 }}
+                                    >
+                                        PRENOTA
+                                    </Button>
+                                )}
                             </CardActions>
                         </Card>
                     </Grid>

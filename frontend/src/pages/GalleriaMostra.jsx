@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { splitImmagini, messaggioErrore } from '../services/api';
 import { getMostra, eliminaMostra } from '../services/mostreService';
-import { isLoggedIn } from '../services/authService';
+import useAdmin from '../hooks/useAdmin';
 import SezioneFeedback from '../components/SezioneFeedback';
 
 export default function GalleriaMostra() {
@@ -21,7 +21,7 @@ export default function GalleriaMostra() {
     const navigate = useNavigate();
     const [mostra, setMostra] = useState(null);
     const [errore, setErrore] = useState('');
-    const admin = isLoggedIn();
+    const admin = useAdmin();
 
     useEffect(() => {
         getMostra(id)
@@ -160,17 +160,20 @@ export default function GalleriaMostra() {
                             </Typography>
                         </Box>
 
-                        <Button
-                            component={Link}
-                            to={`/prenota/${mostra.id}`}
-                            variant="contained"
-                            color="primary"
-                            size="large"
-                            fullWidth
-                            sx={{ borderRadius: 0, py: 2, letterSpacing: 1.5, fontWeight: 'bold' }}
-                        >
-                            PRENOTA
-                        </Button>
+                        {/* l'amministratore non prenota: il pulsante è solo per i visitatori */}
+                        {!admin && (
+                            <Button
+                                component={Link}
+                                to={`/prenota/${mostra.id}`}
+                                variant="contained"
+                                color="primary"
+                                size="large"
+                                fullWidth
+                                sx={{ borderRadius: 0, py: 2, letterSpacing: 1.5, fontWeight: 'bold' }}
+                            >
+                                PRENOTA
+                            </Button>
+                        )}
                     </Box>
                 </Grid>
 

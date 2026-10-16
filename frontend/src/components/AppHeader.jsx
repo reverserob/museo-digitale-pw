@@ -1,14 +1,18 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button } from '@mui/material';
 import useUtente from '../hooks/useUtente';
+import useAdmin from '../hooks/useAdmin';
 import { logoutUtente } from '../services/utentiService';
+import { logout } from '../services/authService';
 
 export default function AppHeader() {
     const utente = useUtente();
+    const admin = useAdmin();
     const navigate = useNavigate();
 
     const esci = () => {
-        logoutUtente();
+        if (admin) logout();
+        else logoutUtente();
         navigate('/');
     };
 
@@ -18,7 +22,17 @@ export default function AppHeader() {
                 <Typography variant="h6" className="app-header__title">
                     <Link to="/">MUSEO CIVICO DIGITALE</Link>
                 </Typography>
-                {utente ? (
+                {admin ? (
+                    // amministratore collegato: niente Accedi/Registrati dei visitatori
+                    <>
+                        <Button component={Link} to="/admin" color="inherit" className="app-header__button">
+                            Ciao, Admin
+                        </Button>
+                        <Button onClick={esci} color="inherit" className="app-header__button">
+                            Esci
+                        </Button>
+                    </>
+                ) : utente ? (
                     <>
                         <Button component={Link} to="/profilo" color="inherit" className="app-header__button">
                             Ciao, {utente.nome}

@@ -8,6 +8,7 @@ export const API_URL = (
 ).replace(/\/$/, '');
 
 const TOKEN_KEY = 'admin_token';
+export const EVENTO_SESSIONE = 'sessione-utente-cambiata';
 
 export const getToken = () => {
     try {
@@ -24,10 +25,11 @@ export const setToken = (token) => {
     } catch {
         /* sessionStorage non disponibile */
     }
+    // anche login e logout dell'admin aggiornano l'header e le pagine aperte
+    window.dispatchEvent(new Event(EVENTO_SESSIONE));
 };
 
 const UTENTE_KEY = 'utente_sessione';
-export const EVENTO_SESSIONE = 'sessione-utente-cambiata';
 
 export const getSessioneUtente = () => {
     try {

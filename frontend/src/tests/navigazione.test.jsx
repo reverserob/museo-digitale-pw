@@ -19,6 +19,15 @@ function apri(indirizzo) {
                         </ProtectedRoute>
                     }
                 />
+                <Route
+                    path="/prenota/:id"
+                    element={
+                        <ProtectedRoute ruolo="utente">
+                            <p>Pagina prenotazione</p>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route path="/accedi" element={<p>Pagina Accedi</p>} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </MemoryRouter>
@@ -36,6 +45,18 @@ describe('ProtectedRoute', () => {
         setToken('token-valido');
         apri('/admin/nuova');
         expect(screen.getByText('Pagina riservata')).toBeInTheDocument();
+    });
+
+    it('la prenotazione senza account rimanda ad Accedi', () => {
+        apri('/prenota/1');
+        expect(screen.getByText('Pagina Accedi')).toBeInTheDocument();
+    });
+
+    it("l'admin che apre la prenotazione torna all'area riservata", () => {
+        setToken('token-valido');
+        apri('/prenota/1');
+        expect(screen.getByText('Pagina di login')).toBeInTheDocument();
+        expect(screen.queryByText('Pagina prenotazione')).not.toBeInTheDocument();
     });
 });
 
