@@ -12,10 +12,17 @@ vi.mock('../services/api', async (importOriginal) => ({
     api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
 
-// GET /api/mostre/1 restituisce la mostra, GET /api/feedback i feedback indicati
-function rispostaMostra(feedback, mostra = MOSTRA) {
-    api.get.mockImplementation((url) => Promise.resolve({ data: url === '/api/feedback' ? feedback : mostra }));
+// GET /api/mostre/1 restituisce la mostra, GET /api/feedback i feedback indicati,
+// GET /api/utenti/me/prenotazioni le prenotazioni del visitatore collegato
+function rispostaMostra(feedback, mostra = MOSTRA, miePrenotazioni = []) {
+    api.get.mockImplementation((url) => {
+        if (url === '/api/feedback') return Promise.resolve({ data: feedback });
+        if (url === '/api/utenti/me/prenotazioni') return Promise.resolve({ data: miePrenotazioni });
+        return Promise.resolve({ data: mostra });
+    });
 }
+
+const PRENOTATO = [{ id: 1, mostra_id: 1, titolo_mostra: MOSTRA.titolo }];
 
 const apriPagina = () =>
     renderConRouter(<GalleriaMostra />, { percorso: '/esposizione/:id', indirizzo: '/esposizione/1' });
@@ -72,7 +79,7 @@ describe('GalleriaMostra - feedback', () => {
 
     it('il visitatore collegato invia un feedback che compare in cima alla lista', async () => {
         collegaUtente();
-        rispostaMostra([], IN_CORSO);
+        rispostaMostra([], IN_CORSO, PRENOTATO);
         api.post.mockResolvedValue({
             data: {
                 id: 9,
@@ -99,7 +106,7 @@ describe('GalleriaMostra - feedback', () => {
 
     it('senza voto non invia nulla', async () => {
         collegaUtente();
-        rispostaMostra([], IN_CORSO);
+        rispostaMostra([], IN_CORSO, PRENOTATO);
         const user = userEvent.setup();
         apriPagina();
 
@@ -110,7 +117,7 @@ describe('GalleriaMostra - feedback', () => {
 
     it("mostra l'errore restituito dal backend (feedback già lasciato)", async () => {
         collegaUtente();
-        rispostaMostra([], IN_CORSO);
+        rispostaMostra([], IN_CORSO, PRENOTATO);
         api.post.mockRejectedValue(erroreHttp(409, 'Hai già lasciato un feedback su questa mostra.'));
         const user = userEvent.setup();
         apriPagina();
@@ -118,6 +125,19 @@ describe('GalleriaMostra - feedback', () => {
         fireEvent.click(await screen.findByRole('radio', { name: '5 Stars' }));
         await user.click(screen.getByRole('button', { name: 'Invia feedback' }));
         expect(await screen.findByText('Hai già lasciato un feedback su questa mostra.')).toBeInTheDocument();
+    });
+
+    it('il visitatore non prenotato a questa mostra non vede il form', async () => {
+        collegaUtente();
+        rispostaMostra([], IN_CORSO, [{ id: 5, mostra_id: 2, titolo_mostra: 'Altra mostra' }]);
+        apriPagina();
+
+        expect(
+            await screen.findByText('Puoi lasciare un feedback solo sulle mostre a cui ti sei prenotato.')
+        ).toBeInTheDocument();
+        expect(api.get).toHaveBeenCalledWith('/api/utenti/me/prenotazioni');
+        expect(screen.getByRole('link', { name: 'Prenota' })).toHaveAttribute('href', '/prenota/1');
+        expect(screen.queryByRole('button', { name: 'Invia feedback' })).not.toBeInTheDocument();
     });
 
     it('per una mostra non ancora iniziata il form non compare', async () => {
@@ -143,7 +163,16 @@ describe('GalleriaMostra - area admin', () => {
         expect(screen.queryByRole('button', { name: /Elimina/ })).not.toBeInTheDocument();
     });
 
-    it("l'admin vede Modifica ed Elimina e i feedback con il pulsante per eliminarli", async () => {
+    it('il visitatore collegato non vede il pulsante per eliminare i feedback', async () => {
+        collegaUtente();
+        rispostaMostra(FEEDBACK, MOSTRA, PRENOTATO);
+        apriPagina();
+
+        expect(await screen.findByText('Splendida')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Elimina/ })).not.toBeInTheDocument();
+    });
+
+    it("l'admin vede Modifica ed Elimina della mostra; i feedback sono in sola lettura", async () => {
         setToken('token-valido');
         rispostaMostra(FEEDBACK);
         apriPagina();
@@ -152,20 +181,19 @@ describe('GalleriaMostra - area admin', () => {
         expect(gestione).toHaveTextContent('Modifica');
         expect(screen.getByRole('link', { name: 'Modifica' })).toHaveAttribute('href', '/admin/modifica/1');
         expect(await screen.findByText('Splendida')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Elimina il feedback di Giulia' })).toBeInTheDocument();
+        // i feedback si eliminano solo dalla dashboard dell'area riservata
+        expect(screen.queryByRole('button', { name: /Elimina il feedback/ })).not.toBeInTheDocument();
+        expect(screen.getByText(/Per eliminarli usa la dashboard/)).toBeInTheDocument();
     });
 
-    it("l'admin elimina un feedback dalla pagina della mostra", async () => {
+    it('con un visitatore collegato i comandi admin non compaiono anche se è rimasto il token admin', async () => {
         setToken('token-valido');
-        rispostaMostra(FEEDBACK);
-        api.delete.mockResolvedValue({ data: {} });
-        vi.spyOn(window, 'confirm').mockReturnValue(true);
-        const user = userEvent.setup();
+        collegaUtente();
+        rispostaMostra(FEEDBACK, MOSTRA, PRENOTATO);
         apriPagina();
 
-        await user.click(await screen.findByRole('button', { name: 'Elimina il feedback di Giulia' }));
-        expect(api.delete).toHaveBeenCalledWith('/api/feedback/3');
-        expect(screen.queryByText('Splendida')).not.toBeInTheDocument();
+        expect(await screen.findByText('Splendida')).toBeInTheDocument();
+        expect(screen.queryByRole('region', { name: 'Gestione mostra' })).not.toBeInTheDocument();
     });
 
     it("l'admin elimina la mostra e torna alla dashboard", async () => {

@@ -120,10 +120,10 @@ Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una
 - **RF3 – Conferma**: dopo la prenotazione il visitatore riceve un'email di riepilogo.
 - **RF4 – Feedback**: il visitatore registrato lascia un voto da 1 a 5 e un commento facoltativo su una mostra già iniziata (uno per mostra); i feedback sono visibili a tutti, anche senza account, con nome e iniziale del cognome.
 - **RF5 – Accesso riservato**: l'amministratore accede con email e password.
-- **RF10 – Account dei visitatori**: chiunque può consultare il catalogo, ma per prenotare e lasciare feedback deve registrarsi (nome, cognome, email, telefono, password) o accedere. Nell'area personale il visitatore vede le proprie prenotazioni.
+- **RF10 – Account dei visitatori**: chiunque può consultare il catalogo, ma per prenotare e lasciare feedback deve registrarsi (nome, cognome, email, telefono, password) o accedere. Ogni email può essere registrata una sola volta (al secondo tentativo compare l'errore "Utente già registrato"); dopo la registrazione il visitatore riceve un'email di conferma. Nell'area personale il visitatore vede le proprie prenotazioni; può uscire (logout) dall'intestazione del sito e, se dimentica la password, reimpostarla con un link temporaneo ricevuto per email. Può lasciare un feedback solo sulle mostre a cui si è prenotato. Finché un visitatore è collegato, l'area riservata non è accessibile: prima deve uscire.
 - **RF6 – Gestione catalogo**: l'amministratore pubblica, modifica ed elimina le mostre e ne carica le immagini.
 - **RF7 – Consultazione prenotazioni**: l'amministratore vede le prenotazioni ricevute, suddivise per mostra.
-- **RF8 – Moderazione**: l'amministratore può eliminare i feedback non appropriati.
+- **RF8 – Moderazione**: l'amministratore può eliminare i feedback non appropriati, solo dalla dashboard dell'area riservata.
 - **RF9 – Dashboard**: l'amministratore consulta indicatori di sintesi (prenotazioni totali e degli ultimi 7 giorni, mostre in corso, in arrivo e concluse, numero di feedback e voto medio, prenotazioni per mostra).
 
 #### 3.2. Requisiti non funzionali
@@ -516,8 +516,10 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 | Router | Metodo e percorso | Descrizione | Risposte principali |
 |---|---|---|---|
 | Area riservata | POST /api/login | Verifica le credenziali dell'amministratore e restituisce un token di accesso firmato a tempo. | 200, 401, 429 |
-| Visitatori | POST /api/utenti/registrazione | Crea l'account del visitatore (password salvata come hash) e restituisce subito il token e il profilo. | 201, 409, 422, 429 |
+| Visitatori | POST /api/utenti/registrazione | Crea l'account del visitatore (password salvata come hash), invia l'email di conferma e restituisce subito il token e il profilo. Con un'email già registrata risponde 409 "Utente già registrato" e avvisa per email il titolare dell'account. | 201, 409, 422, 429 |
 | Visitatori | POST /api/utenti/login | Verifica email e password del visitatore e restituisce token e profilo. | 200, 401, 429 |
+| Visitatori | POST /api/utenti/password-dimenticata | Se l'email è registrata invia un link per reimpostare la password (valido 30 minuti, usabile una volta). La risposta è sempre la stessa, così non si rivela quali email sono registrate. | 200, 429 |
+| Visitatori | POST /api/utenti/reimposta-password | Riceve il token del link e la nuova password (stessa regola della registrazione) e aggiorna l'hash. | 200, 400, 422, 429 |
 | Visitatori | 👤 GET /api/utenti/me | Profilo del visitatore collegato. | 200, 401, 403 |
 | Visitatori | 👤 GET /api/utenti/me/prenotazioni | Prenotazioni del visitatore collegato, con titolo e periodo della mostra. | 200, 401, 403 |
 | Area riservata | 🔒 GET /api/statistiche | Indicatori per la dashboard: conteggi di mostre, prenotazioni e feedback, voto medio, dettaglio per mostra. | 200, 401 |
@@ -686,7 +688,13 @@ Una variabile assente o lasciata vuota assume un valore di default pensato solo 
 #### 9.5. Autenticazione: area riservata e account dei visitatori
 Il controllo delle credenziali avviene sul server e non nel browser. L'endpoint POST /api/login confronta le credenziali con quelle configurate (con confronto a tempo costante, per evitare attacchi basati sui tempi di risposta) e restituisce un token che contiene la scadenza ed è firmato con HMAC-SHA256 tramite la SECRET_KEY. Il token non è cifrato ma firmato: il server può leggerne il contenuto e verificare che non sia stato alterato. Il client invia il token nell'header `Authorization: Bearer`; le rotte riservate usano la dipendenza FastAPI `richiedi_admin` (modulo `auth.py`), che rifiuta con 401 Unauthorized le richieste senza un token valido o scaduto.
 
-**Account dei visitatori.** Chiunque può consultare mostre e feedback, ma per prenotare o recensire serve un account. Con `POST /api/utenti/registrazione` il visitatore indica nome, cognome, email, telefono e una password di almeno 8 caratteri; la password viene trasformata in un hash PBKDF2-HMAC-SHA256 con sale casuale e 200.000 iterazioni (funzioni `hash_password` e `verifica_password` in `auth.py`, solo libreria standard di Python) e non viene mai salvata in chiaro. Login e registrazione restituiscono un token firmato con lo stesso meccanismo dell'amministratore, ma con `"ruolo": "utente"` e l'identificativo dell'account. Le rotte di prenotazione e feedback usano la dipendenza `richiedi_utente`, che verifica firma, scadenza e ruolo e carica l'account dal database; `richiedi_admin` accetta invece solo il ruolo `admin`, quindi un visitatore non può entrare nell'area riservata e l'amministratore non può prenotare. In caso di login errato il messaggio è lo stesso sia per email inesistente sia per password sbagliata, così non si rivela quali email sono registrate.
+**Account dei visitatori.** Chiunque può consultare mostre e feedback, ma per prenotare o recensire serve un account. Con `POST /api/utenti/registrazione` il visitatore indica nome, cognome, email, telefono e una password di almeno 6 caratteri con almeno una lettera maiuscola e un numero (regola controllata sia nel form sia dal server); la password viene trasformata in un hash PBKDF2-HMAC-SHA256 con sale casuale e 200.000 iterazioni (funzioni `hash_password` e `verifica_password` in `auth.py`, solo libreria standard di Python) e non viene mai salvata in chiaro. Login e registrazione restituiscono un token firmato con lo stesso meccanismo dell'amministratore, ma con `"ruolo": "utente"` e l'identificativo dell'account. Le rotte di prenotazione e feedback usano la dipendenza `richiedi_utente`, che verifica firma, scadenza e ruolo e carica l'account dal database; `richiedi_admin` accetta invece solo il ruolo `admin`, quindi un visitatore non può entrare nell'area riservata e l'amministratore non può prenotare. In caso di login errato il messaggio è lo stesso sia per email inesistente sia per password sbagliata, così non si rivela quali email sono registrate.
+
+**Registrazione unica, email e logout.** L'email è un campo univoco: un secondo tentativo con lo stesso indirizzo (anche scritto con maiuscole o spazi diversi) restituisce 409 "Utente già registrato" e al titolare dell'account arriva un'email che lo avvisa del tentativo. Una registrazione riuscita genera invece l'email di benvenuto. Le email partono in background (`BackgroundTasks`), dopo la risposta, così l'utente non aspetta il servizio di posta. Il visitatore esce con il pulsante **Esci** nell'intestazione o nell'area personale: la sessione salvata nel browser viene cancellata.
+
+**Separazione tra visitatore e area riservata.** Nel browser la sessione del visitatore e quella dell'amministratore non possono convivere: il login di un visitatore cancella l'eventuale token admin, e finché un visitatore è collegato la pagina /admin mostra solo l'avviso "Sei collegato come visitatore… devi prima uscire" con il pulsante per farlo. Anche lato server i ruoli restano separati (`richiedi_admin` accetta solo token con ruolo `admin`).
+
+**Recupero della password.** Con `POST /api/utenti/password-dimenticata` il server crea un token firmato con ruolo `reset`, scadenza di 30 minuti (`RESET_PASSWORD_MINUTI`) e un'"impronta" dell'hash della password attuale: appena la password cambia l'impronta non corrisponde più, quindi il link funziona una sola volta. Il link punta al sito da cui è partita la richiesta (se è tra i `CORS_ORIGINS`) oppure a `FRONTEND_URL`. Un token di reset non vale come accesso e un token di accesso non vale come reset. Se il servizio email non è configurato (sviluppo locale) il link viene scritto nel log del backend, così la funzione si può provare comunque.
 
 #### 9.6. Gestione sicura del caricamento file
 Il caricamento delle immagini è gestito da `services/immagini_service.py`. Le immagini vengono accettate solo se hanno un'estensione e un tipo MIME da immagine (jpg, png, webp, gif) e non superano la dimensione massima configurata. Il nome del file su disco viene generato dal server (UUID), evitando sia la sovrascrittura di file esistenti sia attacchi di tipo path traversal. In modifica il client invia l'elenco delle immagini attuali da mantenere: il server accetta solo percorsi già associati a quella mostra, così dal form non è possibile collegare file arbitrari. Nel database si salvano percorsi relativi: è il frontend ad anteporre l'indirizzo del backend, così l'applicazione funziona sia in locale sia in produzione. I dati inseriti dagli utenti vengono inoltre "escapati" prima di essere inseriti nel corpo HTML dell'email di conferma.
@@ -695,7 +703,7 @@ Il caricamento delle immagini è gestito da `services/immagini_service.py`. Le i
 Per impedire attacchi "a forza bruta" (provare molte password in sequenza), gli endpoint di login (amministratore e visitatori) e di registrazione sono protetti dalla libreria `slowapi`: ogni indirizzo IP può effettuare un numero limitato di tentativi (di default 5 al minuto, configurabile con la variabile `LOGIN_RATE_LIMIT`). Superato il limite il server risponde 429 Too Many Requests con un messaggio leggibile, che il frontend mostra nel form di accesso. Poiché in produzione il backend si trova dietro il proxy di Render, uvicorn viene avviato con l'opzione `--proxy-headers`, così da leggere l'indirizzo IP reale del visitatore.
 
 #### 9.8. Feedback dei visitatori
-I feedback si leggono senza account, ma per scriverne uno serve il login: così ogni recensione è legata a una persona registrata e si riducono spam e recensioni multiple. Il server accetta solo voti interi da 1 a 5, commenti di lunghezza limitata, feedback su mostre già iniziate e al massimo un feedback per visitatore su ogni mostra (409 al secondo tentativo). Nel feedback pubblico compaiono solo il nome e l'iniziale del cognome (es. "Giulia V."), mai email o telefono, secondo il principio di minimizzazione dei dati personali. L'amministratore può eliminare i contenuti non appropriati.
+I feedback si leggono senza account, ma per scriverne uno serve il login: così ogni recensione è legata a una persona registrata e si riducono spam e recensioni multiple. Il server accetta solo voti interi da 1 a 5, commenti di lunghezza limitata, feedback su mostre già iniziate e al massimo un feedback per visitatore su ogni mostra (409 al secondo tentativo) e solo da parte di chi si è prenotato a quella mostra (403 altrimenti: il feedback deve venire da un visitatore reale della mostra). Nel feedback pubblico compaiono solo il nome e l'iniziale del cognome (es. "Giulia V."), mai email o telefono, secondo il principio di minimizzazione dei dati personali. L'amministratore può eliminare i contenuti non appropriati dalla dashboard dell'area riservata.
 
 ### 10. Implementazione del front-end
 #### 10.1. Architettura dei componenti e Single Page Application (SPA)
@@ -727,7 +735,7 @@ Le pagine non contengono gli indirizzi delle API: usano le funzioni dei servizi 
 Gli stati locali dei componenti (useState, useEffect) garantiscono feedback visivi immediati all'utente, ad esempio gli indicatori di caricamento tramite CircularProgress.
 
 #### 10.2. Feedback e dashboard con indicatori
-- **SezioneFeedback** (pagina di dettaglio della mostra): mostra il voto medio con le stelle (componente `Rating` di MUI), l'elenco delle recensioni e il form per lasciarne una nuova. Dopo l'invio la recensione compare subito in cima alla lista, senza ricaricare la pagina. Per le mostre non ancora iniziate il form è sostituito da un messaggio informativo. Se la pagina è aperta dall'amministratore collegato (pulsante **Vedi** della dashboard), compaiono anche una barra con i comandi **Modifica** ed **Elimina** della mostra e un pulsante **Elimina** accanto a ogni feedback, mentre il form per lasciare un feedback è nascosto (l'amministratore legge e modera, ma non recensisce); i visitatori non vedono questi comandi e, in ogni caso, il server accetta le operazioni solo con un token valido.
+- **SezioneFeedback** (pagina di dettaglio della mostra): mostra il voto medio con le stelle (componente `Rating` di MUI), l'elenco delle recensioni e il form per lasciarne una nuova. Dopo l'invio la recensione compare subito in cima alla lista, senza ricaricare la pagina. Per le mostre non ancora iniziate il form è sostituito da un messaggio informativo; al visitatore collegato ma non prenotato a quella mostra compare l'avviso "Puoi lasciare un feedback solo sulle mostre a cui ti sei prenotato" con il pulsante **Prenota** (il componente lo verifica con `GET /api/utenti/me/prenotazioni`). Se la pagina è aperta dall'amministratore collegato (pulsante **Vedi** della dashboard), compare una barra con i comandi **Modifica** ed **Elimina** della mostra, mentre i feedback sono in sola lettura: si eliminano soltanto dalla dashboard. Nella pagina pubblica nessuno vede un pulsante per eliminare i feedback e, in ogni caso, il server accetta l'eliminazione solo con il token dell'amministratore.
 - **Accedi e AreaPersonale**: la pagina Accedi ha due schede, *Accedi* e *Registrati*, con validazione in tempo reale (il pulsante si attiva solo con dati validi). La sessione del visitatore è salvata nel browser (`localStorage`), quindi resta attiva anche chiudendo la scheda; l'header mostra "Accedi" oppure "Ciao, <nome>" con il link all'area personale, dove il visitatore vede le proprie prenotazioni ed esce. Nel form di prenotazione nome, cognome ed email sono quelli dell'account (sola lettura) e resta modificabile solo il telefono; nella sezione dei feedback chi non è collegato vede l'invito ad accedere al posto del form.
 - **IndicatoriDashboard** (area riservata): quattro riquadri con prenotazioni totali (e degli ultimi 7 giorni), mostre in corso (con quelle in arrivo e concluse), numero di feedback e voto medio, seguiti da un grafico a barre orizzontali delle prenotazioni per mostra. Il grafico è realizzato con semplici elementi grafici proporzionati al valore massimo, senza librerie aggiuntive. Sotto ogni mostra l'amministratore può aprire l'elenco delle prenotazioni o dei feedback ed eliminare questi ultimi.
 
@@ -763,9 +771,9 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (107 test) | Vitest + React Testing Library (92 test) |
+| Test automatici | pytest + TestClient di FastAPI (128 test) | Vitest + React Testing Library (108 test) |
 
-**Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra, aggiornamento di un database della versione precedente. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
+**Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra e solo dopo la prenotazione, email di registrazione e avviso di registrazione doppia, recupero della password (link valido, scaduto, già usato, token non valido), aggiornamento di un database della versione precedente. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 
 **Test del front-end** (cartella `frontend/src/tests/`): montano le pagine in un browser simulato (jsdom) e sostituiscono le risposte del backend con dati finti. Verificano la visualizzazione delle mostre, la validazione dei form, l'invio delle prenotazioni e dei feedback, login e logout dell'area riservata, registrazione e accesso dei visitatori con ritorno alla pagina richiesta, area personale, scelta del token per ogni chiamata, gli indicatori della dashboard, la protezione delle rotte, la pagina 404 e il caricamento delle pagine "lazy".
 
@@ -791,13 +799,20 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 | TF11 | Moderazione dei feedback | Amministratore | Clic su "Feedback (n)" e poi su "Elimina" | Il feedback viene rimosso dopo la conferma | ✅ Superato |
 | TF12 | Pubblicazione di una mostra | Amministratore | "Nuova mostra", compilare il form e aggiungere più immagini, anche in momenti diversi | Le immagini si sommano con anteprima; il pulsante si attiva solo con tutti i campi validi; la mostra compare nel catalogo con tutte le foto | ✅ Superato |
 | TF12b | Modifica delle immagini di una mostra | Amministratore | "Modifica", togliere una foto con ✕ e aggiungerne una nuova, "Salva modifiche" | Il form mostra le foto attuali; dopo il salvataggio restano quelle non tolte più quella nuova | ✅ Superato |
-| TF12c | Mostra vista dall'amministratore | Amministratore | Dalla dashboard premere "Vedi" su una mostra | Compare la barra "Area admin" con Dashboard, Modifica ed Elimina; i feedback si possono leggere ed eliminare ma il form per lasciarne è nascosto | ✅ Superato |
+| TF12c | Mostra vista dall'amministratore | Amministratore | Dalla dashboard premere "Vedi" su una mostra | Compare la barra "Area admin" con Dashboard, Modifica ed Elimina; i feedback sono in sola lettura (si eliminano dalla dashboard) e il form per lasciarne è nascosto | ✅ Superato |
 | TF15 | Prenotazione senza account | Visitatore | Premere "Prenota" senza aver fatto il login | Si apre la pagina Accedi; dopo la registrazione si torna al form di prenotazione | ✅ Superato |
 | TF16 | Registrazione | Visitatore | Scheda "Registrati": nome, cognome, email, telefono, password di almeno 8 caratteri | Il pulsante si attiva solo con dati validi; l'account viene creato e il visitatore è subito collegato | ✅ Superato |
 | TF17 | Prenotazione da visitatore registrato | Visitatore | Aprire il form di prenotazione da collegato | Nome, cognome ed email dell'account non modificabili, telefono proposto; la prenotazione va a buon fine e l'admin la vede con i dati dell'account | ✅ Superato |
 | TF18 | Area personale | Visitatore | "Ciao, <nome>" nell'header | Elenco delle proprie prenotazioni con titolo e periodo della mostra; pulsante "Esci" | ✅ Superato |
 | TF19 | Feedback senza account | Visitatore | Aprire una mostra in corso senza login | Le recensioni sono visibili; al posto del form c'è l'invito ad accedere | ✅ Superato |
 | TF20 | Login visitatore errato | Visitatore | Password sbagliata nella scheda "Accedi" | Messaggio "Email o password errate."; poi con la password giusta si entra nell'area personale | ✅ Superato |
+| TF21 | Registrazione doppia | Visitatore | Registrarsi una seconda volta con la stessa email | Errore "Utente già registrato…"; nessun nuovo account; email di avviso al titolare | ✅ Superato |
+| TF22 | Email di registrazione | Visitatore | Registrazione corretta | Area personale con "Registrazione completata! Ti abbiamo inviato un'email di conferma." e email di benvenuto | ✅ Superato |
+| TF23 | Logout | Visitatore | Pulsante "Esci" nell'intestazione | Torna alla home, compaiono di nuovo "Accedi" e "Area Riservata" | ✅ Superato |
+| TF24 | Area riservata con visitatore collegato | Visitatore | Aprire /admin da collegato | Avviso "devi prima uscire" e nessun form di login admin; dopo "Esci dall'account visitatore" compare il login | ✅ Superato |
+| TF25 | Feedback senza prenotazione | Visitatore | Collegato, aprire una mostra in corso non prenotata | Avviso "solo sulle mostre a cui ti sei prenotato" e pulsante Prenota; dopo la prenotazione compare il form | ✅ Superato |
+| TF26 | Password dimenticata | Visitatore | "Password dimenticata?" → email → link → nuova password | Password aggiornata; il vecchio accesso non funziona più, il link riusato viene rifiutato | ✅ Superato |
+| TF27 | Eliminazione feedback | Visitatore / Amministratore | Aprire la pagina di una mostra con feedback | Nessun pulsante Elimina per visitatori né nella pagina pubblica; l'admin elimina dalla dashboard | ✅ Superato |
 | TF13 | Accesso diretto a una pagina riservata | Visitatore | Aprire `/admin/nuova` senza login | Si viene reindirizzati alla pagina di accesso | ✅ Superato |
 | TF14 | Troppi tentativi di accesso | Chiunque | Sbagliare la password più di 5 volte in un minuto | Messaggio "Troppi tentativi di accesso. Riprova tra qualche minuto." | ✅ Superato |
 
@@ -845,7 +860,7 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 **TF12c – Mostra vista dall'amministratore**: dalla dashboard, con il pulsante "Vedi", l'amministratore apre la pagina pubblica della mostra con in più la barra di gestione.
 ![Pagina della mostra vista dall'admin](docs/screenshots/13-mostra-admin.webp)
 
-Nella sezione delle opinioni l'amministratore legge i feedback e può eliminarli, ma non può lasciarne di nuovi.
+Nella sezione delle opinioni l'amministratore legge i feedback ma non può lasciarne di nuovi; per eliminarli usa la dashboard.
 ![Feedback visti dall'admin](docs/screenshots/14-mostra-admin-feedback.webp)
 
 **TF16 – Registrazione di un visitatore**
@@ -859,6 +874,21 @@ Nella sezione delle opinioni l'amministratore legge i feedback e può eliminarli
 
 **TF19 – Feedback senza account**: le recensioni restano visibili, ma per scriverne una bisogna accedere. Il feedback "Giulia V." è stato lasciato da un visitatore registrato.
 ![Feedback senza login](docs/screenshots/18-feedback-senza-login.webp)
+
+**TF21 – Registrazione doppia**: con un'email già registrata compare l'errore e al titolare arriva un'email di avviso.
+![Utente già registrato](docs/screenshots/19-registrazione-doppia.webp)
+
+**TF24 – Area riservata con un visitatore collegato**: prima di accedere come amministratore bisogna uscire dall'account visitatore.
+![Area riservata bloccata](docs/screenshots/20-admin-bloccata.webp)
+
+**TF25 – Feedback senza prenotazione**: il visitatore collegato ma non prenotato vede l'invito a prenotare al posto del form.
+![Feedback solo dopo la prenotazione](docs/screenshots/21-feedback-senza-prenotazione.webp)
+
+**TF22 – Registrazione completata**: l'area personale conferma l'invio dell'email; nell'intestazione compare il pulsante "Esci" (TF23).
+![Registrazione completata](docs/screenshots/22-registrazione-email.webp)
+
+**TF26 – Nuova password**: dal link ricevuto per email si sceglie la nuova password, con la stessa regola della registrazione.
+![Reimposta password](docs/screenshots/23-reimposta-password.webp)
 
 ### 13. Istruzioni per l'esecuzione
 #### 13.1. Prerequisiti
@@ -897,6 +927,8 @@ L'applicazione è disponibile su `http://localhost:5173`. In locale, se `ADMIN_E
 | `BREVO_API_KEY` | Facoltativa: chiave API di Brevo; se presente le email partono via API HTTPS |
 | `EMAIL_MITTENTE` / `EMAIL_MITTENTE_NOME` | Mittente delle email inviate con Brevo (indirizzo verificato su Brevo) |
 | `CORS_ORIGINS` | Domini del front-end autorizzati, separati da virgola |
+| `FRONTEND_URL` | Facoltativa: indirizzo del sito usato nel link di reset se la richiesta non arriva da un dominio di `CORS_ORIGINS` (default il sito su Vercel) |
+| `RESET_PASSWORD_MINUTI` | Facoltativa: durata del link per reimpostare la password (default 30) |
 | `DATABASE_URL` | Facoltativa, default `sqlite:///./museo.db` |
 | `LOGIN_RATE_LIMIT` | Facoltativa, tentativi di login consentiti per IP (default `5/minute`) |
 | `VITE_API_URL` | (front-end) indirizzo del back-end, se diverso da quello predefinito |
@@ -931,7 +963,7 @@ La piattaforma è un prototipo funzionante; alcune semplificazioni sono accettab
 - **Un solo amministratore**: le credenziali sono configurate tramite variabili d'ambiente; non esistono più account né ruoli diversi (es. curatore e biglietteria).
 - **Nessuna gestione dei posti**: la prenotazione non prevede fasce orarie né un numero massimo di visitatori per giorno.
 - **Feedback non legati alla visita**: per recensire serve un account, ma non si verifica che il visitatore abbia davvero visitato la mostra; la moderazione è manuale.
-- **Account semplici**: l'email del visitatore non viene verificata con un link di conferma e non c'è ancora il recupero della password dimenticata.
+- **Account semplici**: l'email del visitatore non viene verificata con un link di conferma (riceve solo un'email di benvenuto) e il profilo non si può ancora modificare dall'area personale.
 - **Avvio lento del back-end**: sul piano gratuito il servizio va in pausa dopo un periodo di inattività e la prima richiesta può richiedere alcune decine di secondi.
 
 #### 15.2. Sviluppi futuri
@@ -953,7 +985,7 @@ La dashboard attuale mostra indicatori di sintesi. Il passo successivo è l'anal
 Integrare un servizio di pagamento (es. Stripe o PayPal, oppure pagoPA per un ente pubblico) per acquistare il biglietto al momento della prenotazione, con emissione della ricevuta e biglietto con QR code. Richiederebbe una nuova tabella `pagamenti` collegata alle prenotazioni e la gestione delle notifiche di esito inviate dal fornitore.
 
 **Cybersecurity**
-- Verifica dell'email in fase di registrazione e recupero della password tramite link temporaneo.
+- Verifica dell'email in fase di registrazione tramite link di conferma.
 - Account anche per il personale del museo, nella stessa tabella `utenti`, con ruoli distinti (amministratore, curatore, biglietteria) al posto dell'unico amministratore configurato nelle variabili d'ambiente.
 - Autenticazione a due fattori (2FA) per l'area riservata.
 - Protezione dei form pubblici dallo spam con CAPTCHA e limiti di frequenza anche su prenotazioni e feedback.

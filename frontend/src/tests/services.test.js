@@ -5,7 +5,16 @@ import { prenota, getPrenotazioni } from '../services/prenotazioniService';
 import { login, logout, isLoggedIn } from '../services/authService';
 import { inviaFeedback, getFeedback, eliminaFeedback } from '../services/feedbackService';
 import { getStatistiche } from '../services/statisticheService';
-import { registrazione, loginUtente, logoutUtente, getUtente, getMiePrenotazioni } from '../services/utentiService';
+import {
+    registrazione,
+    loginUtente,
+    logoutUtente,
+    getUtente,
+    getMiePrenotazioni,
+    passwordDimenticata,
+    reimpostaPassword,
+} from '../services/utentiService';
+import { collegaUtente } from './utils';
 
 vi.mock('../services/api', async (importOriginal) => ({
     ...(await importOriginal()),
@@ -134,5 +143,38 @@ describe('utentiService', () => {
         risponde('get', []);
         await getMiePrenotazioni();
         expect(api.get).toHaveBeenCalledWith('/api/utenti/me/prenotazioni');
+    });
+
+    it("il login del visitatore chiude la sessione dell'area riservata", async () => {
+        setToken('token-admin');
+        risponde('post', { access_token: 'tok', utente: { id: 1, nome: 'Mario' } });
+        await loginUtente('m@test.it', 'Museo2026');
+        expect(getToken()).toBeNull();
+        expect(isLoggedIn()).toBe(false);
+    });
+
+    it('passwordDimenticata e reimpostaPassword chiamano le rotte giuste', async () => {
+        risponde('post', { message: 'ok' });
+        expect(await passwordDimenticata('m@test.it')).toBe('ok');
+        expect(api.post).toHaveBeenCalledWith('/api/utenti/password-dimenticata', { email: 'm@test.it' });
+        await reimpostaPassword('tok', 'Nuova1');
+        expect(api.post).toHaveBeenCalledWith('/api/utenti/reimposta-password', { token: 'tok', password: 'Nuova1' });
+    });
+});
+
+describe('authService con un visitatore collegato', () => {
+    it('il login admin viene rifiutato finché il visitatore non esce', async () => {
+        collegaUtente();
+        await expect(login('admin@museo.it', 'admin2026')).rejects.toThrow(/esci dal tuo account/);
+        expect(api.post).not.toHaveBeenCalled();
+        expect(getToken()).toBeNull();
+    });
+
+    it("con un visitatore collegato l'area riservata risulta chiusa anche se c'è un token admin", () => {
+        setToken('token-admin');
+        collegaUtente();
+        expect(isLoggedIn()).toBe(false);
+        logoutUtente();
+        expect(isLoggedIn()).toBe(true);
     });
 });

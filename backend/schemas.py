@@ -32,6 +32,19 @@ def _valida_telefono(v: str) -> str:
     return v
 
 
+def _valida_password(v: str) -> str:
+    # stessa regola controllata nei form del frontend (registrazione e reset)
+    if len(v) < 6:
+        raise ValueError("La password deve contenere almeno 6 caratteri.")
+    if len(v) > 128:
+        raise ValueError("La password può contenere al massimo 128 caratteri.")
+    if not re.search(r"[A-Z]", v):
+        raise ValueError("La password deve contenere almeno una lettera maiuscola.")
+    if not re.search(r"\d", v):
+        raise ValueError("La password deve contenere almeno un numero.")
+    return v
+
+
 class RegistrazioneRequest(BaseModel):
     nome: str
     cognome: str
@@ -57,15 +70,26 @@ class RegistrazioneRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def valida_password(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("La password deve contenere almeno 6 caratteri.")
-        if len(v) > 128:
-            raise ValueError("La password può contenere al massimo 128 caratteri.")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("La password deve contenere almeno una lettera maiuscola.")
-        if not re.search(r"\d", v):
-            raise ValueError("La password deve contenere almeno un numero.")
-        return v
+        return _valida_password(v)
+
+
+class PasswordDimenticataRequest(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def normalizza_email(cls, v: str) -> str:
+        return v.strip().lower()
+
+
+class ReimpostaPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def valida_password(cls, v: str) -> str:
+        return _valida_password(v)
 
 
 class UtenteResponse(BaseModel):

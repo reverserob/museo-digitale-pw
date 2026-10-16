@@ -4,6 +4,7 @@ import { Container, Card, CardContent, Typography, Tabs, Tab, Box, TextField, Bu
 import { messaggioErrore } from '../services/api';
 import { loginUtente, registrazione } from '../services/utentiService';
 import useUtente from '../hooks/useUtente';
+import { REGOLE_PASSWORD } from '../utils/password';
 
 const cardSx = {
     backdropFilter: 'blur(12px)',
@@ -13,12 +14,6 @@ const cardSx = {
 };
 const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
 const campo = { slotProps: { inputLabel: { shrink: true } }, fullWidth: true, sx: inputStyle };
-
-const REGOLE_PASSWORD = [
-    { testo: 'almeno 6 caratteri', ok: (p) => p.length >= 6 },
-    { testo: 'una lettera maiuscola', ok: (p) => /[A-Z]/.test(p) },
-    { testo: 'un numero', ok: (p) => /\d/.test(p) },
-];
 
 function erroreEmail(valore) {
     const email = valore.trim();
@@ -91,7 +86,8 @@ export default function Accedi() {
                       password: dati.password,
                   });
         richiesta
-            .then(() => navigate(next, { replace: true }))
+            // dopo la registrazione la pagina successiva mostra la conferma (email inviata)
+            .then(() => navigate(next, { replace: true, state: scheda === 1 ? { registrato: true } : null }))
             .catch((err) => setErrore(messaggioErrore(err, 'Operazione non riuscita. Riprova.')))
             .finally(() => setInvio(false));
     };
@@ -222,6 +218,16 @@ export default function Accedi() {
                                 helperText={confermaErrata ? 'Le password non coincidono' : ''}
                                 required
                             />
+                        )}
+                        {scheda === 0 && (
+                            <Button
+                                component={Link}
+                                to="/password-dimenticata"
+                                size="small"
+                                sx={{ alignSelf: 'flex-end', mt: -1.5, color: '#c5a059', textTransform: 'none' }}
+                            >
+                                Password dimenticata?
+                            </Button>
                         )}
                         {errore && <Alert severity="error">{errore}</Alert>}
                         <Button

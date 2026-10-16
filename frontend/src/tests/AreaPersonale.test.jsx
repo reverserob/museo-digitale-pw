@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import AreaPersonale from '../pages/AreaPersonale';
 import { api, getSessioneUtente } from '../services/api';
-import { renderConRouter, collegaUtente } from './utils';
+import { renderConRouter, collegaUtente, FUTURE } from './utils';
 
 vi.mock('../services/api', async (importOriginal) => ({
     ...(await importOriginal()),
@@ -49,5 +50,21 @@ describe('AreaPersonale', () => {
         await user.click(screen.getByRole('button', { name: 'Esci' }));
         expect(getSessioneUtente()).toBeNull();
         expect(await screen.findByText('Pagina Home')).toBeInTheDocument();
+    });
+
+    it("dopo la registrazione conferma che è stata inviata l'email", async () => {
+        collegaUtente();
+        api.get.mockResolvedValue({ data: [] });
+        render(
+            <MemoryRouter initialEntries={[{ pathname: '/profilo', state: { registrato: true } }]} future={FUTURE}>
+                <Routes>
+                    <Route path="/profilo" element={<AreaPersonale />} />
+                </Routes>
+            </MemoryRouter>
+        );
+        expect(
+            screen.getByText(/Registrazione completata! Ti abbiamo inviato un'email di conferma/)
+        ).toBeInTheDocument();
+        expect(await screen.findByText(/Non hai ancora prenotato/)).toBeInTheDocument();
     });
 });

@@ -19,9 +19,22 @@ const AdminForm = lazy(() => import('./pages/AdminForm'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Accedi = lazy(() => import('./pages/Accedi'));
 const AreaPersonale = lazy(() => import('./pages/AreaPersonale'));
+const PasswordDimenticata = lazy(() => import('./pages/PasswordDimenticata'));
+const ReimpostaPassword = lazy(() => import('./pages/ReimpostaPassword'));
 
 // Nel JSON le pagine sono indicate per nome: qui associo ogni nome al componente vero
-const pages = { Home, GalleriaMostra, FormPrenotazione, AdminDashboard, AdminForm, NotFound, Accedi, AreaPersonale };
+const pages = {
+    Home,
+    GalleriaMostra,
+    FormPrenotazione,
+    AdminDashboard,
+    AdminForm,
+    NotFound,
+    Accedi,
+    AreaPersonale,
+    PasswordDimenticata,
+    ReimpostaPassword,
+};
 
 function App() {
     const sfondo = { backgroundImage: `${background.overlay}, url(${background.image})` };

@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import routes from '../config/routes.json';
 import background from '../config/background.json';
 import AppHeader from '../components/AppHeader';
 import { FUTURE, collegaUtente } from './utils';
-import { logoutUtente } from '../services/utentiService';
+import { logoutUtente, getUtente } from '../services/utentiService';
 
 describe('configurazione', () => {
     it('ogni rotta di routes.json punta a una pagina esistente', () => {
@@ -23,6 +24,9 @@ describe('configurazione', () => {
         const visitatori = routes.filter((r) => r.protected === 'utente').map((r) => r.path);
         expect(admin).toEqual(['/admin/nuova', '/admin/modifica/:id']);
         expect(visitatori).toEqual(['/prenota/:id', '/profilo']);
+        expect(routes.map((r) => r.path)).toEqual(
+            expect.arrayContaining(['/password-dimenticata', '/reimposta-password'])
+        );
         const pubbliche = routes.filter((r) => !r.protected).map((r) => r.path);
         expect(pubbliche).toEqual(expect.arrayContaining(['/', '/esposizione/:id', '/accedi']));
     });
@@ -74,5 +78,19 @@ describe('AppHeader', () => {
         );
         act(() => logoutUtente());
         expect(screen.getByRole('link', { name: 'Accedi' })).toBeInTheDocument();
+    });
+
+    it("con un visitatore collegato c'è il pulsante Esci e non il link all'area riservata", async () => {
+        collegaUtente();
+        const user = userEvent.setup();
+        render(
+            <MemoryRouter future={FUTURE}>
+                <AppHeader />
+            </MemoryRouter>
+        );
+        expect(screen.queryByRole('link', { name: 'Area Riservata' })).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Esci' }));
+        expect(getUtente()).toBeNull();
+        expect(screen.getByRole('link', { name: 'Area Riservata' })).toBeInTheDocument();
     });
 });

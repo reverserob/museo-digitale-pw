@@ -3,7 +3,8 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminDashboard from '../pages/AdminDashboard';
 import { api, getToken, setToken } from '../services/api';
-import { renderConRouter, erroreHttp, MOSTRA } from './utils';
+import { renderConRouter, erroreHttp, MOSTRA, collegaUtente } from './utils';
+import { getUtente } from '../services/utentiService';
 
 // vi.mock viene eseguito prima degli import: le chiamate HTTP di axios diventano
 // funzioni finte (vi.fn), il resto di services/api.js resta quello vero
@@ -57,6 +58,22 @@ function rispostaDati(statistiche = STATISTICHE) {
 const apriDashboard = () => renderConRouter(<AdminDashboard />, { percorso: '/admin', indirizzo: '/admin' });
 
 describe('AdminDashboard - login', () => {
+    it("con un visitatore collegato chiede di uscire prima di entrare nell'area riservata", async () => {
+        collegaUtente();
+        setToken('token-valido');
+        const user = userEvent.setup();
+        apriDashboard();
+
+        expect(screen.getByText(/Sei collegato come visitatore \(Mario Rossi\)/)).toBeInTheDocument();
+        expect(screen.queryByLabelText(/Email Amministratore/)).not.toBeInTheDocument();
+        expect(screen.queryByText('Dashboard Admin - Esposizioni')).not.toBeInTheDocument();
+        expect(api.get).not.toHaveBeenCalled();
+
+        await user.click(screen.getByRole('button', { name: "Esci dall'account visitatore" }));
+        expect(getUtente()).toBeNull();
+        expect(await screen.findByText('Area Riservata - Accesso Admin')).toBeInTheDocument();
+    });
+
     it('senza token mostra il form di login', () => {
         apriDashboard();
         expect(screen.getByText('Area Riservata - Accesso Admin')).toBeInTheDocument();

@@ -113,3 +113,27 @@ def richiedi_utente(
     if utente is None:
         raise _non_autorizzato("Account non trovato: accedi di nuovo.")
     return utente
+
+
+# --- token per reimpostare la password ---
+def _impronta_password(utente: models.Utente) -> str:
+    # cambia quando cambia la password: così il link di reset si può usare una sola volta
+    return hashlib.sha256(utente.password_hash.encode()).hexdigest()[:16]
+
+
+def crea_token_reset(utente: models.Utente) -> str:
+    scadenza = int(time.time()) + settings.RESET_PASSWORD_MINUTI * 60
+    dati = {"sub": utente.email, "ruolo": "reset", "uid": utente.id, "pw": _impronta_password(utente), "exp": scadenza}
+    payload = _b64(json.dumps(dati).encode())
+    return f"{payload}.{_firma(payload)}"
+
+
+def leggi_token_reset(token: str, db: Session) -> Optional[models.Utente]:
+    """Restituisce il visitatore se il link è valido, non scaduto e non ancora usato."""
+    dati = _leggi_token(token)
+    if dati is None or dati.get("ruolo") != "reset":
+        return None
+    utente = db.get(models.Utente, dati.get("uid"))
+    if utente is None or not hmac.compare_digest(dati.get("pw", ""), _impronta_password(utente)):
+        return None
+    return utente
