@@ -55,7 +55,12 @@ export const setSessioneUtente = (sessione) => {
 export const richiestaDelVisitatore = (config) => {
     const url = config.url || '';
     const metodo = (config.method || 'get').toLowerCase();
-    return url.startsWith('/api/utenti/me') || url === '/api/prenota' || (url === '/api/feedback' && metodo === 'post');
+    return (
+        url.startsWith('/api/utenti/me') ||
+        url === '/api/prenota' ||
+        url === '/api/contatti' ||
+        (url === '/api/feedback' && metodo === 'post')
+    );
 };
 
 // axios instance

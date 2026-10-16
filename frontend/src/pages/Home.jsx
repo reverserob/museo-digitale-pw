@@ -3,9 +3,9 @@ import { Container, Typography, Grid, Box, Button, Card, CardContent } from '@mu
 import useLingua from '../hooks/useLingua';
 
 const PUNTI = [
-    { icona: '🖼️', titolo: 'home.puntoMostreTitolo', testo: 'home.puntoMostre' },
-    { icona: '🎟️', titolo: 'home.puntoPrenotaTitolo', testo: 'home.puntoPrenota' },
-    { icona: '⭐', titolo: 'home.puntoOpinioniTitolo', testo: 'home.puntoOpinioni' },
+    { icona: '', titolo: 'home.puntoMostreTitolo', testo: 'home.puntoMostre' },
+    { icona: '', titolo: 'home.puntoPrenotaTitolo', testo: 'home.puntoPrenota' },
+    { icona: '', titolo: 'home.puntoOpinioniTitolo', testo: 'home.puntoOpinioni' },
 ];
 
 const quadro = {

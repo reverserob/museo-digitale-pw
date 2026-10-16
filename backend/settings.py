@@ -61,6 +61,9 @@ BREVO_API_KEY = _env("BREVO_API_KEY")
 EMAIL_MITTENTE = _env("EMAIL_MITTENTE", SMTP_USER)
 EMAIL_MITTENTE_NOME = _env("EMAIL_MITTENTE_NOME", "Museo Civico Digitale")
 
+# Modulo Contatti: casella che riceve le domande dei visitatori
+CONTATTI_EMAIL = _env("CONTATTI_EMAIL", "r.randazzo85@gmail.com")
+
 # Upload immagini
 STATIC_DIR = Path(__file__).parent / "static"
 UPLOAD_DIR = STATIC_DIR / "uploads"

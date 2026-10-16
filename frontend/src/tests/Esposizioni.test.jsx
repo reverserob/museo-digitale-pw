@@ -57,7 +57,7 @@ describe('Esposizioni', () => {
         expect(await screen.findByRole('alert')).toHaveTextContent('Errore nel recupero delle mostre');
     });
 
-    it('per il visitatore già prenotato mostra GIÀ PRENOTATO al posto di PRENOTA', async () => {
+    it('per il visitatore già prenotato mostra MOSTRA PRENOTATA al posto di PRENOTA', async () => {
         collegaUtente();
         api.get.mockImplementation((url) =>
             Promise.resolve({
@@ -69,7 +69,7 @@ describe('Esposizioni', () => {
         );
         renderConRouter(<Esposizioni />);
 
-        expect(await screen.findByRole('link', { name: /GIÀ PRENOTATO/ })).toHaveAttribute('href', '/profilo');
+        expect(await screen.findByRole('link', { name: /MOSTRA PRENOTATA/ })).toHaveAttribute('href', '/profilo');
         expect(screen.getAllByRole('link', { name: 'PRENOTA' })).toHaveLength(1);
         expect(screen.getByRole('link', { name: 'PRENOTA' })).toHaveAttribute('href', '/prenota/2');
     });

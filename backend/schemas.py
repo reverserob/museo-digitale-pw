@@ -213,3 +213,47 @@ def valida_date(data_inizio: str, data_fine: str) -> tuple[date, date]:
     if fine < inizio:
         raise ValueError("La data di fine non può precedere la data di inizio.")
     return inizio, fine
+
+
+class ContattoRequest(BaseModel):
+    titolo: str
+    descrizione: str
+    nome: str
+    cognome: str
+    email: EmailStr
+    telefono: str
+
+    @field_validator("titolo")
+    @classmethod
+    def valida_titolo(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 3:
+            raise ValueError("Il titolo deve contenere almeno 3 caratteri.")
+        if len(v) > 120:
+            raise ValueError("Il titolo può contenere al massimo 120 caratteri.")
+        return v
+
+    @field_validator("descrizione")
+    @classmethod
+    def valida_descrizione(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 10:
+            raise ValueError("La descrizione deve contenere almeno 10 caratteri.")
+        if len(v) > 2000:
+            raise ValueError("La descrizione può contenere al massimo 2000 caratteri.")
+        return v
+
+    @field_validator("nome", "cognome")
+    @classmethod
+    def valida_nomi(cls, v: str) -> str:
+        return _valida_nome(v)
+
+    @field_validator("email")
+    @classmethod
+    def normalizza_email(cls, v: str) -> str:
+        return v.strip().lower()
+
+    @field_validator("telefono")
+    @classmethod
+    def valida_telefono(cls, v: str) -> str:
+        return _valida_telefono(v)

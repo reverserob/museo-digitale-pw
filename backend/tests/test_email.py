@@ -141,3 +141,9 @@ def test_annullamento_inviato_con_brevo(monkeypatch, richieste_brevo):
     email_service.invia_email_annullamento("anna@test.it", "Anna", "Monet", date(2027, 1, 1), date(2027, 2, 1))
     corpo = json.loads(richieste_brevo[0].data)
     assert corpo["subject"] == "Prenotazione annullata: Monet"
+
+
+def test_brevo_aggiunge_reply_to(monkeypatch, richieste_brevo):
+    monkeypatch.setattr(settings, "BREVO_API_KEY", "chiave")
+    email_service.invia_con_brevo("museo@test.it", "Museo", "Oggetto", "<p>x</p>", "mario@test.it")
+    assert json.loads(richieste_brevo[0].data)["replyTo"] == {"email": "mario@test.it"}
