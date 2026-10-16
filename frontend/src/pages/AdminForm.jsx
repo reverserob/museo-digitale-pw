@@ -137,7 +137,7 @@ export default function AdminForm() {
 
     return (
         <Container maxWidth="md" sx={{ mt: { xs: 5, md: 10 }, mb: 10 }}>
-            <Button onClick={() => navigate('/admin')} sx={{ color: '#bbbbbb', mb: 4, fontFamily: 'sans-serif' }}>
+            <Button onClick={() => navigate('/admin')} sx={{ color: '#bbbbbb', mb: 4 }}>
                 ← Torna alla Dashboard
             </Button>
 
@@ -242,7 +242,7 @@ export default function AdminForm() {
                             </Grid>
 
                             <Grid size={12}>
-                                <Typography variant="body2" sx={{ color: '#cccccc', mb: 1, fontFamily: 'sans-serif' }}>
+                                <Typography variant="body2" sx={{ color: '#cccccc', mb: 1 }}>
                                     {isEditMode
                                         ? 'Foto della mostra (jpg, png, webp, gif - max 5 MB ciascuna): togli quelle che non vuoi e aggiungine di nuove.'
                                         : 'Aggiungi foto (jpg, png, webp, gif - max 5 MB ciascuna):'}

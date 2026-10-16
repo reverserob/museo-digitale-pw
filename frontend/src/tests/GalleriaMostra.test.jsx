@@ -236,3 +236,19 @@ describe('GalleriaMostra - area admin', () => {
         expect(await screen.findByText('Pagina Admin')).toBeInTheDocument();
     });
 });
+
+describe('GalleriaMostra - prenotazione unica', () => {
+    it("il visitatore già prenotato vede l'avviso al posto di PRENOTA", async () => {
+        collegaUtente();
+        api.get.mockImplementation((url) => {
+            if (url === '/api/utenti/me/prenotazioni') return Promise.resolve({ data: [{ id: 2, mostra_id: 1 }] });
+            if (url === '/api/feedback' || url === '/api/utenti/me/feedback') return Promise.resolve({ data: [] });
+            return Promise.resolve({ data: MOSTRA });
+        });
+        apriPagina();
+
+        expect(await screen.findByText('Sei già prenotato a questa mostra.')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Le mie prenotazioni' })).toHaveAttribute('href', '/profilo');
+        expect(screen.queryByRole('link', { name: 'PRENOTA' })).not.toBeInTheDocument();
+    });
+});

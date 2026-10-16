@@ -115,7 +115,7 @@ flowchart TD
 Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una piattaforma informatica full-stack orientata alla digitalizzazione dei processi del museo.
 
 #### 3.1. Requisiti funzionali
-- **RF1 – Catalogo**: il visitatore consulta l'elenco delle mostre e il dettaglio con la galleria di immagini.
+- **RF1 – Catalogo**: la home presenta il museo e porta, con il pulsante "Scopri le esposizioni correnti", all'elenco delle mostre (/esposizioni) e al dettaglio con la galleria di immagini. Un footer in ogni pagina riporta orari (lunedì–sabato 09:00–18:30), indirizzo e contatti per le prenotazioni.
 - **RF2 – Prenotazione**: il visitatore registrato prenota una visita; nome, cognome ed email arrivano dal suo account e può indicare un telefono diverso. Non è possibile prenotare una mostra già conclusa.
 - **RF3 – Conferma**: dopo la prenotazione il visitatore riceve un'email di riepilogo.
 - **RF4 – Feedback**: il visitatore registrato lascia un voto da 1 a 5 e un commento facoltativo su una mostra già iniziata (uno per mostra); i feedback sono visibili a tutti, anche senza account, con nome e iniziale del cognome.
@@ -125,6 +125,8 @@ Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una
 - **RF7 – Consultazione prenotazioni**: l'amministratore vede le prenotazioni ricevute, suddivise per mostra.
 - **RF8 – Moderazione**: l'amministratore può eliminare i feedback non appropriati, sia dalla dashboard sia dalla pagina della mostra aperta da collegato. I visitatori non vedono mai il pulsante di eliminazione.
 - **RF11 – Ruoli separati**: l'amministratore non prenota (il pulsante PRENOTA non compare né in home né nel dettaglio della mostra e il server rifiuta la sua prenotazione con 403); da collegato l'intestazione mostra "Ciao, Admin" ed "Esci" al posto di Accedi/Registrati. Solo i visitatori registrati possono prenotare, e ognuno può lasciare un solo feedback per mostra.
+- **RF12 – Gestione delle proprie prenotazioni**: ogni visitatore può prenotarsi una sola volta a ciascuna mostra (409 al secondo tentativo; nel catalogo compare "GIÀ PRENOTATO" e il form non viene mostrato) e può annullare una prenotazione dalla propria area: la prenotazione viene eliminata e arriva un'email di conferma dell'annullamento. Dopo l'annullamento è possibile prenotarsi di nuovo.
+- **RF13 – Sito in due lingue**: un menu a tendina nell'intestazione permette di scegliere tra italiano (ITA) e inglese (EN); la scelta viene ricordata nel browser.
 - **RF9 – Dashboard**: l'amministratore consulta indicatori di sintesi (prenotazioni totali e degli ultimi 7 giorni, mostre in corso, in arrivo e concluse, numero di feedback e voto medio, prenotazioni per mostra).
 
 #### 3.2. Requisiti non funzionali
@@ -191,7 +193,7 @@ backend/
 │   ├── login.py            → POST /api/login (amministratore)
 │   ├── utenti.py           → registrazione, login, profilo e prenotazioni dei visitatori (/api/utenti)
 │   ├── mostre.py           → CRUD delle mostre (/api/mostre)
-│   ├── prenotazioni.py     → POST /api/prenota, GET /api/prenotazioni
+│   ├── prenotazioni.py     → POST /api/prenota (una per mostra), GET /api/prenotazioni
 │   ├── feedback.py         → POST, GET e DELETE /api/feedback
 │   └── statistiche.py      → GET /api/statistiche (indicatori della dashboard)
 ├── services/
@@ -523,6 +525,7 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 | Visitatori | POST /api/utenti/reimposta-password | Riceve il token del link e la nuova password (stessa regola della registrazione) e aggiorna l'hash. | 200, 400, 422, 429 |
 | Visitatori | 👤 GET /api/utenti/me | Profilo del visitatore collegato. | 200, 401, 403 |
 | Visitatori | 👤 GET /api/utenti/me/prenotazioni | Prenotazioni del visitatore collegato, con titolo e periodo della mostra. | 200, 401, 403 |
+| Visitatori | 👤 DELETE /api/utenti/me/prenotazioni/{prenotazione_id} | Annulla una prenotazione del visitatore collegato e invia in background l'email di conferma dell'annullamento. La prenotazione di un altro visitatore risulta "non trovata". | 200, 401, 403, 404 |
 | Visitatori | 👤 GET /api/utenti/me/feedback | Feedback già lasciati dal visitatore collegato (il frontend nasconde il form sulle mostre già recensite). | 200, 401, 403 |
 | Area riservata | 🔒 GET /api/statistiche | Indicatori per la dashboard: conteggi di mostre, prenotazioni e feedback, voto medio, dettaglio per mostra. | 200, 401 |
 | Mostre | GET /api/mostre | Restituisce la lista di tutte le esposizioni, ordinate per data di inizio. | 200 |
@@ -530,7 +533,7 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 | Mostre | 🔒 POST /api/mostre | Caricamento di una nuova mostra e delle relative immagini (multipart/form-data). | 201, 400, 401, 422 |
 | Mostre | 🔒 PUT /api/mostre/{mostra_id} | Aggiornamento di un'esposizione esistente. Il campo `immagini_esistenti` (lista JSON) indica quali immagini attuali tenere; le nuove immagini caricate si aggiungono in coda. Deve restare almeno un'immagine. | 200, 400, 401, 404 |
 | Mostre | 🔒 DELETE /api/mostre/{mostra_id} | Eliminazione di un'esposizione, delle sue prenotazioni e dei suoi feedback. | 200, 401, 404 |
-| Prenotazioni | 👤 POST /api/prenota | Salva la prenotazione con i dati dell'account e avvia in background l'invio dell'email di conferma. | 201, 400, 401, 403, 404, 422 |
+| Prenotazioni | 👤 POST /api/prenota | Salva la prenotazione con i dati dell'account e avvia in background l'invio dell'email di conferma. Una sola prenotazione per visitatore su ogni mostra. | 201, 400, 401, 403, 404, 409, 422 |
 | Prenotazioni | 🔒 GET /api/prenotazioni | Elenco delle prenotazioni, filtrabile per mostra (`?mostra_id=`). | 200, 401 |
 | Feedback | 👤 POST /api/feedback | Salva il feedback del visitatore su una mostra già iniziata (uno per mostra). | 201, 400, 401, 403, 404, 409, 422 |
 | Feedback | GET /api/feedback | Elenco pubblico dei feedback, filtrabile per mostra (`?mostra_id=`), dal più recente. | 200 |
@@ -663,7 +666,7 @@ Gli stessi dati cambiano rappresentazione mentre passano da un componente all'al
 #### 8.5. Compressione dei dati
 Ridurre i byte da trasferire rende il sito più veloce, soprattutto su rete mobile:
 - Le **immagini** sono in formato **WebP**, che usa una compressione più efficiente di JPEG e PNG: l'immagine di sfondo del sito è passata da circa 478 KB in JPEG a circa 123 KB in WebP, con qualità visiva equivalente. Anche le immagini delle mostre e gli screenshot di questa relazione sono in WebP.
-- I file **JavaScript** vengono minificati da Vite (spazi e nomi lunghi eliminati) e trasferiti compressi con **gzip**: il pacchetto principale passa da circa 377 KB a circa 126 KB.
+- I file **JavaScript** vengono minificati da Vite (spazi e nomi lunghi eliminati) e trasferiti compressi con **gzip**: il pacchetto principale passa da circa 486 KB a circa 159 KB.
 
 #### 8.6. Suddivisione del codice e caricamento su richiesta
 Il front-end usa `React.lazy` e `Suspense`: Vite divide l'applicazione in più file (*code splitting*) e il browser scarica il codice di una pagina solo quando l'utente la apre. Chi visita solo il catalogo non scarica mai il codice dell'area riservata (`AdminDashboard`, `AdminForm`). È lo stesso principio della **memoria virtuale** e della paginazione su richiesta: si carica in memoria solo ciò che serve, nel momento in cui serve.
@@ -715,9 +718,10 @@ Il front-end è stato sviluppato come una Single Page Application (SPA) modulare
 frontend/src/
 ├── App.jsx        → tema, router e rotte
 ├── config/        → routes.json (elenco delle rotte) e background.json (immagine di sfondo)
-├── pages/         → una pagina per rotta: Home, GalleriaMostra, FormPrenotazione, Accedi, AreaPersonale, AdminDashboard, AdminForm, NotFound
-├── components/    → componenti riutilizzabili: AppHeader, ProtectedRoute, ErrorBoundary, SezioneFeedback, IndicatoriDashboard
-├── hooks/         → useUtente: il visitatore collegato, aggiornato a ogni login e logout
+├── pages/         → una pagina per rotta: Home (presentazione), Esposizioni (catalogo), GalleriaMostra, FormPrenotazione, Accedi, AreaPersonale, PasswordDimenticata, ReimpostaPassword, AdminDashboard, AdminForm, NotFound
+├── components/    → componenti riutilizzabili: AppHeader (con menu della lingua), AppFooter, ProtectedRoute, ErrorBoundary, SezioneFeedback, IndicatoriDashboard
+├── hooks/         → useUtente, useAdmin (chi è collegato) e useLingua (lingua e funzione t())
+├── i18n/          → testi.js (testi italiani e inglesi, traduzioni dei messaggi del server) e lingua.js (lingua scelta e traduzione)
 ├── services/      → api.js (istanza Axios) e un servizio per area: mostre, prenotazioni, feedback, statistiche, auth (admin), utenti (visitatori)
 ├── styles/        → fogli di stile del layout
 └── tests/         → test automatici (Vitest)
@@ -735,6 +739,12 @@ Le pagine non contengono gli indirizzi delle API: usano le funzioni dei servizi 
 - costruisce l'indirizzo completo delle immagini a partire dai percorsi relativi salvati nel database.
 
 Gli stati locali dei componenti (useState, useEffect) garantiscono feedback visivi immediati all'utente, ad esempio gli indicatori di caricamento tramite CircularProgress.
+
+**Tipografia.** Il sito usa due caratteri moderni senza grazie: *Outfit* per titoli e pulsanti e *Manrope* per il testo. Sono inclusi nel pacchetto del frontend (librerie `@fontsource-variable`), quindi non dipendono da servizi esterni come Google Fonts e funzionano anche offline; il tema MUI (`theme.js`) li applica a tutti i componenti.
+
+**Due lingue (italiano e inglese).** Tutti i testi delle pagine pubbliche e dell'area visitatori sono raccolti in `i18n/testi.js`, un dizionario con le stesse chiavi per le due lingue (ad esempio `'feedback.titolo'` → "Opinioni dei visitatori" / "Visitor reviews"). I componenti usano l'hook `useLingua()`, che restituisce la funzione `t(chiave, valori)`; i valori variabili si inseriscono con segnaposto come `{nome}`. Il menu a tendina **ITA / EN** nell'intestazione cambia lingua senza ricaricare la pagina: la scelta viene salvata nel `localStorage`, aggiorna l'attributo `lang` della pagina (utile ai lettori di schermo) e un evento del browser avvisa tutti i componenti aperti. I messaggi restituiti dal backend sono in italiano: quando la lingua è l'inglese, `messaggioErrore` li traduce con una tabella di corrispondenze (compresi gli errori di validazione nel formato "campo: messaggio"). Un test verifica che i due dizionari abbiano esattamente le stesse chiavi e gli stessi segnaposto, così nessun testo resta senza traduzione. Restano in italiano i contenuti inseriti dall'amministratore (titoli e descrizioni delle mostre), le email e le pagine dell'area riservata, usate solo dal personale del museo.
+
+**Home e footer.** La home presenta il museo (testo introduttivo, tre punti di forza e immagini delle collezioni) e porta al catalogo con il pulsante "Scopri le esposizioni correnti"; il catalogo è alla rotta `/esposizioni`. Il componente `AppFooter`, presente in tutte le pagine, mostra orari, indirizzo e contatti per le prenotazioni (telefono e email cliccabili). Indirizzo, telefono ed email sono dati di esempio inventati per il progetto.
 
 #### 10.2. Feedback e dashboard con indicatori
 - **SezioneFeedback** (pagina di dettaglio della mostra): mostra il voto medio con le stelle (componente `Rating` di MUI), l'elenco delle recensioni e il form per lasciarne una nuova. Dopo l'invio la recensione compare subito in cima alla lista, senza ricaricare la pagina. Per le mostre non ancora iniziate il form è sostituito da un messaggio informativo; al visitatore collegato ma non prenotato a quella mostra compare l'avviso "Puoi lasciare un feedback solo sulle mostre a cui ti sei prenotato" con il pulsante **Prenota** (il componente lo verifica con `GET /api/utenti/me/prenotazioni`); chi ha già recensito la mostra vede "Hai già lasciato il tuo feedback su questa mostra" al posto del form (verifica con `GET /api/utenti/me/feedback`, e il form sparisce anche subito dopo l'invio). Se la pagina è aperta dall'amministratore collegato (pulsante **Vedi** della dashboard), compaiono la barra con i comandi **Modifica** ed **Elimina** della mostra e un pulsante **Elimina** accanto a ogni feedback, mentre il form per lasciare un feedback e il pulsante **PRENOTA** sono nascosti. I visitatori non vedono mai questi comandi e, in ogni caso, il server accetta l'eliminazione solo con il token dell'amministratore.
@@ -773,7 +783,7 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (131 test) | Vitest + React Testing Library (116 test) |
+| Test automatici | pytest + TestClient di FastAPI (138 test) | Vitest + React Testing Library (134 test) |
 
 **Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra e solo dopo la prenotazione, email di registrazione e avviso di registrazione doppia, recupero della password (link valido, scaduto, già usato, token non valido), aggiornamento di un database della versione precedente. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 
@@ -818,6 +828,11 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 | TF28 | Un solo feedback per mostra | Visitatore | Inviare un feedback e ricaricare la pagina | Il form sparisce e compare "Hai già lasciato il tuo feedback su questa mostra"; il server rifiuta un secondo invio (409) | ✅ Superato |
 | TF29 | Admin collegato | Amministratore | Dopo il login aprire home, dettaglio mostra, /accedi e /prenota/1 | Header "Ciao, Admin · Esci", nessun PRENOTA, /accedi mostra l'invito a uscire, /prenota riporta alla dashboard | ✅ Superato |
 | TF30 | Prenotazione senza account | Visitatore anonimo | Premere PRENOTA senza login | Si apre la pagina Accedi; dopo la registrazione si torna al form di prenotazione | ✅ Superato |
+| TF31 | Una sola prenotazione per mostra | Visitatore | Prenotare una mostra e riaprire /prenota della stessa mostra | Il form non compare ("Ti sei già prenotato…"); nel catalogo c'è "GIÀ PRENOTATO"; il server risponde 409 | ✅ Superato |
+| TF32 | Annullamento della prenotazione | Visitatore | Area personale → "Annulla prenotazione" → conferma | La prenotazione sparisce, compare "Prenotazione annullata. Ti abbiamo inviato un'email di conferma." e parte l'email; poi ci si può riprenotare | ✅ Superato |
+| TF33 | Home di presentazione | Visitatore | Aprire l'indirizzo principale e premere "Scopri le esposizioni correnti" | Presentazione del museo; il pulsante porta a /esposizioni | ✅ Superato |
+| TF34 | Cambio lingua | Visitatore | Menu ITA/EN → EN, poi ricaricare la pagina | Intestazione, pagine, footer e messaggi del server in inglese; la scelta resta dopo la ricarica | ✅ Superato |
+| TF35 | Footer | Visitatore | Scorrere in fondo a una pagina | Orari lunedì–sabato 09:00–18:30, indirizzo, telefono ed email per le prenotazioni | ✅ Superato |
 | TF13 | Accesso diretto a una pagina riservata | Visitatore | Aprire `/admin/nuova` senza login | Si viene reindirizzati alla pagina di accesso | ✅ Superato |
 | TF14 | Troppi tentativi di accesso | Chiunque | Sbagliare la password più di 5 volte in un minuto | Messaggio "Troppi tentativi di accesso. Riprova tra qualche minuto." | ✅ Superato |
 
@@ -901,6 +916,23 @@ Nella sezione delle opinioni l'amministratore legge ed elimina i feedback, ma no
 **TF29 – Home con l'amministratore collegato**: in alto "Ciao, Admin" ed "Esci", nessun pulsante PRENOTA sulle mostre.
 ![Home vista dall'admin](docs/screenshots/25-home-admin.webp)
 
+**TF33 – Home di presentazione del museo**
+![Home](docs/screenshots/26-home.webp)
+
+**TF31 – Catalogo con una mostra già prenotata**
+![Già prenotato](docs/screenshots/27-esposizioni-gia-prenotato.webp)
+
+**TF32 – Annullamento dall'area personale**: a sinistra il pulsante, a destra la conferma dopo l'annullamento.
+![Annulla prenotazione](docs/screenshots/28-area-personale-annulla.webp)
+![Prenotazione annullata](docs/screenshots/29-prenotazione-annullata.webp)
+
+**TF34 – Sito in inglese**: home e dettaglio della mostra dopo aver scelto EN dal menu.
+![Home in inglese](docs/screenshots/30-home-en.webp)
+![Mostra in inglese](docs/screenshots/31-mostra-en.webp)
+
+**TF35 – Footer con orari, indirizzo e contatti**
+![Footer](docs/screenshots/32-footer.webp)
+
 ### 13. Istruzioni per l'esecuzione
 #### 13.1. Prerequisiti
 - Python 3.9 o successivo
@@ -973,7 +1005,8 @@ La piattaforma è un prototipo funzionante; alcune semplificazioni sono accettab
 - **Persistenza su Render free**: sul piano gratuito il disco non è persistente; a ogni riavvio il database SQLite e le immagini caricate dall'area riservata vengono azzerati. Le mostre iniziali vengono ricreate automaticamente dal seeding.
 - **Un solo amministratore**: le credenziali sono configurate tramite variabili d'ambiente; non esistono più account né ruoli diversi (es. curatore e biglietteria).
 - **Nessuna gestione dei posti**: la prenotazione non prevede fasce orarie né un numero massimo di visitatori per giorno.
-- **Feedback non legati alla visita**: per recensire serve un account, ma non si verifica che il visitatore abbia davvero visitato la mostra; la moderazione è manuale.
+- **Feedback legati alla prenotazione, non all'ingresso**: per recensire bisogna essersi prenotati alla mostra, ma non si verifica che il visitatore sia davvero entrato; la moderazione è manuale.
+- **Traduzione parziale**: l'interfaccia pubblica e l'area visitatori sono in italiano e in inglese, ma titoli e descrizioni delle mostre, email e area riservata restano in italiano. Per tradurre anche le mostre servirebbero campi in più nel database (es. `titolo_en`, `descrizione_en`).
 - **Account semplici**: l'email del visitatore non viene verificata con un link di conferma (riceve solo un'email di benvenuto) e il profilo non si può ancora modificare dall'area personale.
 - **Avvio lento del back-end**: sul piano gratuito il servizio va in pausa dopo un periodo di inattività e la prima richiesta può richiedere alcune decine di secondi.
 

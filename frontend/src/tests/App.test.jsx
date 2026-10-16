@@ -15,9 +15,19 @@ function apriApp(indirizzo) {
 }
 
 describe('App', () => {
-    it("mostra header e Home all'indirizzo principale", async () => {
+    it("mostra header, home di presentazione e footer all'indirizzo principale", async () => {
         apriApp('/');
         expect(screen.getByRole('link', { name: 'MUSEO CIVICO DIGITALE' })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Museo Civico Digitale' })).toBeInTheDocument();
+        expect(screen.getAllByRole('link', { name: /Scopri le esposizioni correnti/ })[0]).toHaveAttribute(
+            'href',
+            '/esposizioni'
+        );
+        expect(screen.getByRole('contentinfo')).toHaveTextContent('Dal lunedì al sabato');
+    });
+
+    it("il catalogo delle mostre è all'indirizzo /esposizioni", async () => {
+        apriApp('/esposizioni');
         expect(await screen.findByText('Esposizioni Correnti')).toBeInTheDocument();
     });
 

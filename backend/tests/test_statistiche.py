@@ -34,7 +34,8 @@ def test_statistiche_database_iniziale(client, auth):
 
 def test_statistiche_conteggi(client, auth, utente, mostra_futura, mostra_in_corso):
     prenota(client, mostra_futura, utente)
-    prenota(client, mostra_futura, utente)
+    # una prenotazione per visitatore su ogni mostra: la seconda arriva da un altro account
+    prenota(client, mostra_futura, registra_utente(client, email="luca@test.it", nome="Luca", cognome="Neri"))
     prenota(client, mostra_in_corso, utente)
     recensisci(client, mostra_in_corso, 5, "a@test.it")
     recensisci(client, mostra_in_corso, 4, "b@test.it")

@@ -5,6 +5,8 @@ import { messaggioErrore } from '../services/api';
 import { getFeedback, inviaFeedback, eliminaFeedback } from '../services/feedbackService';
 import { getMiePrenotazioni, getMieiFeedback } from '../services/utentiService';
 import useUtente from '../hooks/useUtente';
+import useLingua from '../hooks/useLingua';
+import { formatoData } from '../i18n/lingua';
 
 const inputStyle = {
     input: { color: 'white' },
@@ -17,6 +19,7 @@ const oggiIso = () => new Date().toISOString().slice(0, 10);
 // admin = true quando la pagina è aperta dall'amministratore: legge ed elimina i feedback, ma non ne scrive.
 export default function SezioneFeedback({ mostra, admin = false }) {
     const utente = useUtente();
+    const { t, lingua } = useLingua();
     const [elenco, setElenco] = useState([]);
     const [voto, setVoto] = useState(0);
     const [commento, setCommento] = useState('');
@@ -54,11 +57,11 @@ export default function SezioneFeedback({ mostra, admin = false }) {
     const conclusa = mostra.data_fine < oggiIso();
 
     const handleElimina = (id) => {
-        if (!window.confirm('Eliminare questo feedback?')) return;
+        if (!window.confirm(t('feedback.confermaElimina'))) return;
         setErrore('');
         eliminaFeedback(id)
             .then(() => setElenco((precedenti) => precedenti.filter((f) => f.id !== id)))
-            .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione del feedback.")));
+            .catch((err) => setErrore(messaggioErrore(err, t('feedback.erroreElimina'))));
     };
 
     const handleSubmit = (e) => {
@@ -66,7 +69,7 @@ export default function SezioneFeedback({ mostra, admin = false }) {
         setErrore('');
         setConferma('');
         if (!voto) {
-            setErrore('Seleziona un voto da 1 a 5 stelle.');
+            setErrore(t('feedback.serveVoto'));
             return;
         }
         setInvio(true);
@@ -75,38 +78,39 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                 setElenco((precedenti) => [nuovo, ...precedenti]);
                 setVoto(0);
                 setCommento('');
-                setConferma('Grazie! Il tuo feedback è stato pubblicato.');
+                setConferma(t('feedback.grazie'));
                 setGiaRecensito(true);
             })
-            .catch((err) => setErrore(messaggioErrore(err, 'Impossibile inviare il feedback.')))
+            .catch((err) => setErrore(messaggioErrore(err, t('feedback.erroreInvio'))))
             .finally(() => setInvio(false));
     };
 
     return (
         <Box component="section" sx={{ mt: 8, mb: 10 }}>
             <Divider sx={{ borderColor: 'rgba(197, 160, 89, 0.3)', mb: 4 }} />
-            <Typography variant="h5" sx={{ color: '#c5a059', mb: 1 }}>
-                Opinioni dei visitatori
+            <Typography variant="h5" component="h2" sx={{ color: '#c5a059', mb: 1 }}>
+                {t('feedback.titolo')}
             </Typography>
 
             {media !== null ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                     <Rating value={media} precision={0.5} readOnly />
-                    <Typography sx={{ color: '#dddddd', fontFamily: 'sans-serif' }}>
-                        {media.toFixed(1)} su 5 · {elenco.length} {elenco.length === 1 ? 'recensione' : 'recensioni'}
+                    <Typography sx={{ color: '#dddddd' }}>
+                        {t('feedback.media', {
+                            media: media.toFixed(1),
+                            numero: elenco.length,
+                            parola: t(elenco.length === 1 ? 'feedback.recensione' : 'feedback.recensioni'),
+                        })}
                     </Typography>
                 </Box>
             ) : (
-                <Typography sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
-                    Nessuna recensione per ora.
-                </Typography>
+                <Typography sx={{ color: '#aaaaaa', mb: 3 }}>{t('feedback.nessuna')}</Typography>
             )}
 
             {admin ? (
                 <>
-                    <Typography variant="body2" sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
-                        Come amministratore puoi leggere ed eliminare i feedback dei visitatori, ma non lasciarne di
-                        nuovi.
+                    <Typography variant="body2" sx={{ color: '#aaaaaa', mb: 3 }}>
+                        {t('feedback.admin')}
                     </Typography>
                     {errore && (
                         <Alert severity="error" sx={{ mb: 3 }}>
@@ -116,7 +120,7 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                 </>
             ) : nonIniziata ? (
                 <Alert severity="info" sx={{ mb: 4 }}>
-                    La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita.
+                    {t('feedback.nonIniziata')}
                 </Alert>
             ) : !utente ? (
                 <Alert
@@ -129,15 +133,15 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                             color="inherit"
                             size="small"
                         >
-                            Accedi
+                            {t('header.accedi')}
                         </Button>
                     }
                 >
-                    Accedi o registrati per lasciare un feedback su questa mostra.
+                    {t('feedback.accedi')}
                 </Alert>
             ) : prenotato === null ? null : giaRecensito ? (
                 <Alert severity={conferma ? 'success' : 'info'} sx={{ mb: 4, maxWidth: 560 }}>
-                    {conferma || 'Hai già lasciato il tuo feedback su questa mostra: se ne può lasciare uno solo.'}
+                    {conferma || t('feedback.giaLasciato')}
                 </Alert>
             ) : !prenotato ? (
                 <Alert
@@ -146,23 +150,23 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                     action={
                         !conclusa && (
                             <Button component={Link} to={`/prenota/${mostra.id}`} color="inherit" size="small">
-                                Prenota
+                                {t('feedback.prenota')}
                             </Button>
                         )
                     }
                 >
-                    Puoi lasciare un feedback solo sulle mostre a cui ti sei prenotato.
+                    {t('feedback.soloPrenotati')}
                 </Alert>
             ) : (
                 <Box
                     component="form"
                     onSubmit={handleSubmit}
-                    aria-label="Lascia un feedback"
+                    aria-label={t('feedback.form')}
                     sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 560, mb: 5 }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography component="legend" sx={{ color: '#dddddd', fontFamily: 'sans-serif' }}>
-                            Il tuo voto
+                        <Typography component="legend" sx={{ color: '#dddddd' }}>
+                            {t('feedback.tuoVoto')}
                         </Typography>
                         <Rating
                             name="voto"
@@ -171,11 +175,13 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                             sx={{ '& .MuiRating-iconEmpty': { color: '#666666' } }}
                         />
                     </Box>
-                    <Typography variant="body2" sx={{ color: '#aaaaaa', fontFamily: 'sans-serif' }}>
-                        Il feedback sarà pubblicato come {utente.nome} {utente.cognome.charAt(0).toUpperCase()}.
+                    <Typography variant="body2" sx={{ color: '#aaaaaa' }}>
+                        {t('feedback.pubblicatoCome', {
+                            nome: `${utente.nome} ${utente.cognome.charAt(0).toUpperCase()}`,
+                        })}
                     </Typography>
                     <TextField
-                        label="Commento (facoltativo)"
+                        label={t('feedback.commento')}
                         value={commento}
                         onChange={(e) => setCommento(e.target.value)}
                         multiline
@@ -191,7 +197,7 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                         disabled={invio}
                         sx={{ alignSelf: 'flex-start', borderRadius: 0 }}
                     >
-                        {invio ? 'Invio in corso...' : 'Invia feedback'}
+                        {invio ? t('feedback.invio') : t('feedback.invia')}
                     </Button>
                 </Box>
             )}
@@ -200,29 +206,23 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                 <Box key={f.id} sx={{ py: 2, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <Rating value={f.voto} size="small" readOnly />
-                        <Typography sx={{ color: '#ffffff', fontWeight: 'bold', fontFamily: 'sans-serif' }}>
-                            {f.nome}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#888888', fontFamily: 'sans-serif' }}>
-                            {new Date(f.creato_il + 'Z').toLocaleDateString('it-IT')}
+                        <Typography sx={{ color: '#ffffff', fontWeight: 'bold' }}>{f.nome}</Typography>
+                        <Typography variant="caption" sx={{ color: '#888888' }}>
+                            {formatoData(f.creato_il + 'Z', lingua)}
                         </Typography>
                         {admin && (
                             <Button
                                 size="small"
                                 color="error"
                                 onClick={() => handleElimina(f.id)}
-                                aria-label={`Elimina il feedback di ${f.nome}`}
+                                aria-label={t('feedback.eliminaDi', { nome: f.nome })}
                                 sx={{ ml: 'auto' }}
                             >
-                                Elimina
+                                {t('mostra.elimina')}
                             </Button>
                         )}
                     </Box>
-                    {f.commento && (
-                        <Typography sx={{ color: '#cccccc', mt: 0.5, fontFamily: 'sans-serif' }}>
-                            {f.commento}
-                        </Typography>
-                    )}
+                    {f.commento && <Typography sx={{ color: '#cccccc', mt: 0.5 }}>{f.commento}</Typography>}
                 </Box>
             ))}
         </Box>

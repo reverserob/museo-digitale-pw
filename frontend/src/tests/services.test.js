@@ -11,6 +11,7 @@ import {
     logoutUtente,
     getUtente,
     getMiePrenotazioni,
+    annullaPrenotazione,
     passwordDimenticata,
     reimpostaPassword,
 } from '../services/utentiService';
@@ -176,5 +177,13 @@ describe('authService con un visitatore collegato', () => {
         expect(isLoggedIn()).toBe(false);
         logoutUtente();
         expect(isLoggedIn()).toBe(true);
+    });
+
+    describe('annullamento', () => {
+        it('annullaPrenotazione chiama DELETE /api/utenti/me/prenotazioni/:id', async () => {
+            risponde('delete', { message: 'Prenotazione annullata.' });
+            expect(await annullaPrenotazione(5)).toBe('Prenotazione annullata.');
+            expect(api.delete).toHaveBeenCalledWith('/api/utenti/me/prenotazioni/5');
+        });
     });
 });

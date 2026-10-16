@@ -40,6 +40,18 @@ def crea_html_conferma(nome: str, titolo_mostra: str, data_inizio: date, data_fi
     """)
 
 
+def crea_html_annullamento(nome: str, titolo_mostra: str, data_inizio: date, data_fine: date) -> str:
+    return _layout(f"""
+            <p style="color: #fff;">Gentile <b>{html.escape(nome)}</b>,</p>
+            <p style="color: #ddd;">ti confermiamo che la tua prenotazione è stata <b>annullata</b>:</p>
+            <div style="background: #1a1a1a; padding: 15px; border-left: 4px solid #c5a059; margin: 20px 0;">
+                <h3 style="margin: 0 0 10px 0; color: #c5a059;">{html.escape(titolo_mostra)}</h3>
+                <p style="margin: 0; color: #ccc;"><b>Periodo:</b> Dal {data_inizio} al {data_fine}</p>
+            </div>
+            <p style="color: #ddd;">Se cambi idea puoi prenotare di nuovo dal sito finché la mostra è aperta.</p>
+    """)
+
+
 def crea_html_registrazione(nome: str) -> str:
     return _layout(f"""
             <p style="color: #fff;">Gentile <b>{html.escape(nome)}</b>,</p>
@@ -134,6 +146,12 @@ def _invia(destinatario: str, nome: str, oggetto: str, html_content: str) -> boo
 def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, data_inizio: date, data_fine: date):
     oggetto = f"Conferma Prenotazione: {titolo_mostra}"
     _invia(destinatario, nome, oggetto, crea_html_conferma(nome, titolo_mostra, data_inizio, data_fine))
+
+
+# SEND MAIL ANNULLAMENTO PRENOTAZIONE
+def invia_email_annullamento(destinatario: str, nome: str, titolo_mostra: str, data_inizio: date, data_fine: date):
+    oggetto = f"Prenotazione annullata: {titolo_mostra}"
+    _invia(destinatario, nome, oggetto, crea_html_annullamento(nome, titolo_mostra, data_inizio, data_fine))
 
 
 # SEND MAIL REGISTRAZIONE

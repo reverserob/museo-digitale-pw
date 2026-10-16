@@ -7,6 +7,7 @@ import useUtente from '../hooks/useUtente';
 import useAdmin from '../hooks/useAdmin';
 import { logout } from '../services/authService';
 import { REGOLE_PASSWORD } from '../utils/password';
+import useLingua from '../hooks/useLingua';
 
 const cardSx = {
     backdropFilter: 'blur(12px)',
@@ -20,22 +21,20 @@ const campo = { slotProps: { inputLabel: { shrink: true } }, fullWidth: true, sx
 function erroreEmail(valore) {
     const email = valore.trim();
     if (!email) return '';
-    if (/\s/.test(email)) return "L'email non può contenere spazi";
+    if (/\s/.test(email)) return 'accedi.emailSpazi';
     const chiocciole = (email.match(/@/g) || []).length;
-    if (chiocciole === 0) return 'Manca la @ (es. nome@dominio.it)';
-    if (chiocciole > 1) return "L'email deve contenere una sola @";
+    if (chiocciole === 0) return 'accedi.emailChiocciola';
+    if (chiocciole > 1) return 'accedi.emailDueChiocciole';
     const [locale, dominio] = email.split('@');
-    if (!locale) return 'Manca la parte prima della @';
-    if (!dominio) return 'Manca il dominio dopo la @ (es. gmail.com)';
-    if (!/^[A-Za-z0-9._%+-]+$/.test(locale) || !/^[A-Za-z0-9.-]+$/.test(dominio))
-        return "L'email contiene caratteri non ammessi";
-    if (locale.startsWith('.') || locale.endsWith('.') || email.includes('..')) return "Punti non validi nell'email";
-    if (!/^([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/.test(dominio))
-        return 'Il dominio non è valido (es. gmail.com)';
+    if (!locale) return 'accedi.emailLocale';
+    if (!dominio) return 'accedi.emailDominioMancante';
+    if (!/^[A-Za-z0-9._%+-]+$/.test(locale) || !/^[A-Za-z0-9.-]+$/.test(dominio)) return 'accedi.emailCaratteri';
+    if (locale.startsWith('.') || locale.endsWith('.') || email.includes('..')) return 'accedi.emailPunti';
+    if (!/^([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/.test(dominio)) return 'accedi.emailDominio';
     return '';
 }
 
-const erroreNome = (valore) => (valore.length > 0 && valore.trim().length < 3 ? 'Inserisci almeno 3 caratteri' : '');
+const erroreNome = (valore) => (valore.length > 0 && valore.trim().length < 3 ? 'accedi.nomeCorto' : '');
 
 // accetto solo indirizzi interni al sito come destinazione dopo il login
 const destinazioneSicura = (next) => (next && next.startsWith('/') && !next.startsWith('//') ? next : '/profilo');
@@ -46,6 +45,7 @@ export default function Accedi() {
     const next = destinazioneSicura(parametri.get('next'));
     const utente = useUtente();
     const admin = useAdmin();
+    const { t } = useLingua();
 
     const [scheda, setScheda] = useState(0);
     const [dati, setDati] = useState({ nome: '', cognome: '', email: '', telefono: '', password: '', conferma: '' });
@@ -54,15 +54,17 @@ export default function Accedi() {
 
     const aggiorna = (nomeCampo) => (e) => setDati({ ...dati, [nomeCampo]: e.target.value });
 
-    const requisitiMancanti = REGOLE_PASSWORD.filter((r) => !r.ok(dati.password)).map((r) => r.testo);
+    const requisitiMancanti = REGOLE_PASSWORD.filter((r) => !r.ok(dati.password)).map((r) => t(r.chiave));
     const passwordValida = requisitiMancanti.length === 0;
     const confermaErrata = dati.conferma.length > 0 && dati.conferma !== dati.password;
 
+    // le funzioni di controllo restituiscono la chiave del messaggio, tradotta qui
+    const traduciChiave = (chiave) => (chiave ? t(chiave) : '');
     const errori = {
-        nome: erroreNome(dati.nome),
-        cognome: erroreNome(dati.cognome),
-        email: erroreEmail(dati.email),
-        telefono: dati.telefono && !/^\d{6,15}$/.test(dati.telefono.trim()) ? 'Solo cifre, da 6 a 15' : '',
+        nome: traduciChiave(erroreNome(dati.nome)),
+        cognome: traduciChiave(erroreNome(dati.cognome)),
+        email: traduciChiave(erroreEmail(dati.email)),
+        telefono: dati.telefono && !/^\d{6,15}$/.test(dati.telefono.trim()) ? t('comune.soloCifre') : '',
     };
 
     const registrazioneValida =
@@ -91,7 +93,7 @@ export default function Accedi() {
         richiesta
             // dopo la registrazione la pagina successiva mostra la conferma (email inviata)
             .then(() => navigate(next, { replace: true, state: scheda === 1 ? { registrato: true } : null }))
-            .catch((err) => setErrore(messaggioErrore(err, 'Operazione non riuscita. Riprova.')))
+            .catch((err) => setErrore(messaggioErrore(err, t('accedi.errore'))))
             .finally(() => setInvio(false));
     };
 
@@ -101,18 +103,17 @@ export default function Accedi() {
                 <Card elevation={0} sx={cardSx}>
                     <CardContent>
                         <Typography variant="h5" sx={{ color: '#c5a059', mb: 2 }}>
-                            Sei collegato come amministratore
+                            {t('accedi.admin')}
                         </Typography>
                         <Alert severity="info" sx={{ mb: 3 }}>
-                            Accesso e registrazione sono riservati ai visitatori. Per usarli esci prima dall&apos;area
-                            riservata.
+                            {t('accedi.adminInfo')}
                         </Alert>
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                             <Button component={Link} to="/admin" variant="contained" sx={{ borderRadius: 0 }}>
-                                Torna alla dashboard
+                                {t('accedi.adminDashboard')}
                             </Button>
                             <Button onClick={logout} variant="outlined" sx={{ borderRadius: 0 }}>
-                                Esci dall&apos;area riservata
+                                {t('accedi.adminEsci')}
                             </Button>
                         </Box>
                     </CardContent>
@@ -127,14 +128,14 @@ export default function Accedi() {
                 <Card elevation={0} sx={cardSx}>
                     <CardContent>
                         <Typography variant="h5" sx={{ color: '#c5a059', mb: 2 }}>
-                            Sei già collegato come {utente.nome} {utente.cognome}
+                            {t('accedi.giaCollegato', { nome: `${utente.nome} ${utente.cognome}` })}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                             <Button component={Link} to="/profilo" variant="contained" sx={{ borderRadius: 0 }}>
-                                La mia area
+                                {t('accedi.miaArea')}
                             </Button>
-                            <Button component={Link} to="/" variant="outlined" sx={{ borderRadius: 0 }}>
-                                Torna alle mostre
+                            <Button component={Link} to="/esposizioni" variant="outlined" sx={{ borderRadius: 0 }}>
+                                {t('accedi.tornaMostre')}
                             </Button>
                         </Box>
                     </CardContent>
@@ -148,11 +149,9 @@ export default function Accedi() {
             <Card elevation={0} sx={cardSx}>
                 <CardContent>
                     <Typography variant="h4" sx={{ color: '#c5a059', mb: 1 }}>
-                        {scheda === 0 ? 'Accedi' : 'Crea un account'}
+                        {scheda === 0 ? t('accedi.titoloAccedi') : t('accedi.titoloRegistrati')}
                     </Typography>
-                    <Typography sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
-                        Per prenotare una visita o lasciare un feedback serve un account gratuito.
-                    </Typography>
+                    <Typography sx={{ color: '#aaaaaa', mb: 3 }}>{t('accedi.intro')}</Typography>
 
                     <Tabs
                         value={scheda}
@@ -164,8 +163,8 @@ export default function Accedi() {
                         indicatorColor="primary"
                         sx={{ mb: 3, '& .MuiTab-root': { color: '#bbbbbb' } }}
                     >
-                        <Tab label="Accedi" />
-                        <Tab label="Registrati" />
+                        <Tab label={t('accedi.schedaAccedi')} />
+                        <Tab label={t('accedi.schedaRegistrati')} />
                     </Tabs>
 
                     <Box
@@ -177,7 +176,7 @@ export default function Accedi() {
                             <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                                 <TextField
                                     {...campo}
-                                    label="Nome"
+                                    label={t('comune.nome')}
                                     value={dati.nome}
                                     onChange={aggiorna('nome')}
                                     error={Boolean(errori.nome)}
@@ -186,7 +185,7 @@ export default function Accedi() {
                                 />
                                 <TextField
                                     {...campo}
-                                    label="Cognome"
+                                    label={t('comune.cognome')}
                                     value={dati.cognome}
                                     onChange={aggiorna('cognome')}
                                     error={Boolean(errori.cognome)}
@@ -197,7 +196,7 @@ export default function Accedi() {
                         )}
                         <TextField
                             {...campo}
-                            label="Email"
+                            label={t('comune.email')}
                             type="email"
                             autoComplete="email"
                             value={dati.email}
@@ -209,18 +208,18 @@ export default function Accedi() {
                         {scheda === 1 && (
                             <TextField
                                 {...campo}
-                                label="Telefono"
+                                label={t('comune.telefono')}
                                 autoComplete="tel"
                                 value={dati.telefono}
                                 onChange={aggiorna('telefono')}
                                 error={Boolean(errori.telefono)}
-                                helperText={errori.telefono || 'Solo cifre, da 6 a 15'}
+                                helperText={errori.telefono || t('comune.soloCifre')}
                                 required
                             />
                         )}
                         <TextField
                             {...campo}
-                            label="Password"
+                            label={t('comune.password')}
                             type="password"
                             autoComplete={scheda === 0 ? 'current-password' : 'new-password'}
                             value={dati.password}
@@ -230,21 +229,21 @@ export default function Accedi() {
                                 scheda !== 1
                                     ? ''
                                     : passwordValida
-                                      ? 'Password valida'
-                                      : `Serve: ${requisitiMancanti.join(', ')}`
+                                      ? t('comune.passwordValida')
+                                      : t('comune.serve', { elenco: requisitiMancanti.join(', ') })
                             }
                             required
                         />
                         {scheda === 1 && (
                             <TextField
                                 {...campo}
-                                label="Conferma password"
+                                label={t('comune.confermaPassword')}
                                 type="password"
                                 autoComplete="new-password"
                                 value={dati.conferma}
                                 onChange={aggiorna('conferma')}
                                 error={confermaErrata}
-                                helperText={confermaErrata ? 'Le password non coincidono' : ''}
+                                helperText={confermaErrata ? t('comune.passwordNonCoincidono') : ''}
                                 required
                             />
                         )}
@@ -255,7 +254,7 @@ export default function Accedi() {
                                 size="small"
                                 sx={{ alignSelf: 'flex-end', mt: -1.5, color: '#c5a059', textTransform: 'none' }}
                             >
-                                Password dimenticata?
+                                {t('accedi.dimenticata')}
                             </Button>
                         )}
                         {errore && <Alert severity="error">{errore}</Alert>}
@@ -266,7 +265,11 @@ export default function Accedi() {
                             disabled={invio || (scheda === 1 && !registrazioneValida)}
                             sx={{ borderRadius: 0, py: 1.5, fontWeight: 'bold' }}
                         >
-                            {invio ? 'Attendere...' : scheda === 0 ? 'ACCEDI' : 'CREA ACCOUNT'}
+                            {invio
+                                ? t('comune.attendere')
+                                : scheda === 0
+                                  ? t('accedi.pulsanteAccedi')
+                                  : t('accedi.pulsanteRegistrati')}
                         </Button>
                     </Box>
                 </CardContent>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
     Container,
     Typography,
@@ -16,6 +16,8 @@ import { messaggioErrore } from '../services/api';
 import { getMostra } from '../services/mostreService';
 import { prenota } from '../services/prenotazioniService';
 import useUtente from '../hooks/useUtente';
+import useLingua from '../hooks/useLingua';
+import { getMiePrenotazioni } from '../services/utentiService';
 
 export default function FormPrenotazione() {
     const { id } = useParams();
@@ -25,6 +27,9 @@ export default function FormPrenotazione() {
 
     // la pagina è protetta: il visitatore è sempre collegato e i suoi dati arrivano dall'account
     const utente = useUtente();
+    const { t } = useLingua();
+    // una sola prenotazione per mostra: se c'è già, il form non viene mostrato
+    const [giaPrenotato, setGiaPrenotato] = useState(false);
     const [telefono, setTelefono] = useState(utente?.telefono || '');
 
     const [loading, setLoading] = useState(false);
@@ -34,7 +39,11 @@ export default function FormPrenotazione() {
     useEffect(() => {
         getMostra(id)
             .then(setMostra)
-            .catch((err) => setErroreCaricamento(messaggioErrore(err, 'Impossibile caricare la mostra.')));
+            .catch((err) => setErroreCaricamento(messaggioErrore(err, t('comune.erroreMostra'))));
+        getMiePrenotazioni()
+            .then((elenco) => setGiaPrenotato(elenco.some((p) => p.mostra_id === Number(id))))
+            .catch(() => setGiaPrenotato(false));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const isTelefonoValid = /^\d{6,15}$/.test(telefono.trim());
@@ -56,7 +65,7 @@ export default function FormPrenotazione() {
             })
             .catch((err) => {
                 setLoading(false);
-                setErrore(messaggioErrore(err, 'Errore di validazione o di rete. Controlla i dati inseriti.'));
+                setErrore(messaggioErrore(err, t('prenota.errore')));
             });
     };
 
@@ -68,8 +77,8 @@ export default function FormPrenotazione() {
                 <Alert severity="error" sx={{ mb: 3 }}>
                     {erroreCaricamento}
                 </Alert>
-                <Button onClick={() => navigate('/')} variant="outlined">
-                    Torna alla Home
+                <Button onClick={() => navigate('/esposizioni')} variant="outlined">
+                    {t('comune.tornaEsposizioni')}
                 </Button>
             </Container>
         );
@@ -83,11 +92,8 @@ export default function FormPrenotazione() {
 
     return (
         <Container maxWidth="md" sx={{ mt: { xs: 5, md: 10 }, mb: 10 }}>
-            <Button
-                onClick={() => navigate(`/esposizione/${id}`)}
-                sx={{ color: '#bbbbbb', mb: 4, fontFamily: 'sans-serif' }}
-            >
-                ← Torna ai dettagli della mostra
+            <Button onClick={() => navigate(`/esposizione/${id}`)} sx={{ color: '#bbbbbb', mb: 4 }}>
+                {t('prenota.indietro')}
             </Button>
 
             <Card
@@ -101,7 +107,7 @@ export default function FormPrenotazione() {
             >
                 <CardContent>
                     <Typography variant="h4" gutterBottom sx={{ color: '#c5a059', mb: 4 }}>
-                        Prenotazione: {mostra.titolo}
+                        {t('prenota.titolo', { titolo: mostra.titolo })}
                     </Typography>
 
                     {errore && (
@@ -118,7 +124,18 @@ export default function FormPrenotazione() {
                         </Alert>
                     )}
 
-                    {successo ? (
+                    {giaPrenotato && !successo ? (
+                        <Alert
+                            severity="info"
+                            action={
+                                <Button component={Link} to="/profilo" color="inherit" size="small">
+                                    {t('prenota.gestisci')}
+                                </Button>
+                            }
+                        >
+                            {t('prenota.giaPrenotato')}
+                        </Alert>
+                    ) : successo ? (
                         <Box
                             sx={{
                                 p: 4,
@@ -129,20 +146,24 @@ export default function FormPrenotazione() {
                             }}
                         >
                             <Typography variant="h6" sx={{ color: '#81c784', fontWeight: 'bold', mb: 2 }}>
-                                Prenotazione confermata con successo!
+                                {t('prenota.confermata')}
                             </Typography>
-                            <Typography variant="body1" sx={{ color: '#ffffff', mb: 3, fontFamily: 'sans-serif' }}>
-                                Abbiamo inviato un'email di riepilogo all'indirizzo <b>{utente?.email}</b> con tutti i
-                                dettagli dell'esposizione.
+                            <Typography variant="body1" sx={{ color: '#ffffff', mb: 3 }}>
+                                {t('prenota.emailInviata', { email: utente?.email })}
                             </Typography>
-                            <Button
-                                onClick={() => navigate('/')}
-                                variant="contained"
-                                color="primary"
-                                sx={{ borderRadius: 0, fontWeight: 'bold' }}
-                            >
-                                Torna alla Home
-                            </Button>
+                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                                <Button
+                                    onClick={() => navigate('/esposizioni')}
+                                    variant="contained"
+                                    color="primary"
+                                    sx={{ borderRadius: 0, fontWeight: 'bold' }}
+                                >
+                                    {t('comune.tornaEsposizioni')}
+                                </Button>
+                                <Button component={Link} to="/profilo" variant="outlined" sx={{ borderRadius: 0 }}>
+                                    {t('prenota.gestisci')}
+                                </Button>
+                            </Box>
                         </Box>
                     ) : (
                         <Box
@@ -152,9 +173,9 @@ export default function FormPrenotazione() {
                         >
                             <Grid container spacing={3}>
                                 {[
-                                    ['Nome', utente?.nome],
-                                    ['Cognome', utente?.cognome],
-                                    ['Email', utente?.email],
+                                    [t('comune.nome'), utente?.nome],
+                                    [t('comune.cognome'), utente?.cognome],
+                                    [t('comune.email'), utente?.email],
                                 ].map(([etichetta, valore]) => (
                                     <Grid key={etichetta} size={{ xs: 12, sm: 6 }}>
                                         <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
@@ -172,12 +193,12 @@ export default function FormPrenotazione() {
                                 {/* Telefono */}
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" sx={{ color: '#c5a059', mb: 1, fontWeight: 500 }}>
-                                        Telefono *
+                                        {t('prenota.telefono')}
                                     </Typography>
                                     <TextField
                                         slotProps={{
                                             inputLabel: { shrink: true },
-                                            htmlInput: { 'aria-label': 'Telefono' },
+                                            htmlInput: { 'aria-label': t('comune.telefono') },
                                         }}
                                         fullWidth
                                         value={telefono}
@@ -185,7 +206,7 @@ export default function FormPrenotazione() {
                                         required
                                         error={telefono.length > 0 && !isTelefonoValid}
                                         helperText={
-                                            telefono.length > 0 && !isTelefonoValid ? 'Solo cifre, da 6 a 15' : ''
+                                            telefono.length > 0 && !isTelefonoValid ? t('comune.soloCifre') : ''
                                         }
                                         sx={inputStyle}
                                         disabled={loading}
@@ -205,8 +226,8 @@ export default function FormPrenotazione() {
                                 {loading && (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                         <CircularProgress size={24} sx={{ color: '#c5a059' }} />
-                                        <Typography variant="body2" sx={{ color: '#c5a059', fontFamily: 'sans-serif' }}>
-                                            Invio prenotazione in corso...
+                                        <Typography variant="body2" sx={{ color: '#c5a059' }}>
+                                            {t('prenota.invio')}
                                         </Typography>
                                     </Box>
                                 )}
@@ -219,7 +240,7 @@ export default function FormPrenotazione() {
                                     disabled={loading || !isFormValid}
                                     sx={{ borderRadius: 0, py: 1.5, px: 6, fontWeight: 'bold', letterSpacing: 1 }}
                                 >
-                                    {loading ? 'Attendere...' : 'PRENOTA'}
+                                    {loading ? t('comune.attendere') : t('comune.prenota')}
                                 </Button>
                             </Box>
                         </Box>

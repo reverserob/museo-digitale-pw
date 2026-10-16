@@ -61,10 +61,10 @@ describe('ProtectedRoute', () => {
 });
 
 describe('NotFound', () => {
-    it('un indirizzo inesistente mostra la pagina 404 con il link alla home', () => {
+    it('un indirizzo inesistente mostra la pagina 404 con il link alle esposizioni', () => {
         apri('/pagina/che/non/esiste');
         expect(screen.getByText('404')).toBeInTheDocument();
         expect(screen.getByRole('heading', { name: 'Pagina non trovata' })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: 'Torna alle esposizioni' })).toHaveAttribute('href', '/');
+        expect(screen.getByRole('link', { name: 'Torna alle esposizioni' })).toHaveAttribute('href', '/esposizioni');
     });
 });

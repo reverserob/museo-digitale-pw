@@ -135,7 +135,7 @@ export default function AdminDashboard() {
 
     return (
         <Container maxWidth="md" sx={{ mt: { xs: 5, md: 10 }, mb: 10 }}>
-            <Button onClick={() => navigate('/')} sx={{ color: '#bbbbbb', mb: 4, fontFamily: 'sans-serif' }}>
+            <Button onClick={() => navigate('/')} sx={{ color: '#bbbbbb', mb: 4 }}>
                 ← Torna alla Home
             </Button>
 
@@ -260,7 +260,7 @@ export default function AdminDashboard() {
                             </Box>
                         )}
                         {!loading && mostre.length === 0 && !errore && (
-                            <Typography sx={{ color: '#aaaaaa', fontFamily: 'sans-serif' }}>
+                            <Typography sx={{ color: '#aaaaaa' }}>
                                 Nessuna mostra presente. Creane una con "Nuova Mostra".
                             </Typography>
                         )}
@@ -295,10 +295,7 @@ export default function AdminDashboard() {
                                                 >
                                                     {m.titolo}
                                                 </Typography>
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{ color: '#aaaaaa', fontFamily: 'sans-serif' }}
-                                                >
+                                                <Typography variant="body2" sx={{ color: '#aaaaaa' }}>
                                                     Periodo: Dal {m.data_inizio} al {m.data_fine}
                                                 </Typography>
                                             </Box>
@@ -353,7 +350,7 @@ export default function AdminDashboard() {
                                             in={aperta?.id === m.id && aperta?.tipo === 'prenotazioni'}
                                             unmountOnExit
                                         >
-                                            <Box sx={{ mt: 2, fontFamily: 'sans-serif' }}>
+                                            <Box sx={{ mt: 2 }}>
                                                 {elenco.length === 0 ? (
                                                     <Typography variant="body2" sx={{ color: '#888' }}>
                                                         Nessuna prenotazione.
@@ -378,7 +375,7 @@ export default function AdminDashboard() {
                                         </Collapse>
 
                                         <Collapse in={aperta?.id === m.id && aperta?.tipo === 'feedback'} unmountOnExit>
-                                            <Box sx={{ mt: 2, fontFamily: 'sans-serif' }}>
+                                            <Box sx={{ mt: 2 }}>
                                                 {recensioni.length === 0 ? (
                                                     <Typography variant="body2" sx={{ color: '#888' }}>
                                                         Nessun feedback.

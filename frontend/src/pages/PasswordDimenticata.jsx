@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { Container, Card, CardContent, Typography, Box, TextField, Button, Alert } from '@mui/material';
 import { messaggioErrore } from '../services/api';
 import { passwordDimenticata } from '../services/utentiService';
+import { traduciServer } from '../i18n/lingua';
+import useLingua from '../hooks/useLingua';
 
 const cardSx = {
     backdropFilter: 'blur(12px)',
@@ -13,6 +15,7 @@ const cardSx = {
 const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
 
 export default function PasswordDimenticata() {
+    const { t } = useLingua();
     const [email, setEmail] = useState('');
     const [conferma, setConferma] = useState('');
     const [errore, setErrore] = useState('');
@@ -23,8 +26,8 @@ export default function PasswordDimenticata() {
         setErrore('');
         setInvio(true);
         passwordDimenticata(email.trim())
-            .then(setConferma)
-            .catch((err) => setErrore(messaggioErrore(err, 'Impossibile inviare la richiesta. Riprova.')))
+            .then((testo) => setConferma(traduciServer(testo)))
+            .catch((err) => setErrore(messaggioErrore(err, t('reset.errore'))))
             .finally(() => setInvio(false));
     };
 
@@ -33,11 +36,9 @@ export default function PasswordDimenticata() {
             <Card elevation={0} sx={cardSx}>
                 <CardContent>
                     <Typography variant="h4" sx={{ color: '#c5a059', mb: 1 }}>
-                        Password dimenticata
+                        {t('reset.titolo')}
                     </Typography>
-                    <Typography sx={{ color: '#aaaaaa', fontFamily: 'sans-serif', mb: 3 }}>
-                        Inserisci l&apos;email del tuo account: ti invieremo un link per scegliere una nuova password.
-                    </Typography>
+                    <Typography sx={{ color: '#aaaaaa', mb: 3 }}>{t('reset.intro')}</Typography>
 
                     {conferma ? (
                         <Alert severity="success" sx={{ mb: 3 }}>
@@ -50,7 +51,7 @@ export default function PasswordDimenticata() {
                             sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}
                         >
                             <TextField
-                                label="Email"
+                                label={t('comune.email')}
                                 type="email"
                                 autoComplete="email"
                                 value={email}
@@ -68,12 +69,12 @@ export default function PasswordDimenticata() {
                                 disabled={invio || !email.trim()}
                                 sx={{ borderRadius: 0, py: 1.5, fontWeight: 'bold' }}
                             >
-                                {invio ? 'Invio in corso...' : 'INVIA IL LINK'}
+                                {invio ? t('reset.invio') : t('reset.invia')}
                             </Button>
                         </Box>
                     )}
                     <Button component={Link} to="/accedi" sx={{ mt: 2, color: '#bbbbbb' }}>
-                        ← Torna all&apos;accesso
+                        {t('reset.tornaAccesso')}
                     </Button>
                 </CardContent>
             </Card>

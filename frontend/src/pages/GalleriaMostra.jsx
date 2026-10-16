@@ -13,7 +13,10 @@ import {
 } from '@mui/material';
 import { splitImmagini, messaggioErrore } from '../services/api';
 import { getMostra, eliminaMostra } from '../services/mostreService';
+import { getMiePrenotazioni } from '../services/utentiService';
 import useAdmin from '../hooks/useAdmin';
+import useUtente from '../hooks/useUtente';
+import useLingua from '../hooks/useLingua';
 import SezioneFeedback from '../components/SezioneFeedback';
 
 export default function GalleriaMostra() {
@@ -22,12 +25,27 @@ export default function GalleriaMostra() {
     const [mostra, setMostra] = useState(null);
     const [errore, setErrore] = useState('');
     const admin = useAdmin();
+    const utente = useUtente();
+    const { t } = useLingua();
+    const [giaPrenotato, setGiaPrenotato] = useState(false);
 
     useEffect(() => {
         getMostra(id)
             .then(setMostra)
-            .catch((err) => setErrore(messaggioErrore(err, 'Impossibile caricare la mostra.')));
+            .catch((err) => setErrore(messaggioErrore(err, t('comune.erroreMostra'))));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
+
+    // il visitatore può prenotarsi una sola volta a ogni mostra
+    useEffect(() => {
+        if (!utente) {
+            setGiaPrenotato(false);
+            return;
+        }
+        getMiePrenotazioni()
+            .then((elenco) => setGiaPrenotato(elenco.some((p) => p.mostra_id === Number(id))))
+            .catch(() => setGiaPrenotato(false));
+    }, [utente, id]);
 
     if (errore) {
         return (
@@ -35,8 +53,8 @@ export default function GalleriaMostra() {
                 <Alert severity="error" sx={{ mb: 3 }}>
                     {errore}
                 </Alert>
-                <Button onClick={() => navigate('/')} variant="outlined">
-                    Torna alle esposizioni
+                <Button onClick={() => navigate('/esposizioni')} variant="outlined">
+                    {t('comune.tornaEsposizioni')}
                 </Button>
             </Container>
         );
@@ -51,26 +69,21 @@ export default function GalleriaMostra() {
     const immaginiGalleria = splitImmagini(mostra.immagini);
 
     const handleEliminaMostra = () => {
-        if (
-            !window.confirm(
-                'Sei sicuro di voler eliminare questa mostra? Verranno eliminati anche prenotazioni e feedback.'
-            )
-        )
-            return;
+        if (!window.confirm(t('mostra.confermaElimina'))) return;
         eliminaMostra(mostra.id)
             .then(() => navigate('/admin'))
-            .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione.")));
+            .catch((err) => setErrore(messaggioErrore(err, t('mostra.erroreElimina'))));
     };
 
     return (
         <Container maxWidth="lg" sx={{ mt: { xs: 5, md: 10 } }}>
-            <Button onClick={() => navigate('/')} sx={{ color: '#bbbbbb', mb: 4, fontFamily: 'sans-serif' }}>
-                ← Torna alle esposizioni
+            <Button onClick={() => navigate('/esposizioni')} sx={{ color: '#bbbbbb', mb: 4 }}>
+                {t('mostra.indietro')}
             </Button>
 
             {admin && (
                 <Box
-                    aria-label="Gestione mostra"
+                    aria-label={t('mostra.gestione')}
                     role="region"
                     sx={{
                         display: 'flex',
@@ -83,14 +96,11 @@ export default function GalleriaMostra() {
                         backgroundColor: 'rgba(10, 10, 10, 0.75)',
                     }}
                 >
-                    <Typography
-                        variant="body2"
-                        sx={{ color: '#c5a059', fontFamily: 'sans-serif', mr: 'auto', letterSpacing: 1 }}
-                    >
-                        AREA ADMIN
+                    <Typography variant="body2" sx={{ color: '#c5a059', mr: 'auto', letterSpacing: 1 }}>
+                        {t('mostra.areaAdmin')}
                     </Typography>
                     <Button component={Link} to="/admin" variant="text" color="inherit" size="small">
-                        Dashboard
+                        {t('mostra.dashboard')}
                     </Button>
                     <Button
                         component={Link}
@@ -99,10 +109,10 @@ export default function GalleriaMostra() {
                         color="primary"
                         size="small"
                     >
-                        Modifica
+                        {t('mostra.modifica')}
                     </Button>
                     <Button variant="outlined" color="error" size="small" onClick={handleEliminaMostra}>
-                        Elimina
+                        {t('mostra.elimina')}
                     </Button>
                 </Box>
             )}
@@ -112,6 +122,7 @@ export default function GalleriaMostra() {
                     <Box sx={{ position: { md: 'sticky' }, top: 100 }}>
                         <Typography
                             variant="h3"
+                            component="h1"
                             gutterBottom
                             sx={{ color: '#c5a059', fontSize: { xs: '2rem', md: '3rem' } }}
                         >
@@ -119,23 +130,12 @@ export default function GalleriaMostra() {
                         </Typography>
                         <Typography
                             variant="body1"
-                            sx={{
-                                color: '#e0e0e0',
-                                mt: 4,
-                                mb: 2,
-                                fontSize: '1.1rem',
-                                fontFamily: 'sans-serif',
-                                lineHeight: 1.8,
-                            }}
+                            sx={{ color: '#e0e0e0', mt: 4, mb: 2, fontSize: '1.1rem', lineHeight: 1.8 }}
                         >
                             {mostra.descrizione}
                         </Typography>
-                        <Typography
-                            variant="body2"
-                            sx={{ color: '#aaaaaa', mb: 6, fontFamily: 'sans-serif', lineHeight: 1.7 }}
-                        >
-                            Il percorso espositivo è curato per offrire un'esperienza immersiva unica, gestita
-                            interamente tramite i sistemi digitali dell'ente.
+                        <Typography variant="body2" sx={{ color: '#aaaaaa', mb: 6, lineHeight: 1.7 }}>
+                            {t('mostra.percorso')}
                         </Typography>
 
                         <Box
@@ -150,30 +150,39 @@ export default function GalleriaMostra() {
                                 variant="subtitle2"
                                 sx={{ color: '#c5a059', textTransform: 'uppercase', letterSpacing: 2 }}
                             >
-                                Periodo Espositivo
+                                {t('mostra.periodo')}
                             </Typography>
-                            <Typography
-                                variant="body1"
-                                sx={{ color: '#ffffff', mt: 1, fontWeight: 'bold', fontFamily: 'sans-serif' }}
-                            >
-                                Dal {mostra.data_inizio} al {mostra.data_fine}
+                            <Typography variant="body1" sx={{ color: '#ffffff', mt: 1, fontWeight: 'bold' }}>
+                                {t('comune.periodo', { inizio: mostra.data_inizio, fine: mostra.data_fine })}
                             </Typography>
                         </Box>
 
-                        {/* l'amministratore non prenota: il pulsante è solo per i visitatori */}
-                        {!admin && (
-                            <Button
-                                component={Link}
-                                to={`/prenota/${mostra.id}`}
-                                variant="contained"
-                                color="primary"
-                                size="large"
-                                fullWidth
-                                sx={{ borderRadius: 0, py: 2, letterSpacing: 1.5, fontWeight: 'bold' }}
-                            >
-                                PRENOTA
-                            </Button>
-                        )}
+                        {/* l'amministratore non prenota; chi è già prenotato non può prenotarsi di nuovo */}
+                        {!admin &&
+                            (giaPrenotato ? (
+                                <Alert
+                                    severity="success"
+                                    action={
+                                        <Button component={Link} to="/profilo" color="inherit" size="small">
+                                            {t('mostra.vediPrenotazioni')}
+                                        </Button>
+                                    }
+                                >
+                                    {t('mostra.giaPrenotato')}
+                                </Alert>
+                            ) : (
+                                <Button
+                                    component={Link}
+                                    to={`/prenota/${mostra.id}`}
+                                    variant="contained"
+                                    color="primary"
+                                    size="large"
+                                    fullWidth
+                                    sx={{ borderRadius: 0, py: 2, letterSpacing: 1.5, fontWeight: 'bold' }}
+                                >
+                                    {t('comune.prenota')}
+                                </Button>
+                            ))}
                     </Box>
                 </Grid>
 
@@ -191,7 +200,7 @@ export default function GalleriaMostra() {
                                 <ImageListItem key={imgUrl} cols={1} rows={1}>
                                     <img
                                         src={imgUrl}
-                                        alt={`${mostra.titolo} - dettaglio ${index + 1}`}
+                                        alt={t('mostra.dettaglio', { titolo: mostra.titolo, numero: index + 1 })}
                                         style={{ borderRadius: 8, height: '250px', objectFit: 'cover' }}
                                     />
                                 </ImageListItem>

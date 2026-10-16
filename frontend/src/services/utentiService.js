@@ -28,3 +28,7 @@ export const passwordDimenticata = (email) =>
 
 export const reimpostaPassword = (token, password) =>
     api.post('/api/utenti/reimposta-password', { token, password }).then((res) => res.data.message);
+
+// annulla una propria prenotazione: il backend invia l'email di conferma dell'annullamento
+export const annullaPrenotazione = (id) =>
+    api.delete(`/api/utenti/me/prenotazioni/${id}`).then((res) => res.data.message);

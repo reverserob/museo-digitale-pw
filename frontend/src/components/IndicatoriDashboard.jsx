@@ -13,17 +13,14 @@ const boxSx = {
 function Indicatore({ etichetta, valore, dettaglio }) {
     return (
         <Box sx={boxSx}>
-            <Typography
-                variant="caption"
-                sx={{ color: '#aaaaaa', textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'sans-serif' }}
-            >
+            <Typography variant="caption" sx={{ color: '#aaaaaa', textTransform: 'uppercase', letterSpacing: 1 }}>
                 {etichetta}
             </Typography>
             <Typography sx={{ color: '#c5a059', fontSize: '2rem', fontWeight: 'bold', lineHeight: 1.2 }}>
                 {valore}
             </Typography>
             {dettaglio && (
-                <Typography variant="caption" sx={{ color: '#888888', fontFamily: 'sans-serif' }}>
+                <Typography variant="caption" sx={{ color: '#888888' }}>
                     {dettaglio}
                 </Typography>
             )}
@@ -75,7 +72,6 @@ export default function IndicatoriDashboard({ statistiche }) {
                             justifyContent: 'space-between',
                             gap: 2,
                             color: '#dddddd',
-                            fontFamily: 'sans-serif',
                             fontSize: '0.85rem',
                         }}
                     >
