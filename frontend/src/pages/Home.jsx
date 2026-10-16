@@ -3,9 +3,9 @@ import { Container, Typography, Grid, Box, Button, Card, CardContent } from '@mu
 import useLingua from '../hooks/useLingua';
 
 const PUNTI = [
-    { icona: '', titolo: 'home.puntoMostreTitolo', testo: 'home.puntoMostre' },
-    { icona: '', titolo: 'home.puntoPrenotaTitolo', testo: 'home.puntoPrenota' },
-    { icona: '', titolo: 'home.puntoOpinioniTitolo', testo: 'home.puntoOpinioni' },
+    { titolo: 'home.puntoMostreTitolo', testo: 'home.puntoMostre' },
+    { titolo: 'home.puntoPrenotaTitolo', testo: 'home.puntoPrenota' },
+    { titolo: 'home.puntoOpinioniTitolo', testo: 'home.puntoOpinioni' },
 ];
 
 const quadro = {
@@ -17,83 +17,90 @@ const quadro = {
     display: 'block',
 };
 
-// Pagina iniziale: presenta il museo e porta alle esposizioni correnti
+// Pagina iniziale: presenta il museo e porta alle esposizioni correnti (tutto centrato)
 export default function Home() {
     const { t } = useLingua();
 
+    // Box con textAlign center: il pulsante (inline) resta al centro della riga
     const pulsante = (
-        <Button
-            component={Link}
-            to="/esposizioni"
-            variant="contained"
-            color="primary"
-            size="large"
-            sx={{ borderRadius: 0, px: 5, py: 1.8, fontWeight: 700 }}
-        >
-            {t('home.vaiEsposizioni')} →
-        </Button>
+        <Box sx={{ textAlign: 'center' }}>
+            <Button
+                component={Link}
+                to="/esposizioni"
+                variant="contained"
+                color="primary"
+                size="large"
+                sx={{ borderRadius: 0, px: 5, py: 1.8, fontWeight: 700 }}
+            >
+                {t('home.vaiEsposizioni')} →
+            </Button>
+        </Box>
     );
 
     return (
         <Container maxWidth="lg" sx={{ mt: { xs: 5, md: 10 } }}>
-            {/* apertura */}
-            <Grid container spacing={{ xs: 5, md: 8 }} sx={{ alignItems: 'center' }}>
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <Typography variant="overline" sx={{ color: '#c5a059', fontSize: '0.85rem' }}>
-                        {t('home.sopratitolo')}
-                    </Typography>
-                    <Typography
-                        variant="h2"
-                        component="h1"
-                        sx={{ color: '#ffffff', fontSize: { xs: '2.6rem', md: '4rem' }, lineHeight: 1.05, mb: 3 }}
-                    >
-                        {t('home.titolo')}
-                    </Typography>
-                    <Typography sx={{ color: '#cccccc', fontSize: '1.15rem', lineHeight: 1.8, mb: 5, maxWidth: 520 }}>
-                        {t('home.sottotitolo')}
-                    </Typography>
-                    {pulsante}
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: '1.3fr 1fr',
-                            gridTemplateRows: { xs: '150px 150px', md: '210px 210px' },
-                            gap: 2,
-                        }}
-                        aria-hidden="true"
-                    >
-                        <Box sx={{ gridRow: 'span 2' }}>
-                            <img src="/images/home/caravaggio.webp" alt="" style={quadro} />
-                        </Box>
-                        <img src="/images/home/monet.webp" alt="" style={quadro} />
-                        <img src="/images/home/leonardo-da-vinci.webp" alt="" style={quadro} />
-                    </Box>
-                </Grid>
-            </Grid>
+            {/* apertura: sopratitolo, titolo, sottotitolo e pulsante centrati */}
+            <Box sx={{ textAlign: 'center', maxWidth: 760, mx: 'auto' }}>
+                <Typography variant="overline" component="p" sx={{ color: '#c5a059', fontSize: '0.85rem' }}>
+                    {t('home.sopratitolo')}
+                </Typography>
+                <Typography
+                    variant="h2"
+                    component="h1"
+                    sx={{ color: '#ffffff', fontSize: { xs: '2.6rem', md: '4rem' }, lineHeight: 1.05, mb: 3 }}
+                >
+                    {t('home.titolo')}
+                </Typography>
+                <Typography
+                    sx={{ color: '#cccccc', fontSize: '1.15rem', lineHeight: 1.8, mb: 5, maxWidth: 640, mx: 'auto' }}
+                >
+                    {t('home.sottotitolo')}
+                </Typography>
+            </Box>
+            {pulsante}
+
+            {/* immagini delle collezioni, centrate sotto il pulsante */}
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.3fr 1fr',
+                    gridTemplateRows: { xs: '150px 150px', md: '210px 210px' },
+                    gap: 2,
+                    maxWidth: 900,
+                    mx: 'auto',
+                    mt: { xs: 6, md: 8 },
+                }}
+                aria-hidden="true"
+            >
+                <Box sx={{ gridRow: 'span 2' }}>
+                    <img src="/images/home/caravaggio.webp" alt="" style={quadro} />
+                </Box>
+                <img src="/images/home/monet.webp" alt="" style={quadro} />
+                <img src="/images/home/leonardo-da-vinci.webp" alt="" style={quadro} />
+            </Box>
 
             {/* il museo */}
             <Box
                 component="section"
                 aria-labelledby="titolo-museo"
-                sx={{ mt: { xs: 8, md: 12 }, pt: 6, borderTop: '1px solid rgba(197, 160, 89, 0.3)' }}
+                sx={{
+                    mt: { xs: 8, md: 12 },
+                    pt: 6,
+                    borderTop: '1px solid rgba(197, 160, 89, 0.3)',
+                    textAlign: 'center',
+                    maxWidth: 820,
+                    mx: 'auto',
+                }}
             >
-                <Grid container spacing={{ xs: 3, md: 8 }}>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                        <Typography id="titolo-museo" variant="h4" component="h2" sx={{ color: '#c5a059' }}>
-                            {t('home.chiSiamoTitolo')}
-                        </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 8 }}>
-                        <Typography sx={{ color: '#dddddd', fontSize: '1.05rem', lineHeight: 1.9, mb: 2 }}>
-                            {t('home.chiSiamo1')}
-                        </Typography>
-                        <Typography sx={{ color: '#bbbbbb', fontSize: '1.05rem', lineHeight: 1.9 }}>
-                            {t('home.chiSiamo2')}
-                        </Typography>
-                    </Grid>
-                </Grid>
+                <Typography id="titolo-museo" variant="h4" component="h2" sx={{ color: '#c5a059', mb: 3 }}>
+                    {t('home.chiSiamoTitolo')}
+                </Typography>
+                <Typography sx={{ color: '#dddddd', fontSize: '1.05rem', lineHeight: 1.9, mb: 2 }}>
+                    {t('home.chiSiamo1')}
+                </Typography>
+                <Typography sx={{ color: '#bbbbbb', fontSize: '1.05rem', lineHeight: 1.9 }}>
+                    {t('home.chiSiamo2')}
+                </Typography>
             </Box>
 
             {/* cosa offre */}
@@ -104,10 +111,7 @@ export default function Home() {
                             elevation={0}
                             sx={{ flex: 1, backdropFilter: 'blur(12px)', border: '1px solid rgba(197, 160, 89, 0.25)' }}
                         >
-                            <CardContent sx={{ p: 4 }}>
-                                <Typography sx={{ fontSize: '1.8rem', mb: 1 }} aria-hidden="true">
-                                    {punto.icona}
-                                </Typography>
+                            <CardContent sx={{ p: 4, textAlign: 'center' }}>
                                 <Typography variant="h6" component="h3" sx={{ color: '#ffffff', mb: 1 }}>
                                     {t(punto.titolo)}
                                 </Typography>
@@ -118,7 +122,7 @@ export default function Home() {
                 ))}
             </Grid>
 
-            <Box sx={{ textAlign: 'center', mt: { xs: 6, md: 9 } }}>{pulsante}</Box>
+            <Box sx={{ mt: { xs: 6, md: 9 } }}>{pulsante}</Box>
         </Container>
     );
 }
