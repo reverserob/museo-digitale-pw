@@ -1,3 +1,4 @@
+// Test delle pagine Password dimenticata e Reimposta password
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

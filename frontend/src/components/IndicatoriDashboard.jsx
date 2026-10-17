@@ -3,6 +3,7 @@ import { Box, Typography } from '@mui/material';
 // Riquadri con gli indicatori principali + barre delle prenotazioni per mostra.
 // I numeri arrivano già calcolati da GET /api/statistiche.
 
+// stile comune dei riquadri
 const boxSx = {
     p: 2,
     border: '1px solid rgba(197, 160, 89, 0.35)',
@@ -10,6 +11,7 @@ const boxSx = {
     borderRadius: 1,
 };
 
+// Un singolo riquadro: etichetta, numero grande e (facoltativo) una riga di dettaglio
 function Indicatore({ etichetta, valore, dettaglio }) {
     return (
         <Box sx={boxSx}>
@@ -29,8 +31,10 @@ function Indicatore({ etichetta, valore, dettaglio }) {
 }
 
 export default function IndicatoriDashboard({ statistiche }) {
+    // finché i dati non sono arrivati non mostro nulla
     if (!statistiche) return null;
     const s = statistiche;
+    // valore massimo per calcolare la lunghezza delle barre in percentuale (almeno 1, per non dividere per zero)
     const massimo = Math.max(1, ...s.per_mostra.map((m) => m.prenotazioni));
 
     return (
@@ -64,6 +68,7 @@ export default function IndicatoriDashboard({ statistiche }) {
             <Typography variant="subtitle2" sx={{ color: '#c5a059', mb: 1.5, letterSpacing: 1 }}>
                 PRENOTAZIONI PER MOSTRA
             </Typography>
+            {/* una riga per mostra: titolo, stato, numero di prenotazioni, voto medio e barra proporzionale */}
             {s.per_mostra.map((m) => (
                 <Box key={m.mostra_id} sx={{ mb: 1.2 }}>
                     <Box

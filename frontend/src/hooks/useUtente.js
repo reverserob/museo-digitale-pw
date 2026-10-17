@@ -4,6 +4,7 @@ import { getUtente } from '../services/utentiService';
 
 // Restituisce il visitatore collegato e si aggiorna quando fa login o logout
 export default function useUtente() {
+    // valore iniziale letto dalla sessione salvata nel browser
     const [utente, setUtente] = useState(getUtente);
 
     useEffect(() => {

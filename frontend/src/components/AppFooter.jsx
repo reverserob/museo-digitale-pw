@@ -1,7 +1,9 @@
+// Piè di pagina mostrato in tutte le pagine
 import { Link } from 'react-router-dom';
 import { Box, Container, Grid, Typography, Divider } from '@mui/material';
 import useLingua from '../hooks/useLingua';
 
+// stili riutilizzati: titoli delle colonne e righe di testo
 const titolo = { color: '#c5a059', mb: 1.5, letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '0.85rem' };
 const riga = { color: '#cccccc', fontSize: '0.95rem', lineHeight: 1.8 };
 
@@ -20,6 +22,7 @@ export default function AppFooter() {
                 }}
             >
                 <Container maxWidth="lg" sx={{ py: 6 }}>
+                    {/* tre colonne su desktop (md: 4 su 12), una sotto l'altra su smartphone (xs: 12) */}
                     <Grid container spacing={5}>
                         <Grid size={{ xs: 12, md: 4 }} component="section" aria-label={t('footer.orariTitolo')}>
                             <Typography variant="h6" component="h2" sx={titolo}>
@@ -59,6 +62,7 @@ export default function AppFooter() {
                             </Typography>
                         </Grid>
                     </Grid>
+                    {/* riga dei diritti con l'anno corrente calcolato automaticamente */}
                     <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', my: 4 }} />
                     <Typography sx={{ color: '#777777', fontSize: '0.8rem', textAlign: 'center' }}>
                         {t('footer.diritti', { anno: new Date().getFullYear() })}

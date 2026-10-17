@@ -1,3 +1,4 @@
+// Test del catalogo delle esposizioni e della visibilità dei pulsanti PRENOTA / MOSTRA PRENOTATA
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import Esposizioni from '../pages/Esposizioni';

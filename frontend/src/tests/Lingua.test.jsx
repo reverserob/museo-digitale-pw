@@ -1,3 +1,4 @@
+// Test della scelta della lingua (ITA/EN) e della traduzione dei testi e dei messaggi del server
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

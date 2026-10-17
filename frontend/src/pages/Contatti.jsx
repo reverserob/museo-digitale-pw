@@ -19,6 +19,7 @@ const campo = {
     fullWidth: true,
     sx: { input: { color: 'white' }, textarea: { color: 'white' }, label: { color: '#999999' } },
 };
+// controllo semplice del formato dell'email
 const emailValida = (v) => /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(v.trim());
 
 // Modulo Contatti: le domande dei visitatori registrati arrivano per email al museo
@@ -27,6 +28,7 @@ export default function Contatti() {
     const admin = useAdmin();
     const { t } = useLingua();
 
+    // il form parte già compilato con i dati dell'account del visitatore (modificabili)
     const datiIniziali = () => ({
         titolo: '',
         descrizione: '',
@@ -50,6 +52,7 @@ export default function Contatti() {
         email: dati.email && !emailValida(dati.email) ? t('contatti.emailNonValida') : '',
         telefono: dati.telefono && !/^\d{6,15}$/.test(dati.telefono.trim()) ? t('comune.soloCifre') : '',
     };
+    // stesse regole dello schema ContattoRequest del backend
     const valido =
         dati.titolo.trim().length >= 3 &&
         dati.descrizione.trim().length >= 10 &&
@@ -62,6 +65,7 @@ export default function Contatti() {
         e.preventDefault();
         setErrore('');
         setInvio(true);
+        // tolgo gli spazi iniziali e finali da tutti i campi prima dell'invio
         const richiesta = Object.fromEntries(Object.entries(dati).map(([k, v]) => [k, v.trim()]));
         inviaContatto(richiesta)
             .then((testo) => setInviata(traduciServer(testo)))
@@ -69,6 +73,7 @@ export default function Contatti() {
             .finally(() => setInvio(false));
     };
 
+    // svuota il form per scrivere un'altra domanda
     const nuovaRichiesta = () => {
         setDati(datiIniziali());
         setInviata('');
@@ -83,6 +88,7 @@ export default function Contatti() {
                     </Typography>
                     <Typography sx={{ color: '#aaaaaa', mb: 4 }}>{t('contatti.intro')}</Typography>
 
+                    {/* il form è visibile solo ai visitatori registrati e collegati */}
                     {admin ? (
                         <Alert severity="info">{t('contatti.admin')}</Alert>
                     ) : !utente ? (

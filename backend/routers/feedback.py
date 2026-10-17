@@ -1,3 +1,5 @@
+"""API dei feedback: lettura pubblica, invio da parte dei visitatori prenotati, moderazione dell'amministratore."""
+
 import logging
 from datetime import date
 from typing import Optional
@@ -16,13 +18,14 @@ logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/api/feedback", tags=["Feedback"])
 
 
-# API POST FEEDBACK
+# POST /api/feedback (solo visitatori registrati)
 @router.post("", response_model=schemas.FeedbackResponse, status_code=status.HTTP_201_CREATED)
 def crea_feedback(
     dati: schemas.FeedbackCreate,
     db: Session = Depends(get_db),
     utente: models.Utente = Depends(richiedi_utente),
 ):
+    """Salva il feedback dopo aver controllato le regole del museo."""
     mostra = trova_mostra(db, dati.mostra_id)
 
     # si può recensire solo una mostra già aperta al pubblico
@@ -59,6 +62,7 @@ def crea_feedback(
         feedback = models.Feedback(
             mostra_id=mostra.id,
             utente_id=utente.id,
+            # nome pubblico: nome e iniziale del cognome (minimizzazione dei dati personali)
             nome=f"{utente.nome} {utente.cognome[0].upper()}.",
             voto=dati.voto,
             commento=dati.commento,
@@ -75,22 +79,24 @@ def crea_feedback(
         ) from e
 
 
-# API GET FEEDBACK (pubblica: i commenti sono visibili nella pagina della mostra)
+# GET /api/feedback (pubblica: i commenti sono visibili nella pagina della mostra)
 @router.get("", response_model=list[schemas.FeedbackResponse])
 def leggi_feedback(mostra_id: Optional[int] = None, db: Session = Depends(get_db)):
+    """Elenco dei feedback, dal più recente; filtrabile per mostra con ?mostra_id=."""
     query = db.query(models.Feedback)
     if mostra_id is not None:
         query = query.filter(models.Feedback.mostra_id == mostra_id)
     return query.order_by(models.Feedback.creato_il.desc()).all()
 
 
-# API DELETE FEEDBACK (moderazione da parte dell'admin)
+# DELETE /api/feedback/{id} (moderazione da parte dell'admin)
 @router.delete("/{feedback_id}")
 def elimina_feedback(
     feedback_id: int,
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
+    """Elimina un feedback non appropriato."""
     feedback = db.query(models.Feedback).filter(models.Feedback.id == feedback_id).first()
     if feedback is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feedback non trovato")

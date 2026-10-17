@@ -1,3 +1,5 @@
+"""Test dell'aggiornamento dello schema su un database creato con una versione precedente."""
+
 from sqlalchemy import create_engine, inspect, text
 
 from services.migrazioni_service import aggiorna_schema

@@ -1,3 +1,5 @@
+"""Test delle API delle mostre: elenco, dettaglio, creazione con immagini, modifica ed eliminazione."""
+
 import json
 from pathlib import Path
 
@@ -12,6 +14,7 @@ DATI_MOSTRA = {
 
 
 def immagine(nome="foto.png", contenuto=PNG_FINTO, tipo="image/png"):
+    # tupla nel formato richiesto da TestClient per caricare un file multipart
     return ("immagini", (nome, contenuto, tipo))
 
 

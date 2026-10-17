@@ -1,3 +1,4 @@
+// Componente principale: tema, router con le pagine definite in config/routes.json, header e footer
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, CssBaseline, Box, CircularProgress } from '@mui/material';
@@ -13,6 +14,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import AppFooter from './components/AppFooter';
 import Home from './pages/Home';
 
+// Le pagine (tranne la Home) sono caricate solo quando servono (lazy loading):
+// il primo caricamento del sito scarica meno codice.
 const Esposizioni = lazy(() => import('./pages/Esposizioni'));
 const Contatti = lazy(() => import('./pages/Contatti'));
 const GalleriaMostra = lazy(() => import('./pages/GalleriaMostra'));
@@ -42,6 +45,7 @@ const pages = {
 };
 
 function App() {
+    // immagine di sfondo con un velo scuro sopra, configurata in config/background.json
     const sfondo = { backgroundImage: `${background.overlay}, url(${background.image})` };
 
     return (
@@ -59,6 +63,7 @@ function App() {
                         }
                     >
                         <Routes>
+                            {/* una Route per ogni voce di routes.json; le pagine protette passano da ProtectedRoute */}
                             {routes.map((route) => {
                                 const Pagina = pages[route.component];
                                 const pagina = route.protected ? (

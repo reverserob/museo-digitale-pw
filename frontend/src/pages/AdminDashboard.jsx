@@ -1,3 +1,5 @@
+// Area riservata (/admin): form di login dell'amministratore e, dopo l'accesso, dashboard con indicatori,
+// elenco delle mostre, prenotazioni e feedback di ciascuna mostra e comandi di gestione.
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -55,6 +57,8 @@ export default function AdminDashboard() {
     const [errore, setErrore] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Carica insieme tutti i dati della dashboard. useCallback mantiene la stessa funzione tra un
+    // render e l'altro, così può essere usata come dipendenza di useEffect senza cicli infiniti.
     const caricaDati = useCallback(() => {
         setLoading(true);
         // feedback e statistiche sono facoltativi: se non rispondono la dashboard mostra comunque mostre e prenotazioni
@@ -64,6 +68,7 @@ export default function AdminDashboard() {
                 return valoreDiRiserva;
             });
 
+        // le quattro richieste partono in parallelo; mostre e prenotazioni sono indispensabili
         Promise.all([
             getMostre(),
             getPrenotazioni(),
@@ -80,10 +85,12 @@ export default function AdminDashboard() {
             .finally(() => setLoading(false));
     }, []);
 
+    // i dati si caricano appena l'amministratore risulta collegato
     useEffect(() => {
         if (isLoggedIn) caricaDati();
     }, [isLoggedIn, caricaDati]);
 
+    // login: se va a buon fine useAdmin diventa true e la pagina mostra la dashboard
     const handleLogin = (e) => {
         e.preventDefault();
         setLoginInCorso(true);
@@ -106,6 +113,7 @@ export default function AdminDashboard() {
         logout();
     };
 
+    // eliminazione di una mostra (con le sue prenotazioni e i suoi feedback) e ricarica dei dati
     const eliminaMostra = (id) => {
         if (
             !window.confirm(
@@ -123,6 +131,7 @@ export default function AdminDashboard() {
             .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione.")));
     };
 
+    // moderazione: eliminazione di un feedback
     const eliminaFeedback = (id) => {
         if (!window.confirm('Eliminare questo feedback?')) return;
         setErrore('');
@@ -131,6 +140,7 @@ export default function AdminDashboard() {
             .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione del feedback.")));
     };
 
+    // apre il pannello scelto sotto la mostra; un secondo clic sullo stesso pulsante lo richiude
     const apriPannello = (id, tipo) => setAperta(aperta?.id === id && aperta?.tipo === tipo ? null : { id, tipo });
 
     return (
@@ -139,6 +149,7 @@ export default function AdminDashboard() {
                 ← Torna alla Home
             </Button>
 
+            {/* tre casi: visitatore collegato (deve uscire), admin non collegato (login), admin collegato (dashboard) */}
             {visitatore ? (
                 <Card elevation={0} sx={cardSx}>
                     <CardContent>
@@ -267,6 +278,7 @@ export default function AdminDashboard() {
 
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {mostre.map((m) => {
+                                // prenotazioni e feedback di questa mostra
                                 const elenco = prenotazioni.filter((p) => p.mostra_id === m.id);
                                 const recensioni = feedback.filter((f) => f.mostra_id === m.id);
                                 return (
@@ -346,6 +358,7 @@ export default function AdminDashboard() {
                                             </Box>
                                         </Box>
 
+                                        {/* pannelli apribili con l'elenco delle prenotazioni e dei feedback */}
                                         <Collapse
                                             in={aperta?.id === m.id && aperta?.tipo === 'prenotazioni'}
                                             unmountOnExit

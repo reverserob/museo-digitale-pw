@@ -1,4 +1,5 @@
-# Modulo Contatti: solo i visitatori registrati possono scrivere, la richiesta arriva per email al museo
+"""Test del modulo Contatti: solo i visitatori registrati possono scrivere, la richiesta arriva per email al museo."""
+
 import pytest
 
 import settings

@@ -1,3 +1,11 @@
+"""Schemi Pydantic: descrivono i dati in ingresso e in uscita dalle API e ne controllano la validità.
+
+Gli schemi "Request"/"Create" validano ciò che arriva dal client: se un controllo fallisce,
+FastAPI risponde 422 e il messaggio del ValueError arriva all'utente (vedi error_service.py).
+Gli schemi "Response" stabiliscono quali campi vengono restituiti: ad esempio l'hash
+della password non compare mai in UtenteResponse.
+"""
+
 import re
 from datetime import date, datetime
 from typing import Optional
@@ -6,6 +14,9 @@ from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 
 class MostraResponse(BaseModel):
+    """Mostra restituita dalle API del catalogo."""
+
+    # from_attributes permette di costruire lo schema direttamente da un oggetto SQLAlchemy
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -16,7 +27,9 @@ class MostraResponse(BaseModel):
     data_fine: date
 
 
+# --- Regole di validazione riutilizzate da più schemi ---
 def _valida_nome(v: str, minimo: int = 2) -> str:
+    """Nome o cognome: spazi iniziali e finali tolti, lunghezza tra `minimo` e 100 caratteri."""
     v = v.strip()
     if len(v) < minimo:
         raise ValueError(f"Il campo deve contenere almeno {minimo} caratteri.")
@@ -26,6 +39,7 @@ def _valida_nome(v: str, minimo: int = 2) -> str:
 
 
 def _valida_telefono(v: str) -> str:
+    """Telefono: solo cifre, da 6 a 15 (nessuno spazio, trattino o prefisso con +)."""
     v = v.strip()
     if not re.fullmatch(r"\d{6,15}", v):
         raise ValueError("Il numero di telefono deve contenere da 6 a 15 cifre.")
@@ -33,6 +47,7 @@ def _valida_telefono(v: str) -> str:
 
 
 def _valida_password(v: str) -> str:
+    """Password: almeno 6 caratteri, una lettera maiuscola e un numero."""
     # stessa regola controllata nei form del frontend (registrazione e reset)
     if len(v) < 6:
         raise ValueError("La password deve contenere almeno 6 caratteri.")
@@ -45,10 +60,13 @@ def _valida_password(v: str) -> str:
     return v
 
 
+# --- Account dei visitatori ---
 class RegistrazioneRequest(BaseModel):
+    """Dati inviati dal form di registrazione."""
+
     nome: str
     cognome: str
-    email: EmailStr
+    email: EmailStr  # EmailStr controlla che l'indirizzo sia sintatticamente valido
     telefono: str
     password: str
 
@@ -60,6 +78,7 @@ class RegistrazioneRequest(BaseModel):
     @field_validator("email")
     @classmethod
     def normalizza_email(cls, v: str) -> str:
+        # salvo l'email in minuscolo: "Mario@Test.it" e "mario@test.it" sono lo stesso account
         return v.strip().lower()
 
     @field_validator("telefono")
@@ -74,6 +93,9 @@ class RegistrazioneRequest(BaseModel):
 
 
 class PasswordDimenticataRequest(BaseModel):
+    """Richiesta del link per reimpostare la password."""
+
+    # stringa semplice e non EmailStr: la risposta deve essere identica anche per email non valide
     email: str
 
     @field_validator("email")
@@ -83,7 +105,9 @@ class PasswordDimenticataRequest(BaseModel):
 
 
 class ReimpostaPasswordRequest(BaseModel):
-    token: str
+    """Nuova password scelta dal link ricevuto per email."""
+
+    token: str  # token firmato contenuto nel link
     password: str
 
     @field_validator("password")
@@ -93,6 +117,8 @@ class ReimpostaPasswordRequest(BaseModel):
 
 
 class UtenteResponse(BaseModel):
+    """Profilo del visitatore restituito al front-end (senza l'hash della password)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -103,12 +129,17 @@ class UtenteResponse(BaseModel):
 
 
 class SessioneUtenteResponse(BaseModel):
+    """Risposta di login e registrazione: token di accesso e profilo del visitatore."""
+
     access_token: str
     token_type: str = "bearer"
     utente: UtenteResponse
 
 
+# --- Prenotazioni ---
 class PrenotazioneCreate(BaseModel):
+    """Dati inviati dal form di prenotazione: nome, cognome ed email arrivano dall'account."""
+
     mostra_id: int
     # facoltativo: se manca si usa il telefono dell'account
     telefono: Optional[str] = None
@@ -120,6 +151,8 @@ class PrenotazioneCreate(BaseModel):
 
 
 class PrenotazioneResponse(BaseModel):
+    """Prenotazione come la vede l'amministratore nella dashboard."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -131,10 +164,13 @@ class PrenotazioneResponse(BaseModel):
     creata_il: datetime
 
 
+# --- Feedback ---
 class FeedbackCreate(BaseModel):
+    """Nuovo feedback: il nome dell'autore viene preso dall'account, non dal form."""
+
     mostra_id: int
     voto: int
-    commento: str = ""
+    commento: str = ""  # facoltativo
 
     @field_validator("voto")
     @classmethod
@@ -153,6 +189,8 @@ class FeedbackCreate(BaseModel):
 
 
 class FeedbackResponse(BaseModel):
+    """Feedback pubblico: contiene solo il nome abbreviato dell'autore, nessun dato di contatto."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -163,16 +201,21 @@ class FeedbackResponse(BaseModel):
     creato_il: datetime
 
 
+# --- Statistiche della dashboard ---
 class StatisticheMostra(BaseModel):
+    """Indicatori di una singola mostra."""
+
     mostra_id: int
     titolo: str
-    stato: str
+    stato: str  # "in corso", "futura" o "conclusa"
     prenotazioni: int
     feedback: int
-    voto_medio: Optional[float]
+    voto_medio: Optional[float]  # None se la mostra non ha ancora feedback
 
 
 class StatisticheResponse(BaseModel):
+    """Indicatori complessivi mostrati nella dashboard dell'amministratore."""
+
     totale_mostre: int
     mostre_in_corso: int
     mostre_future: int
@@ -185,6 +228,8 @@ class StatisticheResponse(BaseModel):
 
 
 class MiaPrenotazioneResponse(BaseModel):
+    """Prenotazione mostrata nell'area personale del visitatore, con i dati della mostra."""
+
     id: int
     mostra_id: int
     titolo_mostra: str
@@ -193,18 +238,24 @@ class MiaPrenotazioneResponse(BaseModel):
     creata_il: datetime
 
 
+# --- Login dell'amministratore ---
 class LoginRequest(BaseModel):
+    """Credenziali inviate dal form di accesso (amministratore o visitatore)."""
+
     email: str
     password: str
 
 
 class TokenResponse(BaseModel):
+    """Risposta del login dell'amministratore."""
+
     access_token: str
     token_type: str = "bearer"
 
 
 def valida_date(data_inizio: str, data_fine: str) -> tuple[date, date]:
     """Controlla il formato ISO delle date e che la fine non preceda l'inizio."""
+    # le mostre arrivano come form-data (per via delle immagini), quindi le date sono stringhe
     try:
         inizio = date.fromisoformat(data_inizio)
         fine = date.fromisoformat(data_fine)
@@ -215,7 +266,10 @@ def valida_date(data_inizio: str, data_fine: str) -> tuple[date, date]:
     return inizio, fine
 
 
+# --- Modulo Contatti ---
 class ContattoRequest(BaseModel):
+    """Domanda inviata dal modulo Contatti (solo visitatori registrati)."""
+
     titolo: str
     descrizione: str
     nome: str

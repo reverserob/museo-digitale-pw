@@ -1,3 +1,5 @@
+// Sezione dei feedback nella pagina di una mostra: media dei voti, form per lasciare un feedback
+// (solo visitatori prenotati, uno per mostra) ed elenco dei commenti; l'admin può eliminarli.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, Rating, TextField, Button, Alert, Divider } from '@mui/material';
@@ -8,12 +10,14 @@ import useUtente from '../hooks/useUtente';
 import useLingua from '../hooks/useLingua';
 import { formatoData } from '../i18n/lingua';
 
+// colori dei campi del form su sfondo scuro
 const inputStyle = {
     input: { color: 'white' },
     textarea: { color: 'white' },
     label: { color: '#999999' },
 };
 
+// data di oggi nel formato AAAA-MM-GG, confrontabile come testo con le date delle mostre
 const oggiIso = () => new Date().toISOString().slice(0, 10);
 
 // admin = true quando la pagina è aperta dall'amministratore: legge ed elimina i feedback, ma non ne scrive.
@@ -31,6 +35,7 @@ export default function SezioneFeedback({ mostra, admin = false }) {
     // true se il visitatore ha già lasciato il suo (unico) feedback su questa mostra
     const [giaRecensito, setGiaRecensito] = useState(false);
 
+    // carica i feedback della mostra (pubblici, visibili anche senza login)
     useEffect(() => {
         getFeedback(mostra.id)
             .then(setElenco)
@@ -44,6 +49,7 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             setGiaRecensito(false);
             return;
         }
+        // le due richieste partono in parallelo: prenotazioni e feedback del visitatore
         Promise.all([getMiePrenotazioni(), getMieiFeedback().catch(() => [])])
             .then(([miePrenotazioni, mieiFeedback]) => {
                 setGiaRecensito(mieiFeedback.some((f) => f.mostra_id === mostra.id));
@@ -52,10 +58,12 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             .catch(() => setPrenotato(false));
     }, [utente, admin, mostra.id]);
 
+    // media dei voti (null se non ci sono ancora feedback)
     const media = elenco.length ? elenco.reduce((somma, f) => somma + f.voto, 0) / elenco.length : null;
     const nonIniziata = mostra.data_inizio > oggiIso();
     const conclusa = mostra.data_fine < oggiIso();
 
+    // solo admin: elimina un feedback dopo la conferma e lo toglie dall'elenco senza ricaricare la pagina
     const handleElimina = (id) => {
         if (!window.confirm(t('feedback.confermaElimina'))) return;
         setErrore('');
@@ -64,8 +72,9 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             .catch((err) => setErrore(messaggioErrore(err, t('feedback.erroreElimina'))));
     };
 
+    // invio del feedback: il voto è obbligatorio, il commento facoltativo
     const handleSubmit = (e) => {
-        e.preventDefault();
+        e.preventDefault(); // evita il ricaricamento della pagina
         setErrore('');
         setConferma('');
         if (!voto) {
@@ -75,6 +84,7 @@ export default function SezioneFeedback({ mostra, admin = false }) {
         setInvio(true);
         inviaFeedback({ mostra_id: mostra.id, voto, commento })
             .then((nuovo) => {
+                // il nuovo feedback compare subito in cima all'elenco
                 setElenco((precedenti) => [nuovo, ...precedenti]);
                 setVoto(0);
                 setCommento('');
@@ -107,6 +117,8 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                 <Typography sx={{ color: '#aaaaaa', mb: 3 }}>{t('feedback.nessuna')}</Typography>
             )}
 
+            {/* cosa mostrare sotto la media, in ordine: admin, mostra non iniziata, utente non collegato,
+                verifica in corso, feedback già lasciato, utente non prenotato, altrimenti il form */}
             {admin ? (
                 <>
                     <Typography variant="body2" sx={{ color: '#aaaaaa', mb: 3 }}>
@@ -208,6 +220,7 @@ export default function SezioneFeedback({ mostra, admin = false }) {
                         <Rating value={f.voto} size="small" readOnly />
                         <Typography sx={{ color: '#ffffff', fontWeight: 'bold' }}>{f.nome}</Typography>
                         <Typography variant="caption" sx={{ color: '#888888' }}>
+                            {/* il backend salva le date in UTC: la Z le fa convertire nel fuso orario locale */}
                             {formatoData(f.creato_il + 'Z', lingua)}
                         </Typography>
                         {admin && (

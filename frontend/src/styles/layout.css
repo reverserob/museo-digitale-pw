@@ -1,16 +1,21 @@
+/* Stili globali della struttura della pagina (il resto dello stile è nel tema MUI e nelle prop sx) */
+
+/* contenitore di tutta l'app: occupa almeno l'altezza dello schermo, così il footer resta in fondo */
 .app-container {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
+    background-attachment: fixed; /* lo sfondo resta fermo durante lo scorrimento */
 }
 
+/* classe ripetuta per avere più priorità degli stili predefiniti di MUI */
 .app-header.app-header {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* nome del museo nell'header */
 .app-header .app-header__title {
     flex-grow: 1;
     color: #c5a059;

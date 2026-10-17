@@ -1,3 +1,5 @@
+"""Gestione delle immagini delle mostre: controllo, salvataggio su disco e selezione di quelle da mantenere."""
+
 import json
 import uuid
 from pathlib import Path
@@ -9,10 +11,16 @@ import settings
 
 
 def file_presenti(immagini: Optional[list[UploadFile]]) -> list[UploadFile]:
+    """Scarta i campi file vuoti (senza nome) che il browser può inviare quando non si sceglie nulla."""
     return [f for f in (immagini or []) if f is not None and f.filename]
 
 
 def immagini_da_tenere(attuali: str, richieste: Optional[str]) -> list[str]:
+    """Restituisce le immagini già salvate che l'amministratore ha scelto di mantenere.
+
+    attuali: percorsi salvati nel database, separati da virgola.
+    richieste: elenco JSON inviato dal form di modifica (None = mantieni tutte).
+    """
     elenco_attuale = [p.strip() for p in (attuali or "").split(",") if p.strip()]
     if richieste is None:
         return elenco_attuale
@@ -24,6 +32,7 @@ def immagini_da_tenere(attuali: str, richieste: Optional[str]) -> list[str]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Elenco delle immagini da mantenere non valido."
         ) from None
+    # accetto solo percorsi che appartengono già alla mostra (niente percorsi inventati) e senza duplicati
     consentiti = set(elenco_attuale)
     tenute = []
     for p in elenco_richiesto:
@@ -33,9 +42,11 @@ def immagini_da_tenere(attuali: str, richieste: Optional[str]) -> list[str]:
 
 
 async def salva_immagini(immagini: list[UploadFile]) -> list[str]:
+    """Controlla e salva le immagini caricate; restituisce i percorsi pubblici (/static/uploads/...)."""
     limite = settings.UPLOAD_MAX_MB * 1024 * 1024
     da_scrivere = []
     for file in immagini:
+        # controllo sia l'estensione del nome sia il tipo dichiarato dal browser
         estensione = Path(file.filename).suffix.lower()
         if estensione not in settings.ESTENSIONI_IMMAGINI or not (file.content_type or "").startswith("image/"):
             raise HTTPException(
@@ -48,8 +59,10 @@ async def salva_immagini(immagini: list[UploadFile]) -> list[str]:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Il file '{file.filename}' supera il limite di {settings.UPLOAD_MAX_MB} MB.",
             )
+        # nome casuale (uuid): evita collisioni e non usa il nome scelto dall'utente
         da_scrivere.append((f"{uuid.uuid4().hex}{estensione}", contenuto))
 
+    # scrivo su disco solo dopo aver controllato TUTTI i file: se uno non è valido non resta nulla a metà
     percorsi = []
     for nome, contenuto in da_scrivere:
         (settings.UPLOAD_DIR / nome).write_bytes(contenuto)

@@ -1,3 +1,4 @@
+// Funzioni di supporto condivise dai test (router finto e sessione simulata)
 import { render } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { setSessioneUtente } from '../services/api';

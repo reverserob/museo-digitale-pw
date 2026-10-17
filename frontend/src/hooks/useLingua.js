@@ -11,6 +11,7 @@ export default function useLingua() {
         return () => window.removeEventListener(EVENTO_LINGUA, aggiorna);
     }, []);
 
+    // useCallback: t cambia solo quando cambia la lingua, così i componenti si aggiornano al momento giusto
     const t = useCallback((chiave, parametri) => traduci(chiave, parametri, lingua), [lingua]);
     return { lingua, setLingua, t };
 }

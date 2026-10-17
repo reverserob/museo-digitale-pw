@@ -19,6 +19,7 @@ const campo = {
     sx: { input: { color: 'white' }, label: { color: '#999999' } },
 };
 
+// Pagina aperta dal link ricevuto per email (/reimposta-password?token=...): permette di scegliere la nuova password
 export default function ReimpostaPassword() {
     const [parametri] = useSearchParams();
     const { t } = useLingua();
@@ -29,6 +30,7 @@ export default function ReimpostaPassword() {
     const [fatto, setFatto] = useState('');
     const [invio, setInvio] = useState(false);
 
+    // controlli in tempo reale: requisiti della password e coincidenza con la conferma
     const mancanti = requisitiMancanti(password).map((chiave) => t(chiave));
     const confermaErrata = conferma.length > 0 && conferma !== password;
     const valida = mancanti.length === 0 && conferma === password;
@@ -51,6 +53,7 @@ export default function ReimpostaPassword() {
                         {t('reset.nuovaTitolo')}
                     </Typography>
 
+                    {/* link senza token, password già aggiornata, oppure form */}
                     {!token ? (
                         <Alert severity="error">
                             {t('reset.linkNonValido')}{' '}

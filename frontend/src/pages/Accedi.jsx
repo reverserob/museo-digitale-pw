@@ -1,3 +1,4 @@
+// Pagina di accesso dei visitatori con due schede: Accedi (login) e Registrati (nuovo account)
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Container, Card, CardContent, Typography, Tabs, Tab, Box, TextField, Button, Alert } from '@mui/material';
@@ -16,8 +17,11 @@ const cardSx = {
     p: { xs: 1, sm: 4 },
 };
 const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
+// proprietà comuni a tutti i campi del form
 const campo = { slotProps: { inputLabel: { shrink: true } }, fullWidth: true, sx: inputStyle };
 
+// Controllo dell'email durante la digitazione: restituisce la chiave del messaggio che spiega
+// l'errore specifico (spazi, chiocciola mancante, dominio non valido...) oppure '' se l'email è valida.
 function erroreEmail(valore) {
     const email = valore.trim();
     if (!email) return '';
@@ -34,6 +38,7 @@ function erroreEmail(valore) {
     return '';
 }
 
+// nome e cognome: almeno 3 caratteri
 const erroreNome = (valore) => (valore.length > 0 && valore.trim().length < 3 ? 'accedi.nomeCorto' : '');
 
 // accetto solo indirizzi interni al sito come destinazione dopo il login
@@ -47,11 +52,13 @@ export default function Accedi() {
     const admin = useAdmin();
     const { t } = useLingua();
 
+    // scheda attiva: 0 = Accedi, 1 = Registrati
     const [scheda, setScheda] = useState(0);
     const [dati, setDati] = useState({ nome: '', cognome: '', email: '', telefono: '', password: '', conferma: '' });
     const [errore, setErrore] = useState('');
     const [invio, setInvio] = useState(false);
 
+    // restituisce il gestore onChange di un campo: aggiorna solo quella proprietà di dati
     const aggiorna = (nomeCampo) => (e) => setDati({ ...dati, [nomeCampo]: e.target.value });
 
     const requisitiMancanti = REGOLE_PASSWORD.filter((r) => !r.ok(dati.password)).map((r) => t(r.chiave));
@@ -67,6 +74,7 @@ export default function Accedi() {
         telefono: dati.telefono && !/^\d{6,15}$/.test(dati.telefono.trim()) ? t('comune.soloCifre') : '',
     };
 
+    // il pulsante Registrati si attiva solo quando tutti i campi rispettano le regole del backend
     const registrazioneValida =
         dati.nome.trim().length >= 3 &&
         dati.cognome.trim().length >= 3 &&
@@ -80,6 +88,7 @@ export default function Accedi() {
         e.preventDefault();
         setErrore('');
         setInvio(true);
+        // la stessa funzione gestisce login e registrazione, in base alla scheda attiva
         const richiesta =
             scheda === 0
                 ? loginUtente(dati.email.trim(), dati.password)
@@ -97,6 +106,7 @@ export default function Accedi() {
             .finally(() => setInvio(false));
     };
 
+    // amministratore collegato: niente login visitatori, solo il collegamento alla dashboard
     if (admin) {
         return (
             <Container maxWidth="sm" sx={{ mt: { xs: 5, md: 10 } }}>
@@ -122,6 +132,7 @@ export default function Accedi() {
         );
     }
 
+    // visitatore già collegato: collegamenti all'area personale e alle mostre
     if (utente) {
         return (
             <Container maxWidth="sm" sx={{ mt: { xs: 5, md: 10 } }}>
@@ -172,6 +183,7 @@ export default function Accedi() {
                         onSubmit={handleSubmit}
                         sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}
                     >
+                        {/* i campi nome, cognome, telefono e conferma password compaiono solo nella scheda Registrati */}
                         {scheda === 1 && (
                             <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                                 <TextField

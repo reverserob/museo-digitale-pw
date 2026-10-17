@@ -5,6 +5,7 @@ import { createTheme } from '@mui/material';
 const TESTO = '"Manrope Variable", "Manrope", "Segoe UI", system-ui, sans-serif';
 const TITOLI = '"Outfit Variable", "Outfit", "Segoe UI", system-ui, sans-serif';
 
+// Tema scuro di Material UI con l'oro (#c5a059) come colore principale del museo
 export const theme = createTheme({
     palette: {
         mode: 'dark',
@@ -23,5 +24,5 @@ export const theme = createTheme({
         button: { fontFamily: TITOLI, fontWeight: 600, letterSpacing: '0.08em' },
         overline: { fontFamily: TITOLI, letterSpacing: '0.15em' },
     },
-    shape: { borderRadius: 8 },
+    shape: { borderRadius: 8 }, // arrotondamento predefinito di card, campi e pulsanti
 });

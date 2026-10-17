@@ -1,3 +1,4 @@
+// Test del modulo Contatti: visibile solo ai visitatori registrati, validazione e invio
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

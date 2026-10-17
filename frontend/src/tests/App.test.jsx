@@ -1,3 +1,4 @@
+// Test di avvio dell'applicazione completa (header, footer e pagina iniziale)
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import App from '../App';

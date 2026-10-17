@@ -1,3 +1,5 @@
+"""Test degli account dei visitatori: registrazione, login, profilo e reimpostazione della password."""
+
 import models
 from auth import hash_password, verifica_password
 from database import SessionLocal

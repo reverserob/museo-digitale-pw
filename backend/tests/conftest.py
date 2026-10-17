@@ -1,3 +1,5 @@
+"""Configurazione comune dei test pytest: ambiente isolato, database pulito e fixture riutilizzabili."""
+
 import os
 import tempfile
 from datetime import date
@@ -14,6 +16,7 @@ os.environ["DATABASE_URL"] = f"sqlite:///{CARTELLA_TEST / 'test.db'}"
 os.environ["ADMIN_EMAIL"] = "admin@test.it"
 os.environ["ADMIN_PASSWORD"] = "password-test"
 os.environ["SECRET_KEY"] = "chiave-segreta-di-test"
+# credenziali email vuote: nessun invio reale durante i test
 os.environ["SMTP_USER"] = ""
 os.environ["SMTP_PASSWORD"] = ""
 os.environ["BREVO_API_KEY"] = ""
@@ -27,6 +30,7 @@ from main import app  # noqa: E402
 from services.rate_limit_service import limiter  # noqa: E402
 from services.seed_service import inserisci_dati_iniziali  # noqa: E402
 
+# credenziali dell'admin di test, uguali a quelle impostate sopra nell'ambiente
 ADMIN_EMAIL = "admin@test.it"
 ADMIN_PASSWORD = "password-test"
 
@@ -45,6 +49,7 @@ def database_pulito():
     models.Base.metadata.create_all(bind=engine)
     inserisci_dati_iniziali()
     db = SessionLocal()
+    # i feedback di esempio del seed vengono tolti: ogni test crea i propri
     db.query(models.Feedback).delete()
     db.commit()
     db.close()
@@ -71,6 +76,7 @@ def email_finta(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def email_registrazione(monkeypatch):
+    # come email_finta, per l'email di benvenuto dopo la registrazione
     chiamate = []
     monkeypatch.setattr("routers.utenti.invia_email_registrazione", lambda **dati: chiamate.append(dati))
     return chiamate
@@ -78,6 +84,7 @@ def email_registrazione(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def email_gia_registrato(monkeypatch):
+    # email di avviso per il tentativo di registrazione con un'email già usata
     chiamate = []
     monkeypatch.setattr("routers.utenti.invia_email_gia_registrato", lambda **dati: chiamate.append(dati))
     return chiamate
@@ -85,6 +92,7 @@ def email_gia_registrato(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def email_annullamento(monkeypatch):
+    # email di conferma dell'annullamento di una prenotazione
     chiamate = []
     monkeypatch.setattr("routers.utenti.invia_email_annullamento", lambda **dati: chiamate.append(dati))
     return chiamate
@@ -92,6 +100,7 @@ def email_annullamento(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def email_reset(monkeypatch):
+    # email con il link per reimpostare la password
     chiamate = []
     monkeypatch.setattr("routers.utenti.invia_email_reset_password", lambda **dati: chiamate.append(dati))
     return chiamate
@@ -99,11 +108,13 @@ def email_reset(monkeypatch):
 
 @pytest.fixture
 def client():
+    # client HTTP che chiama l'app FastAPI direttamente, senza avviare un server
     return TestClient(app)
 
 
 @pytest.fixture
 def token(client):
+    # token dell'amministratore ottenuto con un vero login
     risposta = client.post("/api/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
     return risposta.json()["access_token"]
 
@@ -115,6 +126,7 @@ def auth(token):
 
 
 def crea_mostra_nel_db(data_inizio, data_fine, titolo="Mostra di test"):
+    """Inserisce una mostra direttamente nel database e ne restituisce l'id."""
     db = SessionLocal()
     mostra = models.Mostra(
         titolo=titolo,
@@ -138,11 +150,13 @@ def mostra_futura():
 
 @pytest.fixture
 def mostra_in_corso():
+    # iniziata nel passato e non ancora finita
     return crea_mostra_nel_db("2000-01-01", "2099-12-31", "Mostra in corso")
 
 
 @pytest.fixture
 def mostra_conclusa():
+    # già terminata: non prenotabile, ma recensibile da chi era prenotato
     return crea_mostra_nel_db("2000-01-01", "2000-02-01", "Mostra conclusa")
 
 

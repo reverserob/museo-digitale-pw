@@ -19,6 +19,8 @@ import useUtente from '../hooks/useUtente';
 import useLingua from '../hooks/useLingua';
 import { getMiePrenotazioni } from '../services/utentiService';
 
+// Pagina di prenotazione (protetta: solo visitatori registrati). Nome, cognome ed email sono quelli
+// dell'account e non si modificano; si può indicare un numero di telefono diverso.
 export default function FormPrenotazione() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -36,6 +38,7 @@ export default function FormPrenotazione() {
     const [successo, setSuccesso] = useState(false);
     const [errore, setErrore] = useState('');
 
+    // carica la mostra e verifica se il visitatore è già prenotato
     useEffect(() => {
         getMostra(id)
             .then(setMostra)
@@ -46,6 +49,7 @@ export default function FormPrenotazione() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
+    // stessa regola del backend: da 6 a 15 cifre
     const isTelefonoValid = /^\d{6,15}$/.test(telefono.trim());
     const isFormValid = Boolean(utente) && isTelefonoValid;
 
@@ -56,6 +60,7 @@ export default function FormPrenotazione() {
         setLoading(true);
         setErrore('');
 
+        // si inviano solo mostra e telefono: gli altri dati il backend li prende dall'account (token)
         const payload = { mostra_id: parseInt(id), telefono: telefono.trim() };
 
         prenota(payload)
@@ -124,6 +129,7 @@ export default function FormPrenotazione() {
                         </Alert>
                     )}
 
+                    {/* tre casi: già prenotato, prenotazione appena confermata, form da compilare */}
                     {giaPrenotato && !successo ? (
                         <Alert
                             severity="info"
@@ -172,6 +178,7 @@ export default function FormPrenotazione() {
                             sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
                         >
                             <Grid container spacing={3}>
+                                {/* dati dell'account in sola lettura */}
                                 {[
                                     [t('comune.nome'), utente?.nome],
                                     [t('comune.cognome'), utente?.cognome],
