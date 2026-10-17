@@ -800,7 +800,7 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 
 **Test del front-end** (cartella `frontend/src/tests/`): montano le pagine in un browser simulato (jsdom) e sostituiscono le risposte del backend con dati finti. Verificano la visualizzazione delle mostre, la validazione dei form, l'invio delle prenotazioni e dei feedback, login e logout dell'area riservata, registrazione e accesso dei visitatori con ritorno alla pagina richiesta, area personale, scelta del token per ogni chiamata, gli indicatori della dashboard, la protezione delle rotte, la pagina 404 e il caricamento delle pagine "lazy".
 
-**Integrazione continua (GitHub Actions)**: il file `.github/workflows/ci.yml` esegue automaticamente, a ogni push e pull request, linter, controllo della formattazione e test di entrambe le parti, oltre alla build di produzione del front-end. Il back-end viene verificato con due versioni di Python. Se un controllo fallisce, GitHub lo segnala accanto al commit, impedendo che un errore passi inosservato.
+**Integrazione continua (GitHub Actions)**: il file `.github/workflows/ci.yml` esegue automaticamente, a ogni push e pull request, linter, controllo della formattazione e test di entrambe le parti, oltre alla build di produzione del front-end. Il back-end viene verificato con tre versioni di Python (3.9, 3.12 e 3.15). Se un controllo fallisce, GitHub lo segnala accanto al commit, impedendo che un errore passi inosservato.
 
 **Documentazione generata dal codice.** Tutti i file del progetto sono commentati in italiano e i commenti sono scritti in un formato che permette di trasformarli in pagine di documentazione:
 - **back-end**: docstring in stile Google, con le sezioni *Args*, *Returns* e *Raises* (per gli endpoint sono elencati i codici HTTP di errore, e la prima riga indica metodo e percorso, es. `POST /api/prenota`). Il sito è generato con **MkDocs** (tema Material) e **mkdocstrings**, che legge i docstring senza eseguire il codice e crea una pagina per router, servizi, modelli, schemi e autenticazione, con il collegamento al codice sorgente;
@@ -962,7 +962,7 @@ Nella sezione delle opinioni l'amministratore legge ed elimina i feedback, ma no
 
 ### 13. Istruzioni per l'esecuzione
 #### 13.1. Prerequisiti
-- Python 3.9 o successivo
+- Python 3.9 o successivo (il progetto è verificato fino alla 3.15)
 - Node.js 20 o successivo (con npm)
 - Git
 
@@ -1035,7 +1035,7 @@ L'applicazione è pubblicata con due servizi separati, coerentemente con l'archi
 - **Back-end** su Render: `museo-digitale-pw.onrender.com`
 - **Documentazione** su GitHub Pages: [reverserob.github.io/museo-digitale-pw](https://reverserob.github.io/museo-digitale-pw/)
 
-Su Render le variabili d'ambiente (SECRET_KEY, credenziali dell'amministratore, BREVO_API_KEY ed EMAIL_MITTENTE, CORS_ORIGINS, PYTHON_VERSION) sono impostate dal pannello Environment del servizio. Il backend viene avviato con il comando `uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'`, che permette al server di conoscere l'indirizzo IP reale dei visitatori (necessario per il limite ai tentativi di login). Le versioni delle librerie Python sono fissate in `requirements.txt`, così il server installa sempre le stesse versioni verificate in locale.
+Su Render le variabili d'ambiente (SECRET_KEY, credenziali dell'amministratore, BREVO_API_KEY ed EMAIL_MITTENTE, CORS_ORIGINS, PYTHON_VERSION) sono impostate dal pannello Environment del servizio. Il backend viene avviato con il comando `uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'`, che permette al server di conoscere l'indirizzo IP reale dei visitatori (necessario per il limite ai tentativi di login). In `requirements.txt` le librerie Python sono indicate con intervalli di versioni compatibili (ad esempio `pydantic>=2.11,<3`) invece che con versioni esatte: pip sceglie la versione più recente adatta al Python installato, così il progetto funziona dalla 3.9 fino alle versioni più recenti (verificato nella CI con 3.9, 3.12 e 3.15). Il limite superiore esclude le future versioni principali, che potrebbero introdurre modifiche incompatibili.
 
 ### 15. Limiti e sviluppi futuri
 #### 15.1. Limiti della soluzione attuale

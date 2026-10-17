@@ -1,6 +1,6 @@
 # Ruff CONFIG
 line-length = 120
-target-version = "py39"
+target-version = "py39"  # la versione più vecchia supportata: il codice deve funzionare anche lì
 extend-exclude = ["venv"]
 src = ["."]
 

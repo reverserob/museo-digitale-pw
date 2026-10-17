@@ -125,7 +125,7 @@ GitHub Pages (requisito una tantum: *Settings → Pages → Source: GitHub Actio
 
 #### Integrazione continua (GitHub Actions)
 A ogni push su `main` e a ogni pull request il workflow `.github/workflows/ci.yml` esegue ruff e pytest sul backend
-(Python 3.9 e 3.12), ESLint, Prettier, Vitest e la build sul frontend e controlla che la documentazione
+(Python 3.9, 3.12 e 3.15), ESLint, Prettier, Vitest e la build sul frontend e controlla che la documentazione
 si generi senza errori (JSDoc, schema OpenAPI e `mkdocs build --strict`). L'esito si vede nella scheda
 **Actions** del repository e nel badge in cima a questo file.
 

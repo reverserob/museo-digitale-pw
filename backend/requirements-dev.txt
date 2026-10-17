@@ -1,5 +1,6 @@
+# Strumenti per test e controllo del codice (oltre alle librerie del backend)
 -r requirements.txt
-httpx==0.28.1
-pytest==8.4.2
+httpx>=0.28,<1
+pytest>=8.3,<10
+# ruff resta fissato: versioni diverse formattano il codice in modo leggermente diverso
 ruff==0.17.0
-

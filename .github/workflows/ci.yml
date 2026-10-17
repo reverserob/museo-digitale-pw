@@ -14,8 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # 3.9 = versione usata in locale, 3.12 = versione recente (come sul server)
-        python-version: ["3.9", "3.12"]
+        # il backend deve funzionare con qualsiasi Python dalla 3.9 in poi:
+        # 3.9 = la più vecchia supportata, 3.12 = come sul server, 3.15 = la più recente
+        python-version: ["3.9", "3.12", "3.15"]
     defaults:
       run:
         working-directory: backend
@@ -27,6 +28,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
           cache: pip
           cache-dependency-path: backend/requirements*.txt
 
