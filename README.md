@@ -7,7 +7,13 @@
 ### PW 2 Digitalizzazione dei processi aziendali in un’impresa culturale:
 Progettazione di una piattaforma informatica per la gestione di servizi, dati e utenti
 
-📄 **Relazione tecnica completa** (contesto, processo AS-IS/TO-BE, architettura, diagrammi UML ed ER, API, test funzionali, sviluppi futuri): [DOCUMENTATION.md](DOCUMENTATION.md)
+**Relazione tecnica completa** (contesto, processo AS-IS/TO-BE, architettura, diagrammi UML ed ER, API, test funzionali, sviluppi futuri): [DOCUMENTATION.md](DOCUMENTATION.md)
+
+### Documentazione
+1. https://github.com/reverserob/museo-digitale-pw/blob/main/DOCUMENTATION.md
+
+## Guida al Progetto
+1. https://reverserob.github.io/museo-digitale-pw/
 
 #### Funzionalità
 - Catalogo delle mostre con galleria di immagini
