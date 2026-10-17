@@ -8,12 +8,16 @@
     "data_inizio": "2026-10-10",
     "data_fine": "2027-01-15",
     "feedback": [
-      { "nome": "Giulia", "voto": 5, "commento": "Fantastica mostra, super interessante" }
+      {
+        "nome": "Giulia",
+        "voto": 5,
+        "commento": "Fantastica mostra, super interessante"
+      }
     ]
   },
   {
     "titolo": "Leonardo: Il Codice Atlantico",
-    "descrizione": "Esposizione esclusiva dei disegni tecnici di Leonardo da Vinci.",
+    "descrizione": "Il Codice Atlantico è la più vasta raccolta di disegni e scritti di Leonardo da Vinci: oltre mille fogli realizzati in circa quarant'anni, dal 1478 al 1519, e conservati alla Biblioteca Ambrosiana di Milano. Il nome deriva dal grande formato dei fogli, simile a quello degli atlanti, su cui alla fine del Cinquecento lo scultore Pompeo Leoni incollò i disegni. La mostra accompagna il visitatore nel laboratorio mentale di Leonardo attraverso le riproduzioni dei fogli più celebri: macchine per il volo, studi di idraulica e di meccanica, congegni militari, progetti di architettura e appunti di matematica, scritti con la sua caratteristica grafia speculare. Un percorso che mostra come arte, scienza e tecnica fossero per lui un unico modo di conoscere il mondo.",
     "immagini": [
       "/static/uploads/leonardo-da-vinci.webp",
       "/static/uploads/leonardo-alle-pmi.webp",
@@ -39,5 +43,32 @@
     ],
     "data_inizio": "2026-12-01",
     "data_fine": "2027-04-30"
+  },
+  {
+    "titolo": "Van Gogh: la Notte stellata e il colore",
+    "descrizione": "Vincent van Gogh realizzò oltre duemila opere in appena dieci anni di attività, trasformando il colore in emozione. Il cuore della mostra è la Notte stellata, dipinta nel giugno 1889 dalla finestra della casa di cura di Saint-Rémy-de-Provence: un cielo in movimento, attraversato da vortici di luce, sopra un piccolo villaggio addormentato e un cipresso che sale come una fiamma. Il percorso ricostruisce la vita dell'artista, dagli inizi nei Paesi Bassi agli anni in Provenza, e racconta la sua tecnica fatta di pennellate dense e materiche e di colori complementari accostati con audacia, con le lettere al fratello Theo come filo conduttore.",
+    "immagini": [
+      "/static/uploads/van-gogh-notte-stellata.webp"
+    ],
+    "data_inizio": "2026-09-15",
+    "data_fine": "2027-02-28"
+  },
+  {
+    "titolo": "Hokusai: la Grande onda",
+    "descrizione": "Katsushika Hokusai è il più celebre maestro giapponese delle stampe ukiyo-e, le \"immagini del mondo fluttuante\". La mostra è dedicata alla Grande onda di Kanagawa, la xilografia realizzata intorno al 1830 per la serie Trentasei vedute del Monte Fuji: un'onda gigantesca che sta per abbattersi sulle barche dei pescatori, mentre il Fuji appare piccolo e immobile sullo sfondo. Il percorso spiega come nasceva una stampa, dal disegno dell'artista all'intaglio delle matrici di legno fino alla stampa a colori, e racconta l'influenza che queste opere ebbero sugli impressionisti europei, da Monet a Van Gogh.",
+    "immagini": [
+      "/static/uploads/hokusai-grande-onda.webp"
+    ],
+    "data_inizio": "2026-11-15",
+    "data_fine": "2027-03-31"
+  },
+  {
+    "titolo": "Munch: l'Urlo e l'anima moderna",
+    "descrizione": "Edvard Munch, pittore norvegese, ha dato forma alle inquietudini dell'uomo moderno. La mostra ruota intorno all'Urlo, l'immagine che l'artista realizzò in più versioni a partire dal 1893, tra dipinti, pastelli e litografie: una figura sul ponte, le mani sul volto, sotto un cielo rosso infuocato che sembra vibrare insieme al paesaggio. Il percorso presenta il ciclo del Fregio della vita, con i temi dell'amore, dell'angoscia e della morte, e mostra come le linee ondulate e i colori non naturalistici di Munch abbiano aperto la strada all'Espressionismo.",
+    "immagini": [
+      "/static/uploads/munch-urlo.webp"
+    ],
+    "data_inizio": "2027-01-20",
+    "data_fine": "2027-05-31"
   }
 ]

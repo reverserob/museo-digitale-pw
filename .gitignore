@@ -34,6 +34,9 @@ backend/static/uploads/*
 !backend/static/uploads/leonardo-alle-pmi.webp
 !backend/static/uploads/leonardo-da-vinci-3.webp
 !backend/static/uploads/monet.webp
+!backend/static/uploads/van-gogh-notte-stellata.webp
+!backend/static/uploads/hokusai-grande-onda.webp
+!backend/static/uploads/munch-urlo.webp
 !backend/static/uploads/salvador-dali-.webp
 
 # documentazione generata
