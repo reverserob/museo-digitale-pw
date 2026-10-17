@@ -4,6 +4,7 @@ Le email partono con l'API HTTPS di Brevo se è impostata BREVO_API_KEY, altrime
 Se nessuno dei due è configurato (es. in locale) l'invio viene saltato e annotato nel log.
 """
 
+import base64
 import html
 import json
 import logging
@@ -11,6 +12,7 @@ import smtplib
 import urllib.error
 import urllib.request
 from datetime import date
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
@@ -37,17 +39,53 @@ def _layout(contenuto: str) -> str:
 # --- Modelli HTML delle email ---
 
 
-def crea_html_conferma(nome: str, titolo_mostra: str, data_inizio: date, data_fine: date) -> str:
+def crea_html_conferma(
+    nome: str,
+    titolo_mostra: str,
+    data_inizio: date,
+    data_fine: date,
+    codice: Optional[str] = None,
+    url_qr: Optional[str] = None,
+) -> str:
+    """Email di conferma della prenotazione, con codice di riferimento e QR code da mostrare all'ingresso.
+
+    Args:
+        nome: Nome del visitatore.
+        titolo_mostra: Titolo della mostra prenotata.
+        data_inizio: Data di apertura della mostra.
+        data_fine: Data di chiusura della mostra.
+        codice: Codice della prenotazione (es. `MCD-7K3F-9QXA`).
+        url_qr: Indirizzo pubblico dell'immagine del QR code; se manca il QR è solo in allegato.
+
+    Returns:
+        Il corpo HTML dell'email.
+    """
     # i dati inseriti dall'utente vengono "escapati" prima di finire nell'HTML
     nome_html = html.escape(nome)
     titolo_html = html.escape(titolo_mostra)
+    blocco_codice = ""
+    if codice:
+        immagine = (
+            f'<img src="{html.escape(url_qr, quote=True)}" width="200" height="200" alt="QR code della prenotazione" '
+            f'style="display: block; margin: 15px auto; background: #fff; padding: 8px;">'
+            if url_qr
+            else ""
+        )
+        blocco_codice = f"""
+            <div style="background: #1a1a1a; padding: 20px; border: 1px solid #c5a059; margin: 20px 0; text-align: center;">
+                <p style="margin: 0; color: #aaa; font-size: 13px; letter-spacing: 2px;">CODICE PRENOTAZIONE</p>
+                <p style="margin: 8px 0 0 0; color: #c5a059; font-size: 26px; font-weight: bold; letter-spacing: 3px;">{html.escape(codice)}</p>
+                {immagine}
+                <p style="margin: 10px 0 0 0; color: #ccc; font-size: 13px;">Mostra all'ingresso il QR code (lo trovi anche in allegato)
+                oppure comunica il codice: il personale verificherà la tua prenotazione.</p>
+            </div>"""
     return _layout(f"""
             <p style="color: #fff;">Gentile <b>{nome_html}</b>,</p>
             <p style="color: #ddd;">La tua prenotazione è andata a buon fine! Ti aspettiamo per l'esposizione:</p>
             <div style="background: #1a1a1a; padding: 15px; border-left: 4px solid #c5a059; margin: 20px 0;">
                 <h3 style="margin: 0 0 10px 0; color: #c5a059;">{titolo_html}</h3>
                 <p style="margin: 0; color: #ccc;"><b>Periodo:</b> Dal {data_inizio} al {data_fine}</p>
-            </div>
+            </div>{blocco_codice}
     """)
 
 
@@ -102,8 +140,17 @@ def crea_html_reset_password(nome: str, link: str, minuti: int) -> str:
 # --- Canali di invio ---
 
 
+# allegato di un'email: (nome del file, contenuto)
+Allegato = tuple[str, bytes]
+
+
 def invia_con_brevo(
-    destinatario: str, nome: str, oggetto: str, html_content: str, rispondi_a: Optional[str] = None
+    destinatario: str,
+    nome: str,
+    oggetto: str,
+    html_content: str,
+    rispondi_a: Optional[str] = None,
+    allegati: Optional[list[Allegato]] = None,
 ) -> None:
     # API di Brevo: una richiesta HTTPS (porta 443), quindi funziona anche dove SMTP è bloccato
     dati = {
@@ -115,6 +162,12 @@ def invia_con_brevo(
     if rispondi_a:
         # "Rispondi" nel programma di posta scrive direttamente a chi ha inviato la richiesta
         dati["replyTo"] = {"email": rispondi_a}
+    if allegati:
+        # Brevo vuole il contenuto dei file codificato in Base64
+        dati["attachment"] = [
+            {"name": nome_file, "content": base64.b64encode(contenuto).decode("ascii")}
+            for nome_file, contenuto in allegati
+        ]
     richiesta = urllib.request.Request(
         BREVO_URL,
         data=json.dumps(dati).encode("utf-8"),
@@ -135,7 +188,13 @@ def invia_con_brevo(
         raise RuntimeError(f"Brevo ha risposto {e.code}: {dettaglio}") from e
 
 
-def invia_con_smtp(destinatario: str, oggetto: str, html_content: str, rispondi_a: Optional[str] = None) -> None:
+def invia_con_smtp(
+    destinatario: str,
+    oggetto: str,
+    html_content: str,
+    rispondi_a: Optional[str] = None,
+    allegati: Optional[list[Allegato]] = None,
+) -> None:
     # alternativa a Brevo: invio tramite un server SMTP (es. Gmail con password per le app)
     msg = MIMEMultipart()
     msg["From"] = settings.SMTP_USER
@@ -144,6 +203,11 @@ def invia_con_smtp(destinatario: str, oggetto: str, html_content: str, rispondi_
     if rispondi_a:
         msg["Reply-To"] = rispondi_a
     msg.attach(MIMEText(html_content, "html"))
+    for nome_file, contenuto in allegati or []:
+        # gli allegati delle email del museo sono immagini PNG (QR code)
+        parte = MIMEImage(contenuto, _subtype="png")
+        parte.add_header("Content-Disposition", "attachment", filename=nome_file)
+        msg.attach(parte)
 
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as server:
         server.starttls()  # cifra la connessione prima di inviare le credenziali
@@ -160,7 +224,14 @@ def email_configurata() -> bool:
     return bool(settings.BREVO_API_KEY) or bool(settings.SMTP_USER and settings.SMTP_PASSWORD)
 
 
-def _invia(destinatario: str, nome: str, oggetto: str, html_content: str, rispondi_a: Optional[str] = None) -> bool:
+def _invia(
+    destinatario: str,
+    nome: str,
+    oggetto: str,
+    html_content: str,
+    rispondi_a: Optional[str] = None,
+    allegati: Optional[list[Allegato]] = None,
+) -> bool:
     """Invia un'email con Brevo (se configurato) o con SMTP.
 
     Non solleva eccezioni: un errore di invio viene solo registrato nel log.
@@ -171,6 +242,7 @@ def _invia(destinatario: str, nome: str, oggetto: str, html_content: str, rispon
         oggetto: Oggetto dell'email.
         html_content: Corpo HTML.
         rispondi_a: Indirizzo per "Rispondi" (facoltativo).
+        allegati: File da allegare, come coppie (nome, contenuto).
 
     Returns:
         True se l'email è partita.
@@ -181,9 +253,9 @@ def _invia(destinatario: str, nome: str, oggetto: str, html_content: str, rispon
         return False
     try:
         if usa_brevo:
-            invia_con_brevo(destinatario, nome, oggetto, html_content, rispondi_a)
+            invia_con_brevo(destinatario, nome, oggetto, html_content, rispondi_a, allegati)
         else:
-            invia_con_smtp(destinatario, oggetto, html_content, rispondi_a)
+            invia_con_smtp(destinatario, oggetto, html_content, rispondi_a, allegati)
         logger.info(f"Email '{oggetto}' inviata a {destinatario} tramite {'Brevo' if usa_brevo else 'SMTP'}")
         return True
     # un errore di invio non deve mai far fallire l'operazione principale (prenotazione, registrazione...)
@@ -219,9 +291,41 @@ def invia_email_contatto(dati: dict) -> bool:
 
 
 # Email di conferma della prenotazione (eseguita in background dopo la risposta)
-def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, data_inizio: date, data_fine: date):
+def invia_email_background(
+    destinatario: str,
+    nome: str,
+    titolo_mostra: str,
+    data_inizio: date,
+    data_fine: date,
+    codice: Optional[str] = None,
+    url_backend: Optional[str] = None,
+):
+    """Invia la conferma della prenotazione con codice di riferimento e QR code.
+
+    Il QR code è sia nel corpo dell'email (immagine servita dal backend) sia in allegato PNG,
+    così resta disponibile anche se il programma di posta blocca le immagini esterne.
+
+    Args:
+        destinatario: Email del visitatore.
+        nome: Nome del visitatore.
+        titolo_mostra: Titolo della mostra.
+        data_inizio: Data di apertura della mostra.
+        data_fine: Data di chiusura della mostra.
+        codice: Codice della prenotazione.
+        url_backend: Indirizzo pubblico del backend, per l'immagine del QR code nel corpo dell'email.
+    """
+    # import qui: prenotazioni_service usa i modelli, che non servono alle altre email
+    from services.prenotazioni_service import genera_qr_png
+
     oggetto = f"Conferma Prenotazione: {titolo_mostra}"
-    _invia(destinatario, nome, oggetto, crea_html_conferma(nome, titolo_mostra, data_inizio, data_fine))
+    allegati = None
+    url_qr = None
+    if codice:
+        allegati = [(f"prenotazione-{codice}.png", genera_qr_png(codice))]
+        if url_backend:
+            url_qr = f"{url_backend.rstrip('/')}/api/prenotazioni/qr/{codice}"
+    html_content = crea_html_conferma(nome, titolo_mostra, data_inizio, data_fine, codice, url_qr)
+    _invia(destinatario, nome, oggetto, html_content, allegati=allegati)
 
 
 # Email di conferma dell'annullamento di una prenotazione

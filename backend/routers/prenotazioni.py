@@ -1,18 +1,26 @@
-"""API delle prenotazioni: creazione da parte dei visitatori ed elenco per l'amministratore."""
+"""API delle prenotazioni: creazione da parte dei visitatori, elenco e verifica all'ingresso per l'amministratore."""
 
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 import models
 import schemas
+import settings
 from auth import richiedi_admin, richiedi_utente
 from database import get_db
 from services.email_service import invia_email_background
 from services.mostre_service import trova_mostra
+from services.prenotazioni_service import (
+    genera_codice,
+    genera_qr_png,
+    normalizza_codice,
+    stato_ingresso,
+    trova_per_codice_o_id,
+)
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -23,13 +31,14 @@ router = APIRouter(prefix="/api", tags=["Prenotazioni"])
 @router.post("/prenota", status_code=status.HTTP_201_CREATED)
 def crea_prenotazione(
     dati: schemas.PrenotazioneCreate,
+    request: Request,
     # FastAPI fornisce una coda di attività da eseguire dopo aver inviato la risposta
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     # il visitatore viene ricavato dal token: non può prenotare a nome di altri
     utente: models.Utente = Depends(richiedi_utente),
 ):
-    """`POST /api/prenota` · Salva la prenotazione con i dati dell'account e invia l'email di conferma in background.
+    """`POST /api/prenota` · Salva la prenotazione con un codice di riferimento e invia l'email di conferma con il QR code.
 
     Raises:
         HTTPException: 400 se la mostra è conclusa; 401 senza token visitatore;
@@ -61,6 +70,8 @@ def crea_prenotazione(
             cognome=utente.cognome,
             email=utente.email,
             telefono=dati.telefono or utente.telefono,
+            # codice casuale e unico da mostrare all'ingresso (anche sotto forma di QR code)
+            codice=genera_codice(db),
         )
         db.add(prenotazione)
         db.commit()
@@ -82,8 +93,11 @@ def crea_prenotazione(
         titolo_mostra=mostra.titolo,
         data_inizio=mostra.data_inizio,
         data_fine=mostra.data_fine,
+        codice=prenotazione.codice,
+        # indirizzo del backend per l'immagine del QR code nell'email
+        url_backend=settings.BACKEND_URL or str(request.base_url),
     )
-    return {"message": "Prenotazione effettuata con successo!", "id": prenotazione.id}
+    return {"message": "Prenotazione effettuata con successo!", "id": prenotazione.id, "codice": prenotazione.codice}
 
 
 # GET /api/prenotazioni (solo amministratore)
@@ -98,3 +112,111 @@ def leggi_prenotazioni(
     if mostra_id is not None:
         query = query.filter(models.Prenotazione.mostra_id == mostra_id)
     return query.order_by(models.Prenotazione.creata_il.desc()).all()
+
+
+# GET /api/prenotazioni/qr/{codice} (pubblica: è l'immagine inserita nell'email e nell'area personale)
+@router.get(
+    "/prenotazioni/qr/{codice}",
+    response_class=Response,
+    responses={200: {"content": {"image/png": {}}, "description": "Immagine PNG del QR code"}},
+)
+def qr_prenotazione(codice: str, db: Session = Depends(get_db)):
+    """`GET /api/prenotazioni/qr/{codice}` · Immagine PNG del QR code di una prenotazione.
+
+    Il QR code contiene solo l'indirizzo della pagina di verifica dell'area riservata, nessun dato personale;
+    il codice è casuale e non si può indovinare.
+
+    Raises:
+        HTTPException: 404 se il codice non corrisponde a nessuna prenotazione.
+    """
+    normalizzato = normalizza_codice(codice)
+    trovata = (
+        normalizzato is not None
+        and db.query(models.Prenotazione.id).filter(models.Prenotazione.codice == normalizzato).first() is not None
+    )
+    if not trovata:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prenotazione non trovata.")
+    # il QR di un codice non cambia mai: il browser e i programmi di posta possono tenerlo in cache
+    return Response(
+        content=genera_qr_png(normalizzato),
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+def _risultato_verifica(prenotazione: models.Prenotazione) -> dict:
+    """Dati mostrati al personale: prenotazione, mostra e stato dell'ingresso."""
+    mostra = prenotazione.mostra
+    return {
+        "id": prenotazione.id,
+        "mostra_id": prenotazione.mostra_id,
+        "nome": prenotazione.nome,
+        "cognome": prenotazione.cognome,
+        "email": prenotazione.email,
+        "telefono": prenotazione.telefono,
+        "creata_il": prenotazione.creata_il,
+        "codice": prenotazione.codice,
+        "ingresso_il": prenotazione.ingresso_il,
+        "titolo_mostra": mostra.titolo,
+        "data_inizio": mostra.data_inizio,
+        "data_fine": mostra.data_fine,
+        "stato": stato_ingresso(prenotazione, date.today()),
+    }
+
+
+def _trova_o_404(db: Session, riferimento: str) -> models.Prenotazione:
+    """Prenotazione dal codice o dal numero; 404 se non esiste."""
+    prenotazione = trova_per_codice_o_id(db, riferimento)
+    if prenotazione is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nessuna prenotazione trovata con questo codice.",
+        )
+    return prenotazione
+
+
+# GET /api/prenotazioni/verifica/{riferimento} (solo amministratore)
+@router.get("/prenotazioni/verifica/{riferimento}", response_model=schemas.VerificaPrenotazioneResponse)
+def verifica_prenotazione(
+    riferimento: str,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(richiedi_admin),
+):
+    """`GET /api/prenotazioni/verifica/{riferimento}` · Verifica una prenotazione all'ingresso del museo.
+
+    Il riferimento può essere il codice (`MCD-7K3F-9QXA`, anche scritto in minuscolo o senza trattini)
+    oppure il numero della prenotazione. Lo stato indica se il visitatore può entrare oggi.
+
+    Raises:
+        HTTPException: 401 senza token admin; 404 se la prenotazione non esiste.
+    """
+    return _risultato_verifica(_trova_o_404(db, riferimento))
+
+
+# POST /api/prenotazioni/verifica/{riferimento}/ingresso (solo amministratore)
+@router.post("/prenotazioni/verifica/{riferimento}/ingresso", response_model=schemas.VerificaPrenotazioneResponse)
+def registra_ingresso(
+    riferimento: str,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(richiedi_admin),
+):
+    """`POST /api/prenotazioni/verifica/{riferimento}/ingresso` · Registra l'ingresso del visitatore.
+
+    Ogni prenotazione vale per un solo ingresso, e solo mentre la mostra è aperta.
+
+    Raises:
+        HTTPException: 400 se la mostra non è ancora iniziata o è conclusa; 401 senza token admin;
+            404 se la prenotazione non esiste; 409 se l'ingresso è già stato registrato.
+    """
+    prenotazione = _trova_o_404(db, riferimento)
+    stato = stato_ingresso(prenotazione, date.today())
+    if stato == "gia_entrato":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="L'ingresso è già stato registrato.")
+    if stato == "non_iniziata":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra non è ancora iniziata.")
+    if stato == "conclusa":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra è già conclusa.")
+    prenotazione.ingresso_il = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.commit()
+    db.refresh(prenotazione)
+    return _risultato_verifica(prenotazione)

@@ -45,6 +45,10 @@ class Prenotazione(Base):
     creata_il = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     # account che ha prenotato: se l'account viene eliminato il campo diventa NULL (aggregazione)
     utente_id = Column(Integer, ForeignKey("utenti.id", ondelete="SET NULL"), nullable=True, index=True)
+    # codice di riferimento inviato per email (es. MCD-7K3F-9QXA): unico, usato con il QR code per la verifica
+    codice = Column(String(20), unique=True, index=True, nullable=True)
+    # data e ora (UTC) in cui il personale ha registrato l'ingresso del visitatore; NULL = non ancora entrato
+    ingresso_il = Column(DateTime, nullable=True)
     mostra = relationship("Mostra", back_populates="prenotazioni")
     utente = relationship("Utente", back_populates="prenotazioni")
 

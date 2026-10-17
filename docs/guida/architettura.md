@@ -46,13 +46,14 @@ backend/
 │   ├── login.py            → POST /api/login (amministratore)
 │   ├── utenti.py           → registrazione, login, profilo e prenotazioni dei visitatori (/api/utenti)
 │   ├── mostre.py           → CRUD delle mostre (/api/mostre)
-│   ├── prenotazioni.py     → POST /api/prenota (una per mostra), GET /api/prenotazioni
+│   ├── prenotazioni.py     → POST /api/prenota (una per mostra, con codice), GET /api/prenotazioni, QR code, verifica e ingresso
 │   ├── feedback.py         → POST, GET e DELETE /api/feedback
 │   ├── statistiche.py      → GET /api/statistiche (indicatori della dashboard)
 │   └── contatti.py         → POST /api/contatti (modulo Contatti, invio email al museo)
 ├── services/
 │   ├── mostre_service.py   → ricerca di una mostra e controllo delle date (usato da più router)
-│   ├── email_service.py    → email di conferma (API Brevo o SMTP)
+│   ├── email_service.py    → email di conferma (API Brevo o SMTP), con QR code in allegato
+│   ├── prenotazioni_service.py → codice di prenotazione, QR code (libreria segno) e stato dell'ingresso
 │   ├── immagini_service.py → validazione e salvataggio delle immagini caricate
 │   ├── statistiche_service.py → calcolo degli indicatori per la dashboard
 │   ├── rate_limit_service.py → limite ai tentativi di login (slowapi)
@@ -78,7 +79,7 @@ frontend/src/
 ├── App.jsx                → tema, router con le pagine di config/routes.json, header e footer
 ├── config/routes.json     → elenco delle rotte (percorso, pagina, protezione)
 ├── pages/                 → una pagina per ogni rotta
-├── components/            → header (con IconaMuseo), footer, sezione feedback, indicatori, ProtectedRoute, ErrorBoundary
+├── components/            → header (con IconaMuseo), footer, sezione feedback, indicatori, QrPrenotazione, ProtectedRoute, ErrorBoundary
 ├── services/              → chiamate HTTP al backend (axios) e gestione dei token
 ├── hooks/                 → useUtente, useAdmin, useLingua
 ├── i18n/                  → testi in italiano e inglese, funzioni di traduzione
@@ -126,6 +127,8 @@ erDiagram
         string email "copiata dall'account"
         string telefono "6-15 cifre"
         datetime creata_il "UTC"
+        string codice "unico, es. MCD-7K3F-9QXA"
+        datetime ingresso_il "UTC, NULL se non ancora entrato"
     }
     FEEDBACK {
         int id PK
@@ -148,7 +151,7 @@ erDiagram
 
 **Vincoli applicativi**: i dati inseriti dagli utenti vengono validati a livello di schema (Pydantic con espressioni regolari e validatori personalizzati) prima di essere salvati. Non è possibile prenotare una mostra già conclusa, né lasciare un feedback su una mostra non ancora iniziata.
 
-**Aggiornamento dei database esistenti**: `create_all` crea le tabelle nuove ma non aggiunge colonne a quelle già presenti. All'avvio `migrazioni_service.py` controlla lo schema e, se manca, aggiunge la colonna `utente_id` alle tabelle `prenotazioni` e `feedback` con `ALTER TABLE`, così un `museo.db` creato con la versione precedente continua a funzionare senza perdere dati.
+**Aggiornamento dei database esistenti**: `create_all` crea le tabelle nuove ma non aggiunge colonne a quelle già presenti. All'avvio `migrazioni_service.py` controlla lo schema e, se manca, aggiunge la colonna `utente_id` alle tabelle `prenotazioni` e `feedback` e le colonne `codice` e `ingresso_il` alla tabella `prenotazioni` con `ALTER TABLE`; alle prenotazioni già presenti assegna un codice e crea l'indice unico sulla colonna. Così un `museo.db` creato con una versione precedente continua a funzionare senza perdere dati.
 
 **Indicatori**: i dati delle tabelle mostre, prenotazioni e feedback alimentano la dashboard. Il servizio `statistiche_service.py` calcola i conteggi con query di aggregazione (`COUNT` e `AVG` raggruppati per mostra con `GROUP BY`), invece di caricare in memoria tutte le righe.
 
@@ -184,11 +187,11 @@ sequenceDiagram
             API-->>FE: 404 oppure 400
             FE-->>V: Alert con l'errore
         else Mostra prenotabile
-            API->>DB: INSERT prenotazione (dati dell'account) + COMMIT
+            API->>DB: INSERT prenotazione (dati dell'account + codice MCD-XXXX-XXXX) + COMMIT
             API->>BG: add_task(invia_email_background)
             API-->>FE: 201 Created
-            FE-->>V: "Prenotazione confermata"
-            BG->>EM: Invio email HTML di riepilogo
+            FE-->>V: "Prenotazione confermata" con codice e QR code
+            BG->>EM: Invio email con codice e QR code (anche in allegato PNG)
             EM-->>V: Email nella casella del visitatore
         end
     end
@@ -229,5 +232,37 @@ sequenceDiagram
             API-->>FE: Dati in JSON
             FE-->>A: Indicatori, elenco mostre, prenotazioni e feedback
         end
+    end
+```
+
+## Sequenza: verifica della prenotazione all'ingresso
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor V as Visitatore
+    actor P as Personale del museo
+    participant FE as Front-end React
+    participant API as FastAPI (router prenotazioni)
+    participant DB as SQLite
+
+    V->>P: Mostra il QR code (o comunica il codice MCD-XXXX-XXXX)
+    P->>FE: Inquadra il QR: apre /admin/verifica?codice=...
+    alt Personale non collegato
+        FE-->>P: Pagina di login (next = pagina di verifica)
+        P->>FE: Accede come amministratore
+    end
+    FE->>API: GET /api/prenotazioni/verifica/{codice} (token admin)
+    API->>DB: SELECT prenotazione WHERE codice = ...
+    alt Codice inesistente
+        API-->>FE: 404 Nessuna prenotazione trovata
+    else Prenotazione trovata
+        API-->>FE: Dati del visitatore e della mostra + stato
+        FE-->>P: "Prenotazione valida" (oppure già usata, mostra non iniziata o conclusa)
+        P->>FE: Registra ingresso
+        FE->>API: POST /api/prenotazioni/verifica/{codice}/ingresso
+        API->>DB: UPDATE ingresso_il = ora attuale
+        API-->>FE: 200 (un secondo tentativo riceve 409)
+        FE-->>P: "Ingresso registrato"
     end
 ```

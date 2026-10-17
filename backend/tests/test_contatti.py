@@ -97,7 +97,7 @@ def test_email_contatto_va_alla_casella_configurata_con_rispondi_a(monkeypatch):
     monkeypatch.setattr(settings, "CONTATTI_EMAIL", "museo@test.it")
     monkeypatch.setattr(email_service, "invia_con_brevo", lambda *argomenti: chiamate.append(argomenti))
     assert email_service.invia_email_contatto({**DATI, "email": "mario.rossi@test.it"}) is True
-    destinatario, _nome, oggetto, _html, rispondi_a = chiamate[0]
+    destinatario, _nome, oggetto, _html, rispondi_a, _allegati = chiamate[0]
     assert destinatario == "museo@test.it"
     assert oggetto == "[Contatti] Visite per scuole"
     assert rispondi_a == "mario.rossi@test.it"

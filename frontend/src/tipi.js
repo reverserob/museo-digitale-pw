@@ -50,6 +50,27 @@
  * @property {string} email Email del visitatore.
  * @property {string} telefono Telefono indicato nella prenotazione.
  * @property {string} creata_il Data e ora della prenotazione (UTC).
+ * @property {string} codice Codice di riferimento da mostrare all'ingresso (es. `MCD-7K3F-9QXA`).
+ * @property {?string} ingresso_il Data e ora (UTC) dell'ingresso registrato dal personale, `null` se non ancora entrato.
+ */
+
+/**
+ * Risultato della verifica di una prenotazione all'ingresso (`GET /api/prenotazioni/verifica/{riferimento}`).
+ *
+ * @typedef {object} VerificaPrenotazione
+ * @property {number} id Identificativo della prenotazione.
+ * @property {string} codice Codice di riferimento.
+ * @property {string} nome Nome del visitatore.
+ * @property {string} cognome Cognome del visitatore.
+ * @property {string} email Email del visitatore.
+ * @property {string} telefono Telefono del visitatore.
+ * @property {string} creata_il Data e ora della prenotazione (UTC).
+ * @property {?string} ingresso_il Data e ora dell'ingresso, `null` se non ancora entrato.
+ * @property {number} mostra_id Mostra prenotata.
+ * @property {string} titolo_mostra Titolo della mostra.
+ * @property {string} data_inizio Data di apertura della mostra.
+ * @property {string} data_fine Data di chiusura della mostra.
+ * @property {('valida'|'gia_entrato'|'non_iniziata'|'conclusa')} stato Se il visitatore può entrare oggi.
  */
 
 /**
@@ -62,6 +83,8 @@
  * @property {string} data_inizio Data di apertura della mostra.
  * @property {string} data_fine Data di chiusura della mostra.
  * @property {string} creata_il Data e ora della prenotazione (UTC).
+ * @property {string} codice Codice di riferimento da mostrare all'ingresso.
+ * @property {?string} ingresso_il Data e ora dell'ingresso, `null` se non ancora entrato.
  */
 
 /**

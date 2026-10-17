@@ -23,6 +23,7 @@ import { prenota } from '../services/prenotazioniService';
 import useUtente from '../hooks/useUtente';
 import useLingua from '../hooks/useLingua';
 import { getMiePrenotazioni } from '../services/utentiService';
+import QrPrenotazione from '../components/QrPrenotazione';
 
 /**
  * Pagina di prenotazione (protetta: solo visitatori registrati). Nome, cognome ed email sono quelli
@@ -46,6 +47,8 @@ export default function FormPrenotazione() {
 
     const [loading, setLoading] = useState(false);
     const [successo, setSuccesso] = useState(false);
+    // codice di riferimento restituito dal backend dopo la prenotazione (mostrato con il QR code)
+    const [codice, setCodice] = useState('');
     const [errore, setErrore] = useState('');
 
     // carica la mostra e verifica se il visitatore è già prenotato
@@ -74,8 +77,9 @@ export default function FormPrenotazione() {
         const payload = { mostra_id: parseInt(id), telefono: telefono.trim() };
 
         prenota(payload)
-            .then(() => {
+            .then((risposta) => {
                 setLoading(false);
+                setCodice(risposta?.codice || '');
                 setSuccesso(true);
             })
             .catch((err) => {
@@ -167,6 +171,11 @@ export default function FormPrenotazione() {
                             <Typography variant="body1" sx={{ color: '#ffffff', mb: 3 }}>
                                 {t('prenota.emailInviata', { email: utente?.email })}
                             </Typography>
+                            {codice && (
+                                <Box sx={{ mb: 3 }}>
+                                    <QrPrenotazione codice={codice} />
+                                </Box>
+                            )}
                             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
                                 <Button
                                     onClick={() => navigate('/esposizioni')}

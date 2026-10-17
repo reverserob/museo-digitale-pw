@@ -5,7 +5,7 @@
  * @module pages/AdminDashboard
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Container,
     Typography,
@@ -49,6 +49,10 @@ const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
  */
 export default function AdminDashboard() {
     const navigate = useNavigate();
+    // pagina da riaprire dopo il login (es. /admin/verifica?codice=... dal QR code); solo indirizzi /admin/...
+    const [parametri] = useSearchParams();
+    const next = parametri.get('next');
+    const destinazione = next && next.startsWith('/admin/') && !next.startsWith('//') ? next : null;
 
     // Il login è valido solo se il backend ha rilasciato un token
     const isLoggedIn = useAdmin();
@@ -111,6 +115,7 @@ export default function AdminDashboard() {
         login(email, password)
             .then(() => {
                 setPassword('');
+                if (destinazione) navigate(destinazione, { replace: true });
             })
             .catch((err) =>
                 setErroreLogin(
@@ -247,7 +252,7 @@ export default function AdminDashboard() {
                             <Typography variant="h4" sx={{ color: '#c5a059' }}>
                                 Dashboard Admin - Esposizioni
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                                 <Button
                                     component={Link}
                                     to="/admin/nuova"
@@ -256,6 +261,15 @@ export default function AdminDashboard() {
                                     sx={{ borderRadius: 0, fontWeight: 'bold' }}
                                 >
                                     Nuova Mostra
+                                </Button>
+                                <Button
+                                    component={Link}
+                                    to="/admin/verifica"
+                                    variant="outlined"
+                                    color="primary"
+                                    sx={{ borderRadius: 0, fontWeight: 'bold' }}
+                                >
+                                    Verifica ingresso
                                 </Button>
                                 <Button onClick={handleLogout} variant="outlined" color="primary" size="small">
                                     Esci
@@ -392,8 +406,21 @@ export default function AdminDashboard() {
                                                                 borderTop: '1px solid rgba(255,255,255,0.05)',
                                                             }}
                                                         >
+                                                            {p.codice && (
+                                                                <Link
+                                                                    to={`/admin/verifica?codice=${p.codice}`}
+                                                                    style={{
+                                                                        color: '#c5a059',
+                                                                        fontFamily: 'monospace',
+                                                                    }}
+                                                                >
+                                                                    {p.codice}
+                                                                </Link>
+                                                            )}
+                                                            {p.codice && ' · '}
                                                             {p.nome} {p.cognome} · {p.email} · {p.telefono} ·{' '}
                                                             {new Date(p.creata_il + 'Z').toLocaleString('it-IT')}
+                                                            {p.ingresso_il && ' · ✓ entrato'}
                                                         </Typography>
                                                     ))
                                                 )}

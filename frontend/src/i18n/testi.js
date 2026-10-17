@@ -122,6 +122,9 @@ const it = {
     'prenota.errore': 'Errore di validazione o di rete. Controlla i dati inseriti.',
     'prenota.giaPrenotato': 'Ti sei già prenotato a questa mostra: puoi prenotarti una sola volta.',
     'prenota.gestisci': 'Gestisci le mie prenotazioni',
+    'qr.codice': 'Codice prenotazione',
+    'qr.istruzioni': "Mostra il QR code all'ingresso oppure comunica il codice: li trovi anche nell'email di conferma.",
+    'qr.alt': 'QR code della prenotazione {codice}',
 
     // accesso e registrazione
     'accedi.titoloAccedi': 'Accedi',
@@ -180,6 +183,10 @@ const it = {
     'profilo.annullaDi': 'Annulla la prenotazione di {titolo}',
     'profilo.confermaAnnulla': 'Vuoi annullare la prenotazione per "{titolo}"? Riceverai un\'email di conferma.',
     'profilo.erroreAnnulla': 'Impossibile annullare la prenotazione.',
+    'profilo.mostraQr': 'Mostra QR code',
+    'profilo.nascondiQr': 'Nascondi QR code',
+    'profilo.codice': 'Codice: {codice}',
+    'profilo.ingresso': 'Ingresso effettuato il {data}',
 
     // modulo contatti
     'contatti.titolo': 'Contatti',
@@ -329,6 +336,10 @@ const en = {
     'prenota.errore': 'Validation or network error. Please check your details.',
     'prenota.giaPrenotato': 'You have already booked this exhibition: you can only book once.',
     'prenota.gestisci': 'Manage my bookings',
+    'qr.codice': 'Booking code',
+    'qr.istruzioni':
+        'Show the QR code at the entrance or give the code: you will also find them in the confirmation email.',
+    'qr.alt': 'QR code for booking {codice}',
 
     'accedi.titoloAccedi': 'Sign in',
     'accedi.titoloRegistrati': 'Create an account',
@@ -384,6 +395,10 @@ const en = {
     'profilo.confermaAnnulla':
         'Do you want to cancel your booking for "{titolo}"? You will receive a confirmation email.',
     'profilo.erroreAnnulla': 'Unable to cancel the booking.',
+    'profilo.mostraQr': 'Show QR code',
+    'profilo.nascondiQr': 'Hide QR code',
+    'profilo.codice': 'Code: {codice}',
+    'profilo.ingresso': 'Visited on {data}',
 
     'contatti.titolo': 'Contact',
     'contatti.intro':
@@ -457,6 +472,8 @@ export const MESSAGGI_SERVER_EN = {
     'Ti sei già prenotato a questa mostra.': 'You have already booked this exhibition.',
     "Errore interno durante l'elaborazione della prenotazione.": 'Internal error while processing the booking.',
     'Prenotazione non trovata.': 'Booking not found.',
+    "La prenotazione è già stata usata per l'ingresso e non può essere annullata.":
+        'This booking has already been used to enter the museum and cannot be cancelled.',
     "Prenotazione annullata. Ti abbiamo inviato un'email di conferma.":
         'Booking cancelled. We have sent you a confirmation email.',
     'La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita.':

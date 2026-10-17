@@ -10,6 +10,7 @@
   { "path": "/profilo", "component": "AreaPersonale", "protected": "utente" },
   { "path": "/admin", "component": "AdminDashboard" },
   { "path": "/admin/nuova", "component": "AdminForm", "protected": true },
+  { "path": "/admin/verifica", "component": "AdminVerifica", "protected": true },
   { "path": "/admin/modifica/:id", "component": "AdminForm", "protected": true },
   { "path": "*", "component": "NotFound" }
 ]

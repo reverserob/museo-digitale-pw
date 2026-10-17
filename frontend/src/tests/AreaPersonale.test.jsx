@@ -120,3 +120,39 @@ describe('AreaPersonale', () => {
         expect(api.delete).not.toHaveBeenCalled();
     });
 });
+
+describe('AreaPersonale: codice e QR code', () => {
+    const PRENOTAZIONE = {
+        id: 1,
+        mostra_id: 4,
+        titolo_mostra: 'Monet: La Natura',
+        data_inizio: '2026-12-01',
+        data_fine: '2027-04-30',
+        creata_il: '2026-10-15T09:00:00',
+        codice: 'MCD-7K3F-9QXA',
+        ingresso_il: null,
+    };
+
+    it('mostra il codice e apre il QR code su richiesta', async () => {
+        collegaUtente();
+        api.get.mockResolvedValue({ data: [PRENOTAZIONE] });
+        const user = userEvent.setup();
+        apri();
+
+        expect(await screen.findByText('Codice: MCD-7K3F-9QXA')).toBeInTheDocument();
+        expect(screen.queryByRole('img', { name: /QR code/ })).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Mostra QR code' }));
+        expect(screen.getByRole('img', { name: 'QR code della prenotazione MCD-7K3F-9QXA' })).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Nascondi QR code' }));
+        expect(screen.queryByRole('img', { name: /QR code/ })).not.toBeInTheDocument();
+    });
+
+    it("dopo l'ingresso non si può più annullare la prenotazione", async () => {
+        collegaUtente();
+        api.get.mockResolvedValue({ data: [{ ...PRENOTAZIONE, ingresso_il: '2026-12-05T10:30:00' }] });
+        apri();
+
+        expect(await screen.findByText(/Ingresso effettuato il/)).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Annulla la prenotazione/ })).not.toBeInTheDocument();
+    });
+});

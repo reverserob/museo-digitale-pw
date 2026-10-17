@@ -55,6 +55,9 @@ TOKEN_DURATA_ORE = int(_env("TOKEN_DURATA_ORE", "8"))
 # (se la richiesta arriva da uno dei CORS_ORIGINS si usa direttamente quell'indirizzo)
 RESET_PASSWORD_MINUTI = int(_env("RESET_PASSWORD_MINUTI", "30"))
 FRONTEND_URL = _env("FRONTEND_URL", "https://museo-digitale-pw-azure.vercel.app").rstrip("/")
+# indirizzo pubblico del backend, usato per l'immagine del QR code nelle email di conferma;
+# se è vuoto si usa l'indirizzo da cui è arrivata la richiesta di prenotazione
+BACKEND_URL = _env("BACKEND_URL").rstrip("/")
 
 # --- Limite ai tentativi di login (sintassi di slowapi: "numero/periodo") ---
 LOGIN_RATE_LIMIT = _env("LOGIN_RATE_LIMIT", "5/minute")

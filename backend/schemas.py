@@ -162,6 +162,19 @@ class PrenotazioneResponse(BaseModel):
     email: str
     telefono: str
     creata_il: datetime
+    # codice di riferimento (es. MCD-7K3F-9QXA) e data dell'ingresso registrato dal personale
+    codice: Optional[str] = None
+    ingresso_il: Optional[datetime] = None
+
+
+class VerificaPrenotazioneResponse(PrenotazioneResponse):
+    """Risultato della verifica di una prenotazione all'ingresso del museo (area riservata)."""
+
+    titolo_mostra: str
+    data_inizio: date
+    data_fine: date
+    # "valida", "gia_entrato", "non_iniziata" oppure "conclusa"
+    stato: str
 
 
 # --- Feedback ---
@@ -236,6 +249,8 @@ class MiaPrenotazioneResponse(BaseModel):
     data_inizio: date
     data_fine: date
     creata_il: datetime
+    codice: Optional[str] = None
+    ingresso_il: Optional[datetime] = None
 
 
 # --- Login dell'amministratore ---

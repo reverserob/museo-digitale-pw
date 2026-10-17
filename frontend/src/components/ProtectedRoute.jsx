@@ -11,7 +11,7 @@ import { getUtente } from '../services/utentiService';
  * Protegge le pagine riservate: ruolo `'admin'` per l'area riservata, `'utente'` per le pagine dei visitatori.
  * Chi non ha i permessi viene reindirizzato (`Navigate`) invece di vedere la pagina:
  * - ruolo `'utente'`: l'admin va a `/admin`, chi non è collegato va a `/accedi?next=...`;
- * - ruolo `'admin'`: chi non è collegato va alla pagina di login `/admin`.
+ * - ruolo `'admin'`: chi non è collegato va alla pagina di login `/admin?next=...` e dopo l'accesso torna alla pagina richiesta.
  *
  * @example
  * <ProtectedRoute ruolo="utente">
@@ -38,9 +38,11 @@ export default function ProtectedRoute({ children, ruolo = 'admin' }) {
         return children;
     }
 
-    // pagine dell'admin: senza login si torna alla pagina di accesso dell'area riservata
+    // pagine dell'admin: senza login si va alla pagina di accesso dell'area riservata e, dopo il login,
+    // si torna alla pagina richiesta (es. la verifica aperta dal QR code, con il codice nell'indirizzo)
     if (!isLoggedIn()) {
-        return <Navigate to="/admin" replace />;
+        const destinazione = encodeURIComponent(location.pathname + location.search);
+        return <Navigate to={`/admin?next=${destinazione}`} replace />;
     }
     return children;
 }
