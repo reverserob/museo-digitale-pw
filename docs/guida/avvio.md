@@ -2,7 +2,7 @@
 
 ## Prerequisiti
 
-- Python 3.9 o successivo
+- Python 3.9 o successivo (il progetto è verificato fino alla 3.15)
 - Node.js 20 o successivo (con npm)
 - Git
 
