@@ -34,6 +34,7 @@ theme:
       toggle:
         icon: material/weather-night
         name: Passa al tema scuro
+  favicon: stili/favicon.svg
   icon:
     logo: material/bank
     repo: fontawesome/brands/github
