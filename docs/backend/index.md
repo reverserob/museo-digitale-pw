@@ -17,6 +17,8 @@ Per ogni funzione è possibile aprire il codice sorgente con il pulsante *Source
 | [Router](router.md) | `routers.*` | Gli endpoint REST |
 | [Servizi](servizi.md) | `services.*` | Email, immagini, statistiche, rate limit, seed, migrazioni |
 
+Lo script `esporta_openapi.py` esporta lo schema OpenAPI usato dalla [Swagger UI](../guida/swagger.md) di questo sito.
+
 ```mermaid
 flowchart LR
     R["routers/*<br/>endpoint REST"] --> S["services/*<br/>logica riutilizzabile"]
