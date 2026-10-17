@@ -5,6 +5,7 @@
  */
 import { Link, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Select, MenuItem, Box } from '@mui/material';
+import IconaMuseo from './IconaMuseo';
 import useUtente from '../hooks/useUtente';
 import useAdmin from '../hooks/useAdmin';
 import useLingua from '../hooks/useLingua';
@@ -67,7 +68,10 @@ export default function AppHeader() {
         <AppBar position="static" color="transparent" elevation={0} className="app-header">
             <Toolbar sx={{ flexWrap: 'wrap', gap: 0.5 }}>
                 <Typography variant="h6" className="app-header__title">
-                    <Link to="/">MUSEO CIVICO DIGITALE</Link>
+                    <Link to="/">
+                        <IconaMuseo />
+                        MUSEO CIVICO DIGITALE
+                    </Link>
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                     <Button component={Link} to="/" color="inherit" className="app-header__button">

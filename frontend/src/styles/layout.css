@@ -26,6 +26,10 @@
 .app-header .app-header__title a {
     text-decoration: none;
     color: inherit;
+    /* icona e nome del museo sulla stessa riga, allineati al centro */
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .app-header .app-header__button {
