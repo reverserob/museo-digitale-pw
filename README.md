@@ -1,6 +1,7 @@
 # Project Work - Museo Digitale
 
 [![CI](https://github.com/reverserob/museo-digitale-pw/actions/workflows/ci.yml/badge.svg)](https://github.com/reverserob/museo-digitale-pw/actions/workflows/ci.yml)
+[![Documentazione](https://github.com/reverserob/museo-digitale-pw/actions/workflows/docs.yml/badge.svg)](https://reverserob.github.io/museo-digitale-pw/)
 
 ## Tema n. 1: La digitalizzazione dell’impresa 
 
@@ -9,11 +10,18 @@ Progettazione di una piattaforma informatica per la gestione di servizi, dati e 
 
 **Relazione tecnica completa** (contesto, processo AS-IS/TO-BE, architettura, diagrammi UML ed ER, API, test funzionali, sviluppi futuri): [DOCUMENTATION.md](DOCUMENTATION.md)
 
-### Documentazione
-1. https://github.com/reverserob/museo-digitale-pw/blob/main/DOCUMENTATION.md
+### Online Prototype
+#####[Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 
-## Guida al Progetto
-1. https://reverserob.github.io/museo-digitale-pw/
+### Documentazione
+| | Link |
+|---|---|
+| Relazione tecnica | [DOCUMENTATION.md](DOCUMENTATION.md) |
+| Sito di documentazione (guida, architettura, reference del backend) | [reverserob.github.io/museo-digitale-pw](https://reverserob.github.io/museo-digitale-pw/) |
+| Documentazione del frontend (JSDoc) | [reverserob.github.io/museo-digitale-pw/frontend-api](https://reverserob.github.io/museo-digitale-pw/frontend-api/) |
+| Swagger UI online (sola lettura) | [reverserob.github.io/museo-digitale-pw/guida/swagger](https://reverserob.github.io/museo-digitale-pw/guida/swagger/) |
+| Swagger UI del backend (per provare le API) | [museo-digitale-pw.onrender.com/docs](https://museo-digitale-pw.onrender.com/docs) |
+| Sito del museo | [museo-digitale-pw-azure.vercel.app](https://museo-digitale-pw-azure.vercel.app/) |
 
 #### Funzionalità
 - Catalogo delle mostre con galleria di immagini
@@ -24,7 +32,8 @@ Progettazione di una piattaforma informatica per la gestione di servizi, dati e 
 - Dashboard con indicatori (prenotazioni, mostre in corso, voto medio, prenotazioni per mostra)
 
 #### DASHBOARD
-Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
+
+
 <img width="988" height="730" alt="image" src="https://github.com/user-attachments/assets/51d487b4-a8a7-449f-956e-012e966d298e" />
 
 #### Invio Mail Prenotazione
@@ -40,6 +49,7 @@ Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 - SQLAlchemy: L'ORM (Object-Relational Mapper) per parlare con il database senza scrivere query SQL a mano.
 - Pydantic: Serve per validare i dati JSON in entrata e uscita (FastAPI lo usa di default).
   pip install -r requirements.txt
+
 ####  Run the backend
 1. `cd backend`
 2. `python -m venv venv && source venv/bin/activate`
@@ -69,7 +79,9 @@ Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 | `LOGIN_RATE_LIMIT` | Facoltativa, tentativi di login consentiti per IP (default `5/minute`) |
 
 #### Swagger API docs
-`http://127.0.0.1:8000/docs`
+- In locale, con il backend avviato: `http://127.0.0.1:8000/docs`
+- Backend pubblicato (per provare le chiamate): https://museo-digitale-pw.onrender.com/docs
+- Copia di sola lettura nel sito di documentazione: https://reverserob.github.io/museo-digitale-pw/guida/swagger/
 
 #### Used Frontend Library
 - Vite
@@ -99,16 +111,22 @@ La documentazione del progetto è generata dai commenti del codice e pubblicata 
 
 - **Backend**: MkDocs (tema Material) + mkdocstrings, dai docstring Python in stile Google
 - **Frontend**: JSDoc, dai commenti `/** ... */` dei file React
+- **Swagger UI**: schema OpenAPI esportato da FastAPI con `backend/esporta_openapi.py`
 
 ```bash
-cd frontend && npm run docs && cd ..          # JSDoc → docs/frontend-api/
+cd frontend && npm run docs && cd ..                                  # JSDoc → docs/frontend-api/
+cd backend && python esporta_openapi.py ../docs/swagger/openapi.json && cd ..   # schema per la Swagger UI
 pip install -r backend/requirements-docs.txt
-mkdocs serve -a 127.0.0.1:8001                # anteprima del sito
+mkdocs serve -a 127.0.0.1:8001                                        # anteprima del sito
 ```
 
+A ogni push su `main` il workflow `.github/workflows/docs.yml` rigenera tutto e pubblica il sito su
+GitHub Pages (requisito una tantum: *Settings → Pages → Source: GitHub Actions*).
+
 #### Integrazione continua (GitHub Actions)
-A ogni push su `main` il workflow `.github/workflows/ci.yml` esegue ruff e pytest sul backend
-(Python 3.9 e 3.12) e ESLint, Prettier, Vitest e la build sul frontend. L'esito si vede nella scheda
+A ogni push su `main` e a ogni pull request il workflow `.github/workflows/ci.yml` esegue ruff e pytest sul backend
+(Python 3.9 e 3.12), ESLint, Prettier, Vitest e la build sul frontend e controlla che la documentazione
+si generi senza errori (JSDoc, schema OpenAPI e `mkdocs build --strict`). L'esito si vede nella scheda
 **Actions** del repository e nel badge in cima a questo file.
 
 #### Deploy del backend su Render

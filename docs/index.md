@@ -39,9 +39,9 @@ Questo sito raccoglie la documentazione tecnica del Project Work. La reference d
 
     ---
 
-    Tutti gli endpoint con metodo, permessi e codici di risposta. La Swagger UI interattiva è su `/docs` del backend.
+    Tutti gli endpoint con metodo, permessi e codici di risposta, e la Swagger UI generata dallo schema OpenAPI.
 
-    [:octicons-arrow-right-24: API](guida/api.md)
+    [:octicons-arrow-right-24: API](guida/api.md) · [:octicons-arrow-right-24: Swagger UI](guida/swagger.md)
 
 </div>
 
@@ -55,5 +55,6 @@ Questo sito raccoglie la documentazione tecnica del Project Work. La reference d
 | **Qualità** | pytest, Vitest + Testing Library, ruff, ESLint, Prettier, GitHub Actions |
 | **Deploy** | Backend su Render, frontend su Vercel |
 | **Sito pubblico** | [museo-digitale-pw-azure.vercel.app](https://museo-digitale-pw-azure.vercel.app/) |
+| **API (Swagger)** | [museo-digitale-pw.onrender.com/docs](https://museo-digitale-pw.onrender.com/docs) |
 
 ![Home del sito](screenshots/26-home.webp){ .screenshot loading=lazy }

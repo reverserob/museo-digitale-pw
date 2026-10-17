@@ -5,6 +5,7 @@ La documentazione è composta da due parti, entrambe generate dai commenti del c
 | Parte | Strumento | Sorgente | Uscita |
 | --- | --- | --- | --- |
 | Sito, guida e backend | **MkDocs** + tema Material + **mkdocstrings** | `mkdocs.yml`, `docs/*.md`, docstring di `backend/` | `site/` |
+| Swagger UI | **FastAPI** (OpenAPI) + swagger-ui | `backend/esporta_openapi.py` | `docs/swagger/openapi.json` → `site/swagger/` |
 | Frontend | **JSDoc** + tema clean-jsdoc-theme | commenti `/** */` di `frontend/src` (configurazione in `frontend/jsdoc.json`) | `docs/frontend-api/` → `site/frontend-api/` |
 
 ## Generare tutto in locale
@@ -15,7 +16,11 @@ cd frontend
 npm install
 npm run docs                 # scrive in ../docs/frontend-api/
 
-# 2. sito MkDocs con la reference del backend
+# 2. schema OpenAPI per la Swagger UI
+cd ../backend
+python esporta_openapi.py ../docs/swagger/openapi.json
+
+# 3. sito MkDocs con la reference del backend
 cd ..
 pip install -r backend/requirements-docs.txt
 mkdocs serve                 # anteprima con aggiornamento automatico su http://127.0.0.1:8000

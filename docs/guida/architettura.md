@@ -78,13 +78,15 @@ frontend/src/
 ├── App.jsx                → tema, router con le pagine di config/routes.json, header e footer
 ├── config/routes.json     → elenco delle rotte (percorso, pagina, protezione)
 ├── pages/                 → una pagina per ogni rotta
-├── components/            → header, footer, sezione feedback, indicatori, ProtectedRoute, ErrorBoundary
+├── components/            → header (con IconaMuseo), footer, sezione feedback, indicatori, ProtectedRoute, ErrorBoundary
 ├── services/              → chiamate HTTP al backend (axios) e gestione dei token
 ├── hooks/                 → useUtente, useAdmin, useLingua
 ├── i18n/                  → testi in italiano e inglese, funzioni di traduzione
 ├── utils/password.js      → regole della password condivise
 └── tipi.js                → forma dei dati scambiati con il backend (solo documentazione)
 ```
+
+In `frontend/public/` ci sono le immagini statiche della home e `favicon.svg`, l'icona del museo mostrata nella scheda del browser.
 
 Le pagine non chiamano mai direttamente le API: usano le funzioni dei moduli `services/*`, che sono gli unici a conoscere gli indirizzi del backend. I dettagli sono nella [documentazione del frontend](../frontend.md).
 

@@ -19,7 +19,7 @@ Progettazione di una piattaforma informatica per la gestione di servizi, dati e 
 8. [Architettura dei calcolatori applicata al progetto](#8-architettura-dei-calcolatori-applicata-al-progetto)
 9. [Scelte tecnologiche e sicurezza](#9-scelte-tecnologiche-e-sicurezza)
 10. [Implementazione del front-end](#10-implementazione-del-front-end)
-11. [Qualità del codice e test automatici](#11-qualità-del-codice-e-test-automatici)
+11. [Qualità del codice e test automatici](#11-qualità-del-codice-e-test-automatici) (con la documentazione generata dal codice)
 12. [Test funzionali e scenari d'uso](#12-test-funzionali-e-scenari-duso)
 13. [Istruzioni per l'esecuzione](#13-istruzioni-per-lesecuzione)
 14. [Deploy](#14-deploy)
@@ -513,7 +513,10 @@ sequenceDiagram
 ```
 
 ### 7. Documentazione delle API
-FastAPI genera in modo automatico e nativo la documentazione interattiva delle API basata sullo standard OpenAPI. All'indirizzo [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) è possibile esplorare e testare gli endpoint in tempo reale (Swagger UI), raggruppati per router. Lo screenshot della Swagger UI è riportato nel README del progetto.
+FastAPI genera in modo automatico e nativo la documentazione interattiva delle API basata sullo standard OpenAPI. La Swagger UI, con gli endpoint raggruppati per router, è disponibile in tre punti:
+- **in locale**, con il back-end avviato: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs), dove si possono esplorare e provare gli endpoint in tempo reale;
+- **sul back-end pubblicato**: [museo-digitale-pw.onrender.com/docs](https://museo-digitale-pw.onrender.com/docs), anch'essa interattiva;
+- **nel sito di documentazione** su GitHub Pages: [Guida → Swagger UI](https://reverserob.github.io/museo-digitale-pw/guida/swagger/), una copia di sola lettura. Lo schema `openapi.json` viene esportato a ogni pubblicazione dallo script `backend/esporta_openapi.py` (che importa l'applicazione con un database temporaneo), quindi è sempre allineato al codice. Il pulsante *Try it out* è disattivato perché il back-end accetta richieste dal browser solo dal sito del museo (CORS, vedi §9.2).
 
 #### 7.1. Elenco degli endpoint
 🔒 = richiede il token dell'amministratore; 👤 = richiede il token di un visitatore registrato. Il token si invia nell'header `Authorization: Bearer <token>`; un token del ruolo sbagliato viene rifiutato (401 o 403).
@@ -722,11 +725,12 @@ frontend/src/
 ├── App.jsx        → tema, router e rotte
 ├── config/        → routes.json (elenco delle rotte) e background.json (immagine di sfondo)
 ├── pages/         → una pagina per rotta: Home (presentazione), Esposizioni (catalogo), GalleriaMostra, FormPrenotazione, Accedi, AreaPersonale, PasswordDimenticata, ReimpostaPassword, AdminDashboard, AdminForm, NotFound
-├── components/    → componenti riutilizzabili: AppHeader (con menu della lingua), AppFooter, ProtectedRoute, ErrorBoundary, SezioneFeedback, IndicatoriDashboard
+├── components/    → componenti riutilizzabili: AppHeader (con icona del museo e menu della lingua), AppFooter, IconaMuseo, ProtectedRoute, ErrorBoundary, SezioneFeedback, IndicatoriDashboard
 ├── hooks/         → useUtente, useAdmin (chi è collegato) e useLingua (lingua e funzione t())
 ├── i18n/          → testi.js (testi italiani e inglesi, traduzioni dei messaggi del server) e lingua.js (lingua scelta e traduzione)
 ├── services/      → api.js (istanza Axios) e un servizio per area: mostre, prenotazioni, feedback, statistiche, auth (admin), utenti (visitatori)
 ├── styles/        → fogli di stile del layout
+├── tipi.js        → forma dei dati delle API descritta con JSDoc (solo documentazione)
 └── tests/         → test automatici (Vitest)
 ```
 
@@ -742,6 +746,8 @@ Le pagine non contengono gli indirizzi delle API: usano le funzioni dei servizi 
 - costruisce l'indirizzo completo delle immagini a partire dai percorsi relativi salvati nel database.
 
 Gli stati locali dei componenti (useState, useEffect) garantiscono feedback visivi immediati all'utente, ad esempio gli indicatori di caricamento tramite CircularProgress.
+
+**Icona.** Accanto al nome del museo, nell'intestazione, compare un'icona che rappresenta l'edificio del museo (componente `IconaMuseo`, un'immagine SVG che prende il colore oro del titolo). La stessa icona è la favicon del sito (`public/favicon.svg`), cioè l'immagine mostrata nella scheda del browser.
 
 **Tipografia.** Il sito usa due caratteri moderni senza grazie: *Outfit* per titoli e pulsanti e *Manrope* per il testo. Sono inclusi nel pacchetto del frontend (librerie `@fontsource-variable`), quindi non dipendono da servizi esterni come Google Fonts e funzionano anche offline; il tema MUI (`theme.js`) li applica a tutti i componenti.
 
@@ -795,6 +801,13 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 **Test del front-end** (cartella `frontend/src/tests/`): montano le pagine in un browser simulato (jsdom) e sostituiscono le risposte del backend con dati finti. Verificano la visualizzazione delle mostre, la validazione dei form, l'invio delle prenotazioni e dei feedback, login e logout dell'area riservata, registrazione e accesso dei visitatori con ritorno alla pagina richiesta, area personale, scelta del token per ogni chiamata, gli indicatori della dashboard, la protezione delle rotte, la pagina 404 e il caricamento delle pagine "lazy".
 
 **Integrazione continua (GitHub Actions)**: il file `.github/workflows/ci.yml` esegue automaticamente, a ogni push e pull request, linter, controllo della formattazione e test di entrambe le parti, oltre alla build di produzione del front-end. Il back-end viene verificato con due versioni di Python. Se un controllo fallisce, GitHub lo segnala accanto al commit, impedendo che un errore passi inosservato.
+
+**Documentazione generata dal codice.** Tutti i file del progetto sono commentati in italiano e i commenti sono scritti in un formato che permette di trasformarli in pagine di documentazione:
+- **back-end**: docstring in stile Google, con le sezioni *Args*, *Returns* e *Raises* (per gli endpoint sono elencati i codici HTTP di errore, e la prima riga indica metodo e percorso, es. `POST /api/prenota`). Il sito è generato con **MkDocs** (tema Material) e **mkdocstrings**, che legge i docstring senza eseguire il codice e crea una pagina per router, servizi, modelli, schemi e autenticazione, con il collegamento al codice sorgente;
+- **front-end**: commenti **JSDoc** (`@module`, `@param`, `@returns`, `@example`) su pagine, componenti, hook e servizi; il file `src/tipi.js` descrive con `@typedef` la forma dei dati restituiti dalle API (Mostra, Utente, Prenotazione, Feedback, Statistiche). La documentazione si genera con `npm run docs`;
+- **API**: lo schema OpenAPI esportato da FastAPI alimenta la Swagger UI pubblicata nel sito (§7).
+
+Il sito, che contiene anche la guida all'avvio, le funzionalità con gli screenshot, l'architettura con i diagrammi Mermaid e l'elenco degli endpoint, è pubblicato su **GitHub Pages**: [reverserob.github.io/museo-digitale-pw](https://reverserob.github.io/museo-digitale-pw/). Il workflow `.github/workflows/docs.yml` lo rigenera e lo pubblica a ogni push su `main`; la CI delle pull request esegue `mkdocs build --strict`, che fallisce se una pagina o un collegamento non è valido, così la documentazione resta sempre allineata al codice.
 
 ### 12. Test funzionali e scenari d'uso
 I test automatici verificano il codice; i test funzionali verificano invece che l'applicazione, usata da una persona reale, si comporti come previsto. Gli scenari seguenti sono stati eseguiti sull'applicazione avviata in locale (back-end e front-end), con un database popolato con le mostre iniziali e alcune prenotazioni e feedback di prova.
@@ -1007,10 +1020,20 @@ npm run lint          # ESLint
 npm run build         # build di produzione
 ```
 
+#### 13.6. Generazione della documentazione
+```bash
+cd frontend && npm run docs                                    # JSDoc → docs/frontend-api/
+cd ../backend && python esporta_openapi.py ../docs/swagger/openapi.json   # schema per la Swagger UI
+cd .. && pip install -r backend/requirements-docs.txt
+mkdocs serve -a 127.0.0.1:8001                                 # anteprima su http://127.0.0.1:8001
+mkdocs build --strict                                          # sito statico nella cartella site/
+```
+
 ### 14. Deploy
 L'applicazione è pubblicata con due servizi separati, coerentemente con l'architettura disaccoppiata:
 - **Front-end** su Vercel: [museo-digitale-pw-azure.vercel.app](https://museo-digitale-pw-azure.vercel.app/)
 - **Back-end** su Render: `museo-digitale-pw.onrender.com`
+- **Documentazione** su GitHub Pages: [reverserob.github.io/museo-digitale-pw](https://reverserob.github.io/museo-digitale-pw/)
 
 Su Render le variabili d'ambiente (SECRET_KEY, credenziali dell'amministratore, BREVO_API_KEY ed EMAIL_MITTENTE, CORS_ORIGINS, PYTHON_VERSION) sono impostate dal pannello Environment del servizio. Il backend viene avviato con il comando `uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'`, che permette al server di conoscere l'indirizzo IP reale dei visitatori (necessario per il limite ai tentativi di login). Le versioni delle librerie Python sono fissate in `requirements.txt`, così il server installa sempre le stesse versioni verificate in locale.
 

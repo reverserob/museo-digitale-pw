@@ -4,6 +4,7 @@ FastAPI genera in automatico la documentazione interattiva delle API secondo lo 
 con il backend avviato è disponibile su `/docs` (Swagger UI) e `/redoc`, ad esempio
 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Il codice di ogni endpoint è descritto nella
 [reference dei router](../backend/router.md).
+Una copia della Swagger UI è pubblicata anche in questo sito: [Swagger UI](swagger.md).
 
 ## Elenco degli endpoint
 

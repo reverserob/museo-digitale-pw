@@ -23,6 +23,8 @@ Il backend risponde su `http://127.0.0.1:8000`. Al primo avvio viene creato il f
 !!! tip "Swagger UI"
     FastAPI genera da solo la documentazione interattiva delle API: con il backend avviato apri
     [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) per provare gli endpoint dal browser.
+    Online la trovi sul [backend pubblicato](https://museo-digitale-pw.onrender.com/docs) e, in sola lettura,
+    nella pagina [Swagger UI](swagger.md) di questo sito.
 
 ## Frontend
 
@@ -81,4 +83,5 @@ Senza servizio email configurato l'applicazione funziona lo stesso: le email non
     npm run build         # build di produzione
     ```
 
-Gli stessi controlli vengono eseguiti da **GitHub Actions** a ogni pull request e a ogni push su `main`.
+Gli stessi controlli vengono eseguiti da **GitHub Actions** a ogni pull request e a ogni push su `main`,
+insieme alla generazione di questa documentazione ([come si genera](../documentazione.md)).
