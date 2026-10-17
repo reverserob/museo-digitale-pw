@@ -1,4 +1,8 @@
-// Componente principale: tema, router con le pagine definite in config/routes.json, header e footer
+/**
+ * Componente principale: tema, router con le pagine definite in `config/routes.json`, header e footer.
+ *
+ * @module App
+ */
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, CssBaseline, Box, CircularProgress } from '@mui/material';
@@ -44,6 +48,14 @@ const pages = {
     ReimpostaPassword,
 };
 
+/**
+ * Applicazione completa. Per ogni voce di `config/routes.json` crea una rotta; le pagine con
+ * `protected` passano da {@link module:components/ProtectedRoute} e ogni pagina è avvolta da
+ * {@link module:components/ErrorBoundary}.
+ *
+ * @returns {JSX.Element} L'applicazione.
+ * @alias module:App.App
+ */
 function App() {
     // immagine di sfondo con un velo scuro sopra, configurata in config/background.json
     const sfondo = { backgroundImage: `${background.overlay}, url(${background.image})` };

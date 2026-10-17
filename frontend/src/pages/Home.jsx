@@ -1,3 +1,8 @@
+/**
+ * Pagina iniziale del sito (`/`).
+ *
+ * @module pages/Home
+ */
 import { Link } from 'react-router-dom';
 import { Container, Typography, Grid, Box, Button, Card, CardContent } from '@mui/material';
 import useLingua from '../hooks/useLingua';
@@ -19,7 +24,12 @@ const quadro = {
     display: 'block',
 };
 
-// Pagina iniziale: presenta il museo e porta alle esposizioni correnti (tutto centrato)
+/**
+ * Pagina iniziale: presenta il museo e porta alle esposizioni correnti (tutto centrato).
+ *
+ * @returns {JSX.Element} La pagina.
+ * @alias module:pages/Home.Home
+ */
 export default function Home() {
     const { t } = useLingua();
 

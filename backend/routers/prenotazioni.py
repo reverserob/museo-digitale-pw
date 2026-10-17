@@ -29,7 +29,12 @@ def crea_prenotazione(
     # il visitatore viene ricavato dal token: non può prenotare a nome di altri
     utente: models.Utente = Depends(richiedi_utente),
 ):
-    """Salva la prenotazione con i dati dell'account e invia l'email di conferma in background."""
+    """`POST /api/prenota` · Salva la prenotazione con i dati dell'account e invia l'email di conferma in background.
+
+    Raises:
+        HTTPException: 400 se la mostra è conclusa; 401 senza token visitatore;
+            404 se la mostra non esiste; 409 se il visitatore è già prenotato.
+    """
     mostra = trova_mostra(db, dati.mostra_id)
 
     # non si può prenotare una mostra già conclusa
@@ -88,7 +93,7 @@ def leggi_prenotazioni(
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
-    """Elenco delle prenotazioni, dalla più recente; filtrabile per mostra."""
+    """`GET /api/prenotazioni` · Elenco delle prenotazioni, dalla più recente; filtrabile per mostra."""
     query = db.query(models.Prenotazione)
     if mostra_id is not None:
         query = query.filter(models.Prenotazione.mostra_id == mostra_id)

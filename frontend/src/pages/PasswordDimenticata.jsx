@@ -1,3 +1,8 @@
+/**
+ * Pagina Password dimenticata (`/password-dimenticata`).
+ *
+ * @module pages/PasswordDimenticata
+ */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Card, CardContent, Typography, Box, TextField, Button, Alert } from '@mui/material';
@@ -14,8 +19,13 @@ const cardSx = {
 };
 const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
 
-// Pagina "Password dimenticata": l'utente inserisce l'email e riceve un link per reimpostare la password.
-// Il messaggio di conferma è sempre lo stesso, anche se l'email non è registrata (scelta di sicurezza).
+/**
+ * L'utente inserisce l'email e riceve un link per reimpostare la password.
+ * Il messaggio di conferma è sempre lo stesso, anche se l'email non è registrata (scelta di sicurezza).
+ *
+ * @returns {JSX.Element} La pagina.
+ * @alias module:pages/PasswordDimenticata.PasswordDimenticata
+ */
 export default function PasswordDimenticata() {
     const { t } = useLingua();
     const [email, setEmail] = useState('');

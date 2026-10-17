@@ -26,7 +26,12 @@ def invia_contatto(
     # solo i visitatori registrati possono scrivere: senza token valido la risposta è 401
     _utente: models.Utente = Depends(richiedi_utente),
 ):
-    """Inoltra la richiesta del visitatore; risponde 503 se il servizio email non riesce a inviarla."""
+    """`POST /api/contatti` · Inoltra la richiesta del visitatore alla casella del museo.
+
+    Raises:
+        HTTPException: 401 senza token visitatore; 422 per dati non validi;
+            503 se il servizio email non riesce a inviarla.
+    """
     if not email_configurata():
         # in locale, senza servizio email, la richiesta viene scritta nel log per poter provare il modulo
         logger.warning(f"Email non configurata: richiesta Contatti non inviata a {settings.CONTATTI_EMAIL}: {dati}")

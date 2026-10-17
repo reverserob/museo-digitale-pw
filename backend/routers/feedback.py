@@ -25,7 +25,13 @@ def crea_feedback(
     db: Session = Depends(get_db),
     utente: models.Utente = Depends(richiedi_utente),
 ):
-    """Salva il feedback dopo aver controllato le regole del museo."""
+    """`POST /api/feedback` · Salva il feedback dopo aver controllato le regole del museo.
+
+    Raises:
+        HTTPException: 400 se la mostra non è ancora iniziata; 401 senza token visitatore;
+            403 se il visitatore non è prenotato; 404 se la mostra non esiste;
+            409 se ha già lasciato un feedback.
+    """
     mostra = trova_mostra(db, dati.mostra_id)
 
     # si può recensire solo una mostra già aperta al pubblico
@@ -82,7 +88,7 @@ def crea_feedback(
 # GET /api/feedback (pubblica: i commenti sono visibili nella pagina della mostra)
 @router.get("", response_model=list[schemas.FeedbackResponse])
 def leggi_feedback(mostra_id: Optional[int] = None, db: Session = Depends(get_db)):
-    """Elenco dei feedback, dal più recente; filtrabile per mostra con ?mostra_id=."""
+    """`GET /api/feedback` · Elenco dei feedback, dal più recente; filtrabile per mostra con ?mostra_id=."""
     query = db.query(models.Feedback)
     if mostra_id is not None:
         query = query.filter(models.Feedback.mostra_id == mostra_id)
@@ -96,7 +102,7 @@ def elimina_feedback(
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
-    """Elimina un feedback non appropriato."""
+    """`DELETE /api/feedback/{feedback_id}` · Elimina un feedback non appropriato."""
     feedback = db.query(models.Feedback).filter(models.Feedback.id == feedback_id).first()
     if feedback is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feedback non trovato")

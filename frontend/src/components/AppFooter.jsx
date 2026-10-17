@@ -1,4 +1,8 @@
-// Piè di pagina mostrato in tutte le pagine
+/**
+ * Piè di pagina mostrato in tutte le pagine.
+ *
+ * @module components/AppFooter
+ */
 import { Link } from 'react-router-dom';
 import { Box, Container, Grid, Typography, Divider } from '@mui/material';
 import useLingua from '../hooks/useLingua';
@@ -7,7 +11,13 @@ import useLingua from '../hooks/useLingua';
 const titolo = { color: '#c5a059', mb: 1.5, letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '0.85rem' };
 const riga = { color: '#cccccc', fontSize: '0.95rem', lineHeight: 1.8 };
 
-// Footer con orari, indirizzo (di esempio) e indicazioni per le prenotazioni, che avvengono solo online
+/**
+ * Footer con orari di apertura, indirizzo (di esempio) e indicazioni per le prenotazioni,
+ * che avvengono solo online dal pulsante PRENOTA di ogni mostra.
+ *
+ * @returns {JSX.Element} Il footer del sito.
+ * @alias module:components/AppFooter.AppFooter
+ */
 export default function AppFooter() {
     const { t } = useLingua();
     return (

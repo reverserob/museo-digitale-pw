@@ -1,3 +1,8 @@
+/**
+ * Catalogo delle esposizioni (`/esposizioni`).
+ *
+ * @module pages/Esposizioni
+ */
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -19,7 +24,13 @@ import useAdmin from '../hooks/useAdmin';
 import useUtente from '../hooks/useUtente';
 import useLingua from '../hooks/useLingua';
 
-// Catalogo delle esposizioni correnti
+/**
+ * Catalogo delle esposizioni correnti: una card per mostra con i pulsanti SCOPRI DI PIÙ e PRENOTA
+ * (oppure MOSTRA PRENOTATA se il visitatore è già prenotato; nessun pulsante di prenotazione per l'admin).
+ *
+ * @returns {JSX.Element} La pagina.
+ * @alias module:pages/Esposizioni.Esposizioni
+ */
 export default function Esposizioni() {
     const admin = useAdmin();
     const utente = useUtente();

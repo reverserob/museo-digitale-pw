@@ -254,7 +254,18 @@ class TokenResponse(BaseModel):
 
 
 def valida_date(data_inizio: str, data_fine: str) -> tuple[date, date]:
-    """Controlla il formato ISO delle date e che la fine non preceda l'inizio."""
+    """Controlla il formato ISO delle date e che la fine non preceda l'inizio.
+
+    Args:
+        data_inizio: Data di apertura in formato `AAAA-MM-GG`.
+        data_fine: Data di chiusura in formato `AAAA-MM-GG`.
+
+    Returns:
+        Le due date convertite in oggetti `date`.
+
+    Raises:
+        ValueError: Se una data non è valida o la fine precede l'inizio.
+    """
     # le mostre arrivano come form-data (per via delle immagini), quindi le date sono stringhe
     try:
         inizio = date.fromisoformat(data_inizio)

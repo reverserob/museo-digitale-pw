@@ -1,4 +1,8 @@
-// Pagina di accesso dei visitatori con due schede: Accedi (login) e Registrati (nuovo account)
+/**
+ * Pagina di accesso dei visitatori (`/accedi`) con due schede: Accedi (login) e Registrati (nuovo account).
+ *
+ * @module pages/Accedi
+ */
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Container, Card, CardContent, Typography, Tabs, Tab, Box, TextField, Button, Alert } from '@mui/material';
@@ -20,8 +24,15 @@ const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
 // proprietà comuni a tutti i campi del form
 const campo = { slotProps: { inputLabel: { shrink: true } }, fullWidth: true, sx: inputStyle };
 
-// Controllo dell'email durante la digitazione: restituisce la chiave del messaggio che spiega
-// l'errore specifico (spazi, chiocciola mancante, dominio non valido...) oppure '' se l'email è valida.
+/**
+ * Controllo dell'email durante la digitazione.
+ *
+ * @private
+ * @param {string} valore Email digitata.
+ * @returns {string} Chiave del messaggio che spiega l'errore specifico (spazi, chiocciola mancante,
+ *   dominio non valido...) oppure `''` se l'email è valida o il campo è vuoto.
+ * @alias module:pages/Accedi.erroreEmail
+ */
 function erroreEmail(valore) {
     const email = valore.trim();
     if (!email) return '';
@@ -44,6 +55,15 @@ const erroreNome = (valore) => (valore.length > 0 && valore.trim().length < 3 ? 
 // accetto solo indirizzi interni al sito come destinazione dopo il login
 const destinazioneSicura = (next) => (next && next.startsWith('/') && !next.startsWith('//') ? next : '/profilo');
 
+/**
+ * Pagina Accedi / Registrati.
+ *
+ * Dopo l'accesso porta all'indirizzo indicato nel parametro `next` (solo indirizzi interni al sito),
+ * altrimenti all'area personale. Se è già collegato l'admin o un visitatore mostra solo dei collegamenti.
+ *
+ * @returns {JSX.Element} La pagina.
+ * @alias module:pages/Accedi.Accedi
+ */
 export default function Accedi() {
     const navigate = useNavigate();
     const [parametri] = useSearchParams();

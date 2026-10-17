@@ -1,0 +1,49 @@
+# Funzionalità
+
+## Visitatori
+
+### Catalogo e dettaglio delle mostre
+
+La pagina **Esposizioni** mostra tutte le mostre; ogni scheda porta al dettaglio con descrizione, periodo e galleria di immagini. Il catalogo è pubblico, non serve un account.
+
+![Catalogo delle esposizioni](../screenshots/01-catalogo.webp){ .screenshot loading=lazy }
+
+### Account
+
+Per prenotare e lasciare un feedback serve un account. La registrazione controlla i dati mentre si scrive (email, telefono, requisiti della password) e invia un'email di benvenuto. Ogni email può essere registrata una sola volta: un secondo tentativo mostra un errore e avvisa per email il titolare dell'account.
+
+![Registrazione](../screenshots/15-registrazione.webp){ .screenshot loading=lazy }
+
+Chi dimentica la password riceve un link valido 30 minuti e utilizzabile una sola volta.
+
+### Prenotazione
+
+Il pulsante **PRENOTA** apre il form con nome, cognome ed email dell'account (non modificabili) e il telefono. Dopo la conferma parte l'email di riepilogo. Ogni visitatore può prenotarsi una sola volta a ciascuna mostra: dopo la prenotazione il pulsante diventa **MOSTRA PRENOTATA**.
+
+![Prenotazione confermata](../screenshots/05-prenotazione-confermata.webp){ .screenshot loading=lazy }
+
+### Area personale
+
+Elenca le prenotazioni del visitatore e permette di annullarle; l'annullamento invia un'email di conferma e consente di prenotare di nuovo.
+
+![Area personale](../screenshots/28-area-personale-annulla.webp){ .screenshot loading=lazy }
+
+### Feedback
+
+Sulla pagina di una mostra già iniziata, chi si è prenotato può lasciare **un solo feedback** (voto da 1 a 5 e commento facoltativo). Il nome pubblico è abbreviato (es. *Mario R.*).
+
+![Feedback già lasciato](../screenshots/24-feedback-gia-lasciato.webp){ .screenshot loading=lazy }
+
+### Contatti e lingua
+
+Il modulo **Contatti** (solo per utenti registrati) invia la domanda per email alla casella del museo. Dal menu in alto si sceglie la lingua dell'interfaccia: italiano o inglese.
+
+![Modulo Contatti](../screenshots/33-contatti.webp){ .screenshot loading=lazy }
+
+## Amministratore
+
+L'**Area Riservata** è accessibile con le credenziali dell'amministratore e solo quando nessun visitatore è collegato. La dashboard mostra gli indicatori principali e, per ogni mostra, le prenotazioni e i feedback; da qui si creano, modificano ed eliminano le mostre e si moderano i commenti.
+
+![Dashboard con indicatori](../screenshots/08-dashboard-indicatori.webp){ .screenshot loading=lazy }
+
+![Modifica di una mostra](../screenshots/12-modifica-mostra.webp){ .screenshot loading=lazy }

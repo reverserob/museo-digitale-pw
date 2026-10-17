@@ -17,7 +17,11 @@ router = APIRouter(prefix="/api", tags=["Area riservata"])
 @router.post("/login", response_model=schemas.TokenResponse)
 @limiter.limit(settings.LOGIN_RATE_LIMIT)
 def login(request: Request, dati: schemas.LoginRequest):
-    """Verifica le credenziali dell'amministratore e restituisce un token firmato."""
+    """`POST /api/login` · Verifica le credenziali dell'amministratore e restituisce un token firmato.
+
+    Raises:
+        HTTPException: 401 se le credenziali sono errate; 429 oltre il limite di tentativi.
+    """
     if not verifica_credenziali(dati.email, dati.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenziali errate.")
     # il token contiene il ruolo "admin": le rotte riservate lo controllano con richiedi_admin

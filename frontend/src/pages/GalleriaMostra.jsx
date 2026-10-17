@@ -1,3 +1,8 @@
+/**
+ * Pagina di dettaglio di una mostra (`/esposizione/:id`).
+ *
+ * @module pages/GalleriaMostra
+ */
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
@@ -19,8 +24,13 @@ import useUtente from '../hooks/useUtente';
 import useLingua from '../hooks/useLingua';
 import SezioneFeedback from '../components/SezioneFeedback';
 
-// Pagina di dettaglio di una mostra: descrizione, periodo, galleria di immagini, pulsante PRENOTA e feedback.
-// Per l'amministratore mostra anche i comandi Modifica ed Elimina.
+/**
+ * Dettaglio di una mostra: descrizione, periodo, galleria di immagini, pulsante PRENOTA e feedback.
+ * Per l'amministratore mostra anche i comandi Modifica ed Elimina.
+ *
+ * @returns {JSX.Element} La pagina.
+ * @alias module:pages/GalleriaMostra.GalleriaMostra
+ */
 export default function GalleriaMostra() {
     // id della mostra preso dall'indirizzo /esposizione/:id
     const { id } = useParams();

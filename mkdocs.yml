@@ -1,0 +1,122 @@
+# Configurazione del sito di documentazione (MkDocs + tema Material).
+# Le pagine sono in docs/; la reference del backend è generata dai docstring con mkdocstrings,
+# quella del frontend da JSDoc (npm run docs nella cartella frontend → docs/frontend-api/).
+site_name: Museo Civico Digitale
+site_description: Documentazione tecnica del Project Work "Museo Civico Digitale" (FastAPI + React)
+site_author: Roberta Randazzo
+site_url: https://reverserob.github.io/museo-digitale-pw/
+repo_url: https://github.com/reverserob/museo-digitale-pw
+repo_name: reverserob/museo-digitale-pw
+edit_uri: edit/main/docs/
+copyright: Museo Civico Digitale – Project Work di Roberta Randazzo
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: it
+  font:
+    text: Manrope
+    code: JetBrains Mono
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Passa al tema chiaro
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Passa al tema scuro
+  icon:
+    logo: material/bank
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+extra_css:
+  - stili/museo.css
+
+plugins:
+  - search:
+      lang: it
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [backend]
+          options:
+            docstring_style: google
+            docstring_section_style: table
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            heading_level: 2
+            members_order: source
+            filters: ["!^_"]
+            show_signature_annotations: true
+            separate_signature: true
+            signature_crossrefs: true
+            merge_init_into_class: true
+            show_if_no_docstring: false
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
+not_in_nav: |
+  /frontend-api/**
+
+nav:
+  - Home: index.md
+  - Guida:
+      - Avvio in locale: guida/avvio.md
+      - Funzionalità: guida/funzionalita.md
+      - Architettura: guida/architettura.md
+      - API REST: guida/api.md
+  - Backend (Python):
+      - backend/index.md
+      - Applicazione e configurazione: backend/applicazione.md
+      - Modelli dei dati: backend/modelli.md
+      - Schemi Pydantic: backend/schemi.md
+      - Autenticazione: backend/autenticazione.md
+      - Router (endpoint): backend/router.md
+      - Servizi: backend/servizi.md
+  - Frontend (React): frontend.md
+  - Come si genera: documentazione.md

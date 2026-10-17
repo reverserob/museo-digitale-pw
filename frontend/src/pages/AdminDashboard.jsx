@@ -1,5 +1,9 @@
-// Area riservata (/admin): form di login dell'amministratore e, dopo l'accesso, dashboard con indicatori,
-// elenco delle mostre, prenotazioni e feedback di ciascuna mostra e comandi di gestione.
+/**
+ * Area riservata (`/admin`): form di login dell'amministratore e, dopo l'accesso, dashboard con indicatori,
+ * elenco delle mostre, prenotazioni e feedback di ciascuna mostra e comandi di gestione.
+ *
+ * @module pages/AdminDashboard
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -34,6 +38,15 @@ const cardSx = {
 };
 const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
 
+/**
+ * Pagina dell'area riservata. Mostra tre contenuti diversi:
+ * - visitatore collegato: avviso e pulsante per uscire dall'account visitatore;
+ * - admin non collegato: form di login;
+ * - admin collegato: dashboard.
+ *
+ * @returns {JSX.Element} La pagina.
+ * @alias module:pages/AdminDashboard.AdminDashboard
+ */
 export default function AdminDashboard() {
     const navigate = useNavigate();
 

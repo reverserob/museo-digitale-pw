@@ -1,5 +1,9 @@
-// Testi dell'interfaccia pubblica e dell'area visitatori in italiano e in inglese.
-// Le chiavi sono raggruppate per pagina; {nome} indica un valore inserito al momento.
+/**
+ * Testi dell'interfaccia pubblica e dell'area visitatori in italiano e in inglese.
+ * Le chiavi sono raggruppate per pagina; `{nome}` indica un valore inserito al momento.
+ *
+ * @module i18n/testi
+ */
 
 const it = {
     // intestazione e menu lingua
@@ -419,10 +423,19 @@ const en = {
     'errore.tornaHome': 'Back to home',
 };
 
-// dizionari usati da traduci() in lingua.js
+/**
+ * Dizionari dei testi per lingua, usati da {@link module:i18n/lingua.traduci}.
+ *
+ * @type {{it: Object<string, string>, en: Object<string, string>}}
+ */
 export const TESTI = { it, en };
 
-// Traduzione inglese dei messaggi che il backend restituisce in italiano
+/**
+ * Traduzione inglese dei messaggi che il backend restituisce in italiano,
+ * usata da {@link module:i18n/lingua.traduciServer}.
+ *
+ * @type {Object<string, string>}
+ */
 export const MESSAGGI_SERVER_EN = {
     'Email o password errate.': 'Incorrect email or password.',
     'Utente già registrato: esiste già un account con questa email. Accedi oppure reimposta la password.':

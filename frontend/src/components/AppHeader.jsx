@@ -1,4 +1,8 @@
-// Barra superiore del sito: nome del museo, menu di navigazione, accesso/uscita e scelta della lingua
+/**
+ * Barra superiore del sito: nome del museo, menu di navigazione, accesso/uscita e scelta della lingua.
+ *
+ * @module components/AppHeader
+ */
 import { Link, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Select, MenuItem, Box } from '@mui/material';
 import useUtente from '../hooks/useUtente';
@@ -7,7 +11,13 @@ import useLingua from '../hooks/useLingua';
 import { logoutUtente } from '../services/utentiService';
 import { logout } from '../services/authService';
 
-// menu a tendina della lingua: ITA / EN
+/**
+ * Menu a tendina per scegliere la lingua (ITA / EN).
+ *
+ * @private
+ * @returns {JSX.Element} Il selettore della lingua.
+ * @alias module:components/AppHeader.SceltaLingua
+ */
 function SceltaLingua() {
     const { lingua, setLingua, t } = useLingua();
     return (
@@ -31,7 +41,15 @@ function SceltaLingua() {
     );
 }
 
-// Il menu cambia in base a chi è collegato: amministratore, visitatore o nessuno
+/**
+ * Header dell'applicazione. Il menu cambia in base a chi è collegato:
+ * - amministratore: "Ciao, Admin" ed Esci;
+ * - visitatore: saluto con il nome (porta all'area personale) ed Esci;
+ * - nessuno: Accedi e Area Riservata.
+ *
+ * @returns {JSX.Element} La barra di navigazione.
+ * @alias module:components/AppHeader.AppHeader
+ */
 export default function AppHeader() {
     const utente = useUtente();
     const admin = useAdmin();

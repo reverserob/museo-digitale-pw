@@ -1,0 +1,30 @@
+{
+  "source": {
+    "include": ["src"],
+    "includePattern": "\\.(js|jsx)$",
+    "excludePattern": "(^|\\/|\\\\)tests(\\/|\\\\)"
+  },
+  "sourceType": "module",
+  "plugins": ["plugins/markdown"],
+  "opts": {
+    "destination": "../docs/frontend-api",
+    "recurse": true,
+    "readme": "docs/jsdoc-home.md",
+    "encoding": "utf8",
+    "template": "node_modules/clean-jsdoc-theme",
+    "theme_opts": {
+      "default_theme": "dark",
+      "title": "Museo Civico Digitale · Frontend",
+      "homepageTitle": "Documentazione frontend",
+      "menu": [
+        { "title": "Documentazione del progetto", "link": "../", "target": "_self" },
+        { "title": "GitHub", "link": "https://github.com/reverserob/museo-digitale-pw", "target": "_blank" }
+      ],
+      "include_css": ["docs/jsdoc-tema.css"],
+      "sections": ["Modules", "Global"],
+      "displayModuleHeader": true,
+      "footer": "Museo Civico Digitale – Project Work"
+    }
+  },
+  "templates": { "cleverLinks": true, "default": { "useLongnameInNav": false } }
+}

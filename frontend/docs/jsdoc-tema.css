@@ -1,0 +1,8 @@
+/* colori del museo applicati al tema della documentazione JSDoc */
+:root {
+    --primary-color: #c5a059;
+}
+a,
+.sidebar-section-title {
+    color: #c5a059;
+}

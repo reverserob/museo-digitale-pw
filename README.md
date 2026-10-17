@@ -87,6 +87,19 @@ Go To: [Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
 L'indirizzo del backend si può impostare con `VITE_API_URL` (vedi `frontend/.env.example`; su Vercel
 in *Settings → Environment Variables*).
 
+#### Documentazione tecnica
+La documentazione del progetto è generata dai commenti del codice e pubblicata su GitHub Pages:
+[reverserob.github.io/museo-digitale-pw](https://reverserob.github.io/museo-digitale-pw/)
+
+- **Backend**: MkDocs (tema Material) + mkdocstrings, dai docstring Python in stile Google
+- **Frontend**: JSDoc, dai commenti `/** ... */` dei file React
+
+```bash
+cd frontend && npm run docs && cd ..          # JSDoc → docs/frontend-api/
+pip install -r backend/requirements-docs.txt
+mkdocs serve -a 127.0.0.1:8001                # anteprima del sito
+```
+
 #### Integrazione continua (GitHub Actions)
 A ogni push su `main` il workflow `.github/workflows/ci.yml` esegue ruff e pytest sul backend
 (Python 3.9 e 3.12) e ESLint, Prettier, Vitest e la build sul frontend. L'esito si vede nella scheda

@@ -1,0 +1,38 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&display=swap");
+
+/* Colori del museo (oro #c5a059) applicati al tema Material */
+:root,
+[data-md-color-scheme="default"] {
+    --md-primary-fg-color: #8a6d2f;
+    --md-primary-fg-color--light: #c5a059;
+    --md-primary-fg-color--dark: #6b5322;
+    --md-accent-fg-color: #8a6d2f;
+}
+
+[data-md-color-scheme="slate"] {
+    --md-primary-fg-color: #c5a059;
+    --md-primary-fg-color--light: #d9bd85;
+    --md-primary-fg-color--dark: #9c7b3c;
+    --md-primary-bg-color: #111111;
+    --md-accent-fg-color: #d9bd85;
+    --md-default-bg-color: #121212;
+    --md-typeset-a-color: #d9bd85;
+}
+
+/* titoli con lo stesso font del sito */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+    font-family: "Outfit", "Manrope", sans-serif;
+}
+
+/* screenshot con bordo sottile */
+.md-typeset img.screenshot {
+    border: 1px solid rgba(197, 160, 89, 0.35);
+    border-radius: 6px;
+}
+
+/* card della home */
+.md-typeset .grid.cards > ul > li {
+    border-color: rgba(197, 160, 89, 0.35);
+}
