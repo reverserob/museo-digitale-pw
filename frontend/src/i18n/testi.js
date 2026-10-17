@@ -217,6 +217,7 @@ const it = {
     'errore.tornaHome': 'Torna alla home',
 };
 
+// Traduzione inglese: stesse chiavi del dizionario italiano
 const en = {
     'header.accedi': 'Sign in',
     'header.areaRiservata': 'Staff area',
@@ -418,6 +419,7 @@ const en = {
     'errore.tornaHome': 'Back to home',
 };
 
+// dizionari usati da traduci() in lingua.js
 export const TESTI = { it, en };
 
 // Traduzione inglese dei messaggi che il backend restituisce in italiano

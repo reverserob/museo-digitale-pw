@@ -1,3 +1,5 @@
+"""Popolamento iniziale del database con le mostre di esempio."""
+
 import json
 import logging
 from datetime import date
@@ -8,19 +10,22 @@ from database import SessionLocal
 
 logger = logging.getLogger("uvicorn.error")
 
-# File con le mostre iniziali
+# File con le mostre iniziali (backend/data/mostre.json)
 SEED_FILE = Path(__file__).parent.parent / "data" / "mostre.json"
 
 
-# get dat from mostre.-json
 def leggi_mostre_json():
+    """Legge il file JSON delle mostre iniziali."""
     with SEED_FILE.open(encoding="utf-8") as f:
         return json.load(f)
 
 
 def inserisci_dati_iniziali():
+    """Inserisce le mostre iniziali solo se il catalogo è vuoto (chiamata all'avvio dell'applicazione)."""
+    # qui non c'è una richiesta HTTP, quindi apro e chiudo la sessione manualmente
     db = SessionLocal()
     try:
+        # se ci sono già mostre non faccio nulla: i dati inseriti dall'admin non vengono toccati
         if db.query(models.Mostra).count() == 0:
             mostre = leggi_mostre_json()
             for m in mostre:
@@ -40,6 +45,7 @@ def inserisci_dati_iniziali():
                 db.add(mostra)
             db.commit()
             logger.info(f"Seeding completato: {len(mostre)} mostre inserite da {SEED_FILE.name}")
+    # un problema nel file non blocca l'avvio del server: viene solo registrato nel log
     except FileNotFoundError:
         logger.error(f"File {SEED_FILE} non trovato: nessuna mostra iniziale inserita")
     except (json.JSONDecodeError, KeyError) as e:

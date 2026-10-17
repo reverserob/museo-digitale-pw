@@ -1,3 +1,4 @@
+// Barra superiore del sito: nome del museo, menu di navigazione, accesso/uscita e scelta della lingua
 import { Link, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Select, MenuItem, Box } from '@mui/material';
 import useUtente from '../hooks/useUtente';
@@ -30,12 +31,14 @@ function SceltaLingua() {
     );
 }
 
+// Il menu cambia in base a chi è collegato: amministratore, visitatore o nessuno
 export default function AppHeader() {
     const utente = useUtente();
     const admin = useAdmin();
     const { t } = useLingua();
     const navigate = useNavigate();
 
+    // logout di chi è collegato e ritorno alla home
     const esci = () => {
         if (admin) logout();
         else logoutUtente();
@@ -69,6 +72,7 @@ export default function AppHeader() {
                             </Button>
                         </>
                     ) : utente ? (
+                        // visitatore collegato: saluto con il nome (porta all'area personale) ed Esci
                         <>
                             <Button component={Link} to="/profilo" color="inherit" className="app-header__button">
                                 {t('header.ciao', { nome: utente.nome })}
@@ -78,6 +82,7 @@ export default function AppHeader() {
                             </Button>
                         </>
                     ) : (
+                        // nessuno collegato: accesso visitatori e area riservata
                         <>
                             <Button component={Link} to="/accedi" color="inherit" className="app-header__button">
                                 {t('header.accedi')}

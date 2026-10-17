@@ -14,6 +14,8 @@ const cardSx = {
 };
 const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
 
+// Pagina "Password dimenticata": l'utente inserisce l'email e riceve un link per reimpostare la password.
+// Il messaggio di conferma è sempre lo stesso, anche se l'email non è registrata (scelta di sicurezza).
 export default function PasswordDimenticata() {
     const { t } = useLingua();
     const [email, setEmail] = useState('');
@@ -40,6 +42,7 @@ export default function PasswordDimenticata() {
                     </Typography>
                     <Typography sx={{ color: '#aaaaaa', mb: 3 }}>{t('reset.intro')}</Typography>
 
+                    {/* dopo l'invio il form viene sostituito dal messaggio di conferma */}
                     {conferma ? (
                         <Alert severity="success" sx={{ mb: 3 }}>
                             {conferma}

@@ -1,4 +1,5 @@
-# Test "unitari": controllano le singole funzioni di validazione senza passare dalle API
+"""Test unitari: controllano le singole funzioni di validazione senza passare dalle API."""
+
 import pytest
 from pydantic import ValidationError
 

@@ -1,3 +1,5 @@
+"""Test dei feedback: regole di invio (prenotazione, una sola recensione, date), lettura e moderazione."""
+
 import pytest
 
 from tests.conftest import prenota_nel_db, registra_utente

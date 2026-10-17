@@ -14,6 +14,7 @@ const cardSx = {
     p: { xs: 1, sm: 4 },
 };
 
+// Area personale del visitatore (/profilo): dati dell'account, elenco delle prenotazioni e annullamento
 export default function AreaPersonale() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -22,6 +23,7 @@ export default function AreaPersonale() {
     const [prenotazioni, setPrenotazioni] = useState(null);
     const [errore, setErrore] = useState('');
     const [messaggio, setMessaggio] = useState('');
+    // id della prenotazione in corso di annullamento (per disattivarne il pulsante)
     const [inAnnullamento, setInAnnullamento] = useState(null);
 
     useEffect(() => {
@@ -36,6 +38,7 @@ export default function AreaPersonale() {
         navigate('/');
     };
 
+    // annulla una prenotazione dopo la conferma; il backend invia l'email di conferma dell'annullamento
     const annulla = (p) => {
         if (!window.confirm(t('profilo.confermaAnnulla', { titolo: p.titolo_mostra }))) return;
         setErrore('');
@@ -50,6 +53,7 @@ export default function AreaPersonale() {
             .finally(() => setInAnnullamento(null));
     };
 
+    // dopo il logout il componente non mostra nulla mentre avviene il cambio di pagina
     if (!utente) return null;
 
     return (
@@ -76,6 +80,7 @@ export default function AreaPersonale() {
                         {utente.nome} {utente.cognome} · {utente.email} · {utente.telefono}
                     </Typography>
 
+                    {/* messaggio mostrato subito dopo la registrazione (stato passato dalla pagina Accedi) */}
                     {location.state?.registrato && (
                         <Alert severity="success" sx={{ mt: 3 }}>
                             {t('profilo.registrato')}

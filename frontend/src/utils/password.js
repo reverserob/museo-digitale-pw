@@ -6,4 +6,5 @@ export const REGOLE_PASSWORD = [
     { chiave: 'password.numero', ok: (p) => /\d/.test(p) },
 ];
 
+// Restituisce le chiavi dei requisiti non rispettati (array vuoto = password valida)
 export const requisitiMancanti = (password) => REGOLE_PASSWORD.filter((r) => !r.ok(password)).map((r) => r.chiave);

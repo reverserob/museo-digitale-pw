@@ -1,3 +1,4 @@
+// Test del client HTTP: indirizzo del backend, token, intercettori, immagini e messaggi di errore
 import { describe, it, expect } from 'vitest';
 import {
     API_URL,

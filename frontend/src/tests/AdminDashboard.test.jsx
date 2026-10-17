@@ -1,3 +1,4 @@
+// Test dell'area riservata: login admin, blocco per i visitatori collegati, dashboard e moderazione
 import { describe, it, expect, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

@@ -1,3 +1,5 @@
+"""Test degli indicatori della dashboard amministratore."""
+
 from datetime import date, datetime
 
 import models

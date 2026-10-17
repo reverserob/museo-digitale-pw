@@ -39,6 +39,7 @@ export default function Esposizioni() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // per il visitatore collegato leggo le sue prenotazioni, per mostrare "MOSTRA PRENOTATA" al posto di PRENOTA
     useEffect(() => {
         if (!utente) {
             setPrenotate([]);
@@ -69,6 +70,7 @@ export default function Esposizioni() {
                 </Typography>
             </Box>
 
+            {/* stati della pagina: caricamento, errore, catalogo vuoto */}
             {loading && (
                 <Box sx={{ textAlign: 'center' }}>
                     <CircularProgress color="primary" />
@@ -83,6 +85,7 @@ export default function Esposizioni() {
                 <Typography sx={{ textAlign: 'center', color: '#bbbbbb' }}>{t('esposizioni.vuoto')}</Typography>
             )}
 
+            {/* una card per mostra: due colonne da tablet in su, una su smartphone */}
             <Grid container spacing={4} sx={{ alignItems: 'stretch' }}>
                 {mostre.map((mostra) => (
                     <Grid key={mostra.id} size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>

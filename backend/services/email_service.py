@@ -1,3 +1,9 @@
+"""Invio delle email del museo (conferme, annullamenti, registrazione, reset password, contatti).
+
+Le email partono con l'API HTTPS di Brevo se è impostata BREVO_API_KEY, altrimenti con SMTP.
+Se nessuno dei due è configurato (es. in locale) l'invio viene saltato e annotato nel log.
+"""
+
 import html
 import json
 import logging
@@ -13,6 +19,7 @@ import settings
 
 logger = logging.getLogger("uvicorn.error")
 
+# indirizzo dell'API di Brevo per l'invio di email transazionali
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
 
@@ -25,6 +32,9 @@ def _layout(contenuto: str) -> str:
             <p style="color: #aaa;">A presto,<br><b>La Direzione del Museo</b></p>
         </div>
     """
+
+
+# --- Modelli HTML delle email ---
 
 
 def crea_html_conferma(nome: str, titolo_mostra: str, data_inizio: date, data_fine: date) -> str:
@@ -42,6 +52,7 @@ def crea_html_conferma(nome: str, titolo_mostra: str, data_inizio: date, data_fi
 
 
 def crea_html_annullamento(nome: str, titolo_mostra: str, data_inizio: date, data_fine: date) -> str:
+    # html.escape impedisce che un nome o un titolo contenente tag HTML alteri l'email
     return _layout(f"""
             <p style="color: #fff;">Gentile <b>{html.escape(nome)}</b>,</p>
             <p style="color: #ddd;">ti confermiamo che la tua prenotazione è stata <b>annullata</b>:</p>
@@ -54,6 +65,7 @@ def crea_html_annullamento(nome: str, titolo_mostra: str, data_inizio: date, dat
 
 
 def crea_html_registrazione(nome: str) -> str:
+    # email di benvenuto dopo una registrazione riuscita
     return _layout(f"""
             <p style="color: #fff;">Gentile <b>{html.escape(nome)}</b>,</p>
             <p style="color: #ddd;">la registrazione al Museo Civico Digitale è avvenuta con successo.</p>
@@ -63,6 +75,7 @@ def crea_html_registrazione(nome: str) -> str:
 
 
 def crea_html_gia_registrato(nome: str) -> str:
+    # avviso al titolare dell'account quando qualcuno prova a registrarsi di nuovo con la sua email
     return _layout(f"""
             <p style="color: #fff;">Gentile <b>{html.escape(nome)}</b>,</p>
             <p style="color: #ddd;">qualcuno ha appena provato a creare un nuovo account con il tuo indirizzo email,
@@ -73,6 +86,7 @@ def crea_html_gia_registrato(nome: str) -> str:
 
 
 def crea_html_reset_password(nome: str, link: str, minuti: int) -> str:
+    # quote=True escapa anche le virgolette, perché il link finisce dentro l'attributo href
     link_html = html.escape(link, quote=True)
     return _layout(f"""
             <p style="color: #fff;">Gentile <b>{html.escape(nome)}</b>,</p>
@@ -83,6 +97,9 @@ def crea_html_reset_password(nome: str, link: str, minuti: int) -> str:
             <p style="color: #aaa;">Il link è valido per {minuti} minuti e può essere usato una sola volta.
             Se non hai fatto tu la richiesta, ignora questa email: la password resta invariata.</p>
     """)
+
+
+# --- Canali di invio ---
 
 
 def invia_con_brevo(
@@ -108,6 +125,7 @@ def invia_con_brevo(
             "accept": "application/json",
         },
     )
+    # timeout di 10 secondi: se Brevo non risponde l'invio fallisce invece di restare bloccato
     try:
         with urllib.request.urlopen(richiesta, timeout=10) as risposta:
             risposta.read()
@@ -118,6 +136,7 @@ def invia_con_brevo(
 
 
 def invia_con_smtp(destinatario: str, oggetto: str, html_content: str, rispondi_a: Optional[str] = None) -> None:
+    # alternativa a Brevo: invio tramite un server SMTP (es. Gmail con password per le app)
     msg = MIMEMultipart()
     msg["From"] = settings.SMTP_USER
     msg["To"] = destinatario
@@ -127,12 +146,13 @@ def invia_con_smtp(destinatario: str, oggetto: str, html_content: str, rispondi_
     msg.attach(MIMEText(html_content, "html"))
 
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as server:
-        server.starttls()
+        server.starttls()  # cifra la connessione prima di inviare le credenziali
         server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.sendmail(settings.SMTP_USER, destinatario, msg.as_string())
 
 
 def email_configurata() -> bool:
+    """True se è configurato almeno un canale di invio (Brevo oppure SMTP)."""
     return bool(settings.BREVO_API_KEY) or bool(settings.SMTP_USER and settings.SMTP_PASSWORD)
 
 
@@ -149,6 +169,7 @@ def _invia(destinatario: str, nome: str, oggetto: str, html_content: str, rispon
             invia_con_smtp(destinatario, oggetto, html_content, rispondi_a)
         logger.info(f"Email '{oggetto}' inviata a {destinatario} tramite {'Brevo' if usa_brevo else 'SMTP'}")
         return True
+    # un errore di invio non deve mai far fallire l'operazione principale (prenotazione, registrazione...)
     except Exception as e:
         logger.error(f"Errore invio email a {destinatario}: {e}")
         return False
@@ -171,35 +192,38 @@ def crea_html_contatto(dati: dict) -> str:
     """)
 
 
-# SEND MAIL MODULO CONTATTI (alla casella del museo)
+# --- Funzioni chiamate dai router ---
+
+
+# Email del modulo Contatti, inviata alla casella del museo con "Rispondi a" = email del visitatore
 def invia_email_contatto(dati: dict) -> bool:
     oggetto = f"[Contatti] {dati['titolo']}"
     return _invia(settings.CONTATTI_EMAIL, "Museo Civico Digitale", oggetto, crea_html_contatto(dati), dati["email"])
 
 
-# SEND MAIL PRENOTAZIONE
+# Email di conferma della prenotazione (eseguita in background dopo la risposta)
 def invia_email_background(destinatario: str, nome: str, titolo_mostra: str, data_inizio: date, data_fine: date):
     oggetto = f"Conferma Prenotazione: {titolo_mostra}"
     _invia(destinatario, nome, oggetto, crea_html_conferma(nome, titolo_mostra, data_inizio, data_fine))
 
 
-# SEND MAIL ANNULLAMENTO PRENOTAZIONE
+# Email di conferma dell'annullamento di una prenotazione
 def invia_email_annullamento(destinatario: str, nome: str, titolo_mostra: str, data_inizio: date, data_fine: date):
     oggetto = f"Prenotazione annullata: {titolo_mostra}"
     _invia(destinatario, nome, oggetto, crea_html_annullamento(nome, titolo_mostra, data_inizio, data_fine))
 
 
-# SEND MAIL REGISTRAZIONE
+# Email di benvenuto dopo la registrazione
 def invia_email_registrazione(destinatario: str, nome: str):
     _invia(destinatario, nome, "Registrazione completata", crea_html_registrazione(nome))
 
 
-# SEND MAIL TENTATIVO DI REGISTRAZIONE DOPPIA
+# Email di avviso per un tentativo di registrazione con un'email già usata
 def invia_email_gia_registrato(destinatario: str, nome: str):
     _invia(destinatario, nome, "Tentativo di registrazione con la tua email", crea_html_gia_registrato(nome))
 
 
-# SEND MAIL RESET PASSWORD
+# Email con il link per reimpostare la password
 def invia_email_reset_password(destinatario: str, nome: str, link: str, minuti: int):
     if not _invia(destinatario, nome, "Reimposta la tua password", crea_html_reset_password(nome, link, minuti)):
         # senza servizio email (es. in locale) il link viene scritto nel log per poter provare la funzione

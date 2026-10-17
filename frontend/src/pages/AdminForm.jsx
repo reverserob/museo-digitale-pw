@@ -1,3 +1,4 @@
+// Form dell'amministratore per creare una nuova mostra (/admin/nuova) o modificarne una (/admin/modifica/:id)
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid, Alert } from '@mui/material';
@@ -45,6 +46,7 @@ const nomeFile = (percorso) => percorso.split('/').pop();
 export default function AdminForm() {
     const navigate = useNavigate();
     const { id } = useParams();
+    // se nell'indirizzo c'è un id siamo in modifica, altrimenti in creazione
     const isEditMode = Boolean(id);
 
     const [titolo, setTitolo] = useState('');
@@ -59,6 +61,7 @@ export default function AdminForm() {
     const [errore, setErrore] = useState('');
     const [salvataggio, setSalvataggio] = useState(false);
 
+    // in modifica precompila il form con i dati attuali della mostra
     useEffect(() => {
         if (isEditMode) {
             getMostra(id)
@@ -78,6 +81,7 @@ export default function AdminForm() {
         }
     }, [id, isEditMode]);
 
+    // controlli del form: le date in formato AAAA-MM-GG si possono confrontare come testo
     const dateValide = !dataInizio || !dataFine || dataFine >= dataInizio;
     const totaleImmagini = immaginiAttuali.length + fileImmagini.length;
     const immaginiOk = totaleImmagini > 0;
@@ -86,6 +90,7 @@ export default function AdminForm() {
     const anteprime = useMemo(() => fileImmagini.map((file) => URL.createObjectURL(file)), [fileImmagini]);
     useEffect(() => () => anteprime.forEach((url) => URL.revokeObjectURL(url)), [anteprime]);
 
+    // aggiunge i file scelti a quelli già selezionati
     const aggiungiImmagini = (e) => {
         const nuovi = Array.from(e.target.files || []);
         setFileImmagini((precedenti) => {
@@ -112,6 +117,7 @@ export default function AdminForm() {
         setErrore('');
         setSalvataggio(true);
 
+        // FormData permette di inviare insieme campi di testo e file (multipart/form-data)
         const formData = new FormData();
         formData.append('titolo', titolo.trim());
         formData.append('descrizione', descrizione.trim());
@@ -127,6 +133,7 @@ export default function AdminForm() {
         request
             .then(() => {
                 setMessaggio(isEditMode ? 'Mostra modificata con successo!' : 'Nuova mostra pubblicata con successo!');
+                // dopo un attimo (per leggere il messaggio) torna alla dashboard
                 setTimeout(() => navigate('/admin'), 1200);
             })
             .catch((err) => {
@@ -265,6 +272,7 @@ export default function AdminForm() {
                                     Puoi selezionare più foto insieme oppure aggiungerle una alla volta. La prima sarà
                                     l'immagine principale della mostra.
                                 </Typography>
+                                {/* miniature: prima le immagini già salvate, poi le nuove (anteprima locale) */}
                                 {totaleImmagini > 0 ? (
                                     <>
                                         <Typography

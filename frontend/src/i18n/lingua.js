@@ -16,6 +16,8 @@ const leggiLinguaSalvata = () => {
 
 export const getLingua = () => leggiLinguaSalvata();
 
+// Salva la lingua scelta, aggiorna l'attributo lang della pagina e avvisa i componenti (hook useLingua)
+
 export const setLingua = (lingua) => {
     if (!LINGUE.includes(lingua)) return;
     try {

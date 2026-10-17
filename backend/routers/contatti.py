@@ -1,3 +1,5 @@
+"""API del modulo Contatti: le domande dei visitatori registrati arrivano per email al museo."""
+
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -14,19 +16,23 @@ logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/api/contatti", tags=["Contatti"])
 
 
-# API POST CONTATTI: la domanda del visitatore registrato arriva per email alla casella del museo
+# POST /api/contatti: la domanda del visitatore registrato arriva per email alla casella del museo
+# (indirizzo in settings.CONTATTI_EMAIL). Il limite ai tentativi evita invii a raffica.
 @router.post("")
 @limiter.limit(settings.LOGIN_RATE_LIMIT)
 def invia_contatto(
     request: Request,
     dati: schemas.ContattoRequest,
+    # solo i visitatori registrati possono scrivere: senza token valido la risposta è 401
     _utente: models.Utente = Depends(richiedi_utente),
 ):
+    """Inoltra la richiesta del visitatore; risponde 503 se il servizio email non riesce a inviarla."""
     if not email_configurata():
         # in locale, senza servizio email, la richiesta viene scritta nel log per poter provare il modulo
         logger.warning(f"Email non configurata: richiesta Contatti non inviata a {settings.CONTATTI_EMAIL}: {dati}")
         return {"message": "Richiesta inviata. Ti risponderemo all'indirizzo email indicato."}
     # l'invio avviene subito (non in background) per poter avvisare l'utente se qualcosa non va
+    # model_dump() trasforma lo schema Pydantic in un dizionario con i campi del modulo
     if not invia_email_contatto(dati.model_dump()):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

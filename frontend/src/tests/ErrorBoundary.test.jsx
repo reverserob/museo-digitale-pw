@@ -1,3 +1,4 @@
+// Test dell'ErrorBoundary: un errore in una pagina mostra un messaggio invece della pagina bianca
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ErrorBoundary from '../components/ErrorBoundary';

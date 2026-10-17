@@ -1,3 +1,4 @@
+// Test della configurazione delle rotte (config/routes.json) e della navigazione dal menu
 import { describe, it, expect } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

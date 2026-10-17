@@ -1,3 +1,5 @@
+"""API delle prenotazioni: creazione da parte dei visitatori ed elenco per l'amministratore."""
+
 import logging
 from datetime import date
 from typing import Optional
@@ -17,16 +19,20 @@ logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/api", tags=["Prenotazioni"])
 
 
-# API POST PRENOTAZIONE
+# POST /api/prenota (solo visitatori registrati)
 @router.post("/prenota", status_code=status.HTTP_201_CREATED)
 def crea_prenotazione(
     dati: schemas.PrenotazioneCreate,
+    # FastAPI fornisce una coda di attività da eseguire dopo aver inviato la risposta
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    # il visitatore viene ricavato dal token: non può prenotare a nome di altri
     utente: models.Utente = Depends(richiedi_utente),
 ):
+    """Salva la prenotazione con i dati dell'account e invia l'email di conferma in background."""
     mostra = trova_mostra(db, dati.mostra_id)
 
+    # non si può prenotare una mostra già conclusa
     if mostra.data_fine < date.today():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra è già conclusa: non è più possibile prenotare."
@@ -42,6 +48,7 @@ def crea_prenotazione(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ti sei già prenotato a questa mostra.")
 
     try:
+        # nome, cognome ed email vengono copiati dall'account; il telefono può essere diverso
         prenotazione = models.Prenotazione(
             mostra_id=mostra.id,
             utente_id=utente.id,
@@ -61,6 +68,8 @@ def crea_prenotazione(
             detail="Errore interno durante l'elaborazione della prenotazione.",
         ) from e
 
+    # l'email parte DOPO la risposta 201: l'utente non aspetta i tempi del servizio di posta,
+    # e se l'invio fallisce la prenotazione resta comunque salvata
     background_tasks.add_task(
         invia_email_background,
         destinatario=utente.email,
@@ -72,13 +81,14 @@ def crea_prenotazione(
     return {"message": "Prenotazione effettuata con successo!", "id": prenotazione.id}
 
 
-# API GET PRENOTAZIONI
+# GET /api/prenotazioni (solo amministratore)
 @router.get("/prenotazioni", response_model=list[schemas.PrenotazioneResponse])
 def leggi_prenotazioni(
-    mostra_id: Optional[int] = None,
+    mostra_id: Optional[int] = None,  # parametro facoltativo nell'URL: ?mostra_id=3
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
+    """Elenco delle prenotazioni, dalla più recente; filtrabile per mostra."""
     query = db.query(models.Prenotazione)
     if mostra_id is not None:
         query = query.filter(models.Prenotazione.mostra_id == mostra_id)

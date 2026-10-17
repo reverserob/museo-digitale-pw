@@ -1,3 +1,5 @@
+"""Calcolo degli indicatori della dashboard amministratore."""
+
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
@@ -10,6 +12,7 @@ import models
 
 
 def stato_mostra(mostra: models.Mostra, oggi: date) -> str:
+    """Stato della mostra rispetto alla data di oggi: "conclusa", "futura" o "in corso"."""
     if mostra.data_fine < oggi:
         return "conclusa"
     if mostra.data_inizio > oggi:
@@ -18,10 +21,12 @@ def stato_mostra(mostra: models.Mostra, oggi: date) -> str:
 
 
 def _arrotonda(valore) -> Optional[float]:
+    """Arrotonda a un decimale; None se non ci sono voti (media non calcolabile)."""
     return round(float(valore), 1) if valore is not None else None
 
 
 def calcola_statistiche(db: Session) -> dict:
+    """Totali generali e dettaglio per mostra (prenotazioni, feedback, voto medio)."""
     oggi = date.today()
     mostre = db.query(models.Mostra).order_by(models.Mostra.data_inizio).all()
 
@@ -40,6 +45,7 @@ def calcola_statistiche(db: Session) -> dict:
         .all()
     }
 
+    # una riga per ogni mostra e conteggio delle mostre per stato
     per_mostra = []
     stati = {"in corso": 0, "futura": 0, "conclusa": 0}
     for m in mostre:
@@ -61,6 +67,7 @@ def calcola_statistiche(db: Session) -> dict:
     limite = (datetime.now(timezone.utc) - timedelta(days=7)).replace(tzinfo=None)
     ultimi_7 = db.query(models.Prenotazione).filter(models.Prenotazione.creata_il >= limite).count()
 
+    # i nomi delle chiavi corrispondono ai campi di schemas.StatisticheResponse
     return {
         "totale_mostre": len(mostre),
         "mostre_in_corso": stati["in corso"],

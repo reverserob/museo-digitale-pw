@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom';
 import { Container, Typography, Grid, Box, Button, Card, CardContent } from '@mui/material';
 import useLingua from '../hooks/useLingua';
 
+// i tre riquadri "cosa offre il museo" (chiavi dei testi in i18n/testi.js)
 const PUNTI = [
     { titolo: 'home.puntoMostreTitolo', testo: 'home.puntoMostre' },
     { titolo: 'home.puntoPrenotaTitolo', testo: 'home.puntoPrenota' },
     { titolo: 'home.puntoOpinioniTitolo', testo: 'home.puntoOpinioni' },
 ];
 
+// stile delle immagini delle opere
 const quadro = {
     width: '100%',
     height: '100%',
@@ -122,6 +124,7 @@ export default function Home() {
                 ))}
             </Grid>
 
+            {/* il pulsante viene ripetuto anche in fondo alla pagina */}
             <Box sx={{ mt: { xs: 6, md: 9 } }}>{pulsante}</Box>
         </Container>
     );

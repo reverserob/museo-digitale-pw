@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Container, Typography, Button } from '@mui/material';
 import useLingua from '../hooks/useLingua';
 
+// Pagina 404: mostrata per gli indirizzi che non corrispondono a nessuna pagina (path "*" in routes.json)
 export default function NotFound() {
     const { t } = useLingua();
     return (

@@ -1,3 +1,5 @@
+"""Aggiornamento leggero dello schema di un database SQLite già esistente."""
+
 import logging
 
 from sqlalchemy import inspect, text
@@ -14,10 +16,12 @@ COLONNE_AGGIUNTE = {
 
 
 def aggiorna_schema(engine):
+    """Aggiunge le colonne mancanti elencate in COLONNE_AGGIUNTE (chiamata all'avvio da main.py)."""
     ispettore = inspect(engine)
     tabelle = set(ispettore.get_table_names())
     with engine.begin() as conn:
         for tabella, colonne in COLONNE_AGGIUNTE.items():
+            # tabella non ancora creata: ci penserà create_all con tutte le colonne
             if tabella not in tabelle:
                 continue
             esistenti = {c["name"] for c in ispettore.get_columns(tabella)}

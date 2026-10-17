@@ -1,3 +1,5 @@
+"""Test delle prenotazioni: regole di accesso, validazione, unicità, annullamento ed elenco per l'admin."""
+
 import pytest
 
 from tests.conftest import registra_utente

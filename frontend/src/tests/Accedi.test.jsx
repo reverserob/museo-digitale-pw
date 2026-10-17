@@ -1,3 +1,4 @@
+// Test della pagina Accedi: login, registrazione, controlli dei campi e redirect dopo l'accesso
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

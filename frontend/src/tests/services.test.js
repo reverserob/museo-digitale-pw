@@ -1,3 +1,4 @@
+// Test dei servizi: ogni funzione chiama l'API giusta con i parametri giusti (axios simulato)
 import { describe, it, expect, vi } from 'vitest';
 import { api, getToken, setToken } from '../services/api';
 import { getMostre, getMostra, creaMostra, aggiornaMostra, eliminaMostra } from '../services/mostreService';

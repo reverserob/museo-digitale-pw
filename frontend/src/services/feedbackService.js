@@ -2,6 +2,7 @@ import { api } from './api';
 
 // Chiamate al backend per i feedback dei visitatori
 
+// solo visitatori prenotati alla mostra (il backend controlla le regole)
 export const inviaFeedback = (dati) => api.post('/api/feedback', dati).then((res) => res.data);
 
 // pubblica: se mostraId è indicato restituisce solo i feedback di quella mostra

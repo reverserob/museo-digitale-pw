@@ -1,3 +1,4 @@
+// Test del form admin di creazione e modifica delle mostre (campi, immagini, invio multipart)
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

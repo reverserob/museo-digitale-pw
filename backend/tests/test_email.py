@@ -1,5 +1,7 @@
-# Test del servizio email: nessuna email viene inviata davvero,
-# le chiamate a Brevo e a SMTP vengono sostituite da funzioni finte.
+"""Test del servizio email: nessuna email viene inviata davvero,
+le chiamate a Brevo e a SMTP vengono sostituite da funzioni finte.
+"""
+
 import json
 from datetime import date
 

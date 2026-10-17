@@ -19,7 +19,10 @@ import useUtente from '../hooks/useUtente';
 import useLingua from '../hooks/useLingua';
 import SezioneFeedback from '../components/SezioneFeedback';
 
+// Pagina di dettaglio di una mostra: descrizione, periodo, galleria di immagini, pulsante PRENOTA e feedback.
+// Per l'amministratore mostra anche i comandi Modifica ed Elimina.
 export default function GalleriaMostra() {
+    // id della mostra preso dall'indirizzo /esposizione/:id
     const { id } = useParams();
     const navigate = useNavigate();
     const [mostra, setMostra] = useState(null);
@@ -29,6 +32,7 @@ export default function GalleriaMostra() {
     const { t } = useLingua();
     const [giaPrenotato, setGiaPrenotato] = useState(false);
 
+    // carica la mostra quando la pagina si apre o cambia l'id nell'indirizzo
     useEffect(() => {
         getMostra(id)
             .then(setMostra)
@@ -47,6 +51,7 @@ export default function GalleriaMostra() {
             .catch(() => setGiaPrenotato(false));
     }, [utente, id]);
 
+    // mostra non trovata o errore di rete
     if (errore) {
         return (
             <Container maxWidth="md" sx={{ mt: 10 }}>
@@ -59,6 +64,7 @@ export default function GalleriaMostra() {
             </Container>
         );
     }
+    // dati non ancora arrivati: indicatore di caricamento
     if (!mostra)
         return (
             <Box sx={{ textAlign: 'center', mt: 20 }}>
@@ -68,6 +74,7 @@ export default function GalleriaMostra() {
 
     const immaginiGalleria = splitImmagini(mostra.immagini);
 
+    // solo admin: elimina la mostra (con prenotazioni e feedback) dopo la conferma e torna alla dashboard
     const handleEliminaMostra = () => {
         if (!window.confirm(t('mostra.confermaElimina'))) return;
         eliminaMostra(mostra.id)
@@ -81,6 +88,7 @@ export default function GalleriaMostra() {
                 {t('mostra.indietro')}
             </Button>
 
+            {/* barra dei comandi visibile solo all'amministratore */}
             {admin && (
                 <Box
                     aria-label={t('mostra.gestione')}
@@ -187,6 +195,7 @@ export default function GalleriaMostra() {
                 </Grid>
 
                 <Grid size={{ xs: 12, md: 7 }}>
+                    {/* galleria: la prima immagine grande, poi fino a quattro immagini più piccole */}
                     {immaginiGalleria.length > 0 && (
                         <ImageList variant="quilted" cols={2} gap={16}>
                             <ImageListItem cols={2} rows={2}>

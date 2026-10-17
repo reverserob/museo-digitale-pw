@@ -1,5 +1,7 @@
+// Autenticazione dell'amministratore (area riservata)
 import { api, getToken, setToken, getSessioneUtente } from './api';
 
+// mostrato se un visitatore collegato prova ad accedere all'area riservata
 export const MESSAGGIO_VISITATORE_COLLEGATO =
     "Sei collegato come visitatore: esci dal tuo account per accedere all'area riservata.";
 
@@ -13,6 +15,7 @@ export const login = (email, password) => {
     });
 };
 
+// logout: basta cancellare il token salvato nel browser
 export const logout = () => setToken(null);
 
 // l'area riservata è aperta solo con il token admin e nessun visitatore collegato
