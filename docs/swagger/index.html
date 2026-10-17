@@ -1,0 +1,54 @@
+<!doctype html>
+<!--
+  Swagger UI statica delle API del Museo Civico Digitale.
+  Lo schema openapi.json viene generato durante la build della documentazione
+  da backend/esporta_openapi.py (non è salvato nel repository).
+-->
+<html lang="it">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>API · Museo Civico Digitale</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css" />
+        <style>
+            body {
+                margin: 0;
+                background: #ffffff;
+            }
+            .avviso {
+                font-family: system-ui, sans-serif;
+                font-size: 14px;
+                padding: 10px 20px;
+                background: #f6efe1;
+                border-bottom: 1px solid #c5a059;
+                color: #3b2f17;
+            }
+            .avviso a {
+                color: #6b5322;
+            }
+            .swagger-ui .topbar {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="avviso">
+            Documentazione di sola lettura. Per provare le chiamate usa la Swagger UI del backend:
+            <a href="https://museo-digitale-pw.onrender.com/docs" target="_blank" rel="noopener">museo-digitale-pw.onrender.com/docs</a>
+            · <a href="../guida/api/" target="_top">Torna alla documentazione</a>
+        </div>
+        <div id="swagger-ui"></div>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+        <script>
+            window.ui = SwaggerUIBundle({
+                url: 'openapi.json',
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                docExpansion: 'list',
+                defaultModelsExpandDepth: 0,
+                // il backend accetta chiamate solo dal sito del museo (CORS): qui "Try it out" è disattivato
+                supportedSubmitMethods: [],
+            });
+        </script>
+    </body>
+</html>

@@ -39,3 +39,4 @@ backend/static/uploads/*
 # documentazione generata
 site/
 docs/frontend-api/
+docs/swagger/openapi.json

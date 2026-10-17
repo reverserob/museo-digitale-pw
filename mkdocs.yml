@@ -103,6 +103,7 @@ markdown_extensions:
 
 not_in_nav: |
   /frontend-api/**
+  /swagger/**
 
 nav:
   - Home: index.md
@@ -111,6 +112,7 @@ nav:
       - Funzionalità: guida/funzionalita.md
       - Architettura: guida/architettura.md
       - API REST: guida/api.md
+      - Swagger UI: guida/swagger.md
   - Backend (Python):
       - backend/index.md
       - Applicazione e configurazione: backend/applicazione.md
