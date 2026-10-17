@@ -35,3 +35,7 @@ backend/static/uploads/*
 !backend/static/uploads/leonardo-da-vinci-3.webp
 !backend/static/uploads/monet.webp
 !backend/static/uploads/salvador-dali-.webp
+
+# documentazione generata
+site/
+docs/frontend-api/

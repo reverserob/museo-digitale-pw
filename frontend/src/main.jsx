@@ -1,4 +1,8 @@
-// Punto di ingresso del frontend: carica i font e monta l'applicazione React nella pagina
+/**
+ * Punto di ingresso del frontend: carica i font e monta l'applicazione React nella pagina.
+ *
+ * @module main
+ */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 // font installati come pacchetti npm, serviti insieme al sito

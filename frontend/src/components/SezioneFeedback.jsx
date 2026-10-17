@@ -1,5 +1,9 @@
-// Sezione dei feedback nella pagina di una mostra: media dei voti, form per lasciare un feedback
-// (solo visitatori prenotati, uno per mostra) ed elenco dei commenti; l'admin può eliminarli.
+/**
+ * Sezione dei feedback nella pagina di una mostra: media dei voti, form per lasciare un feedback
+ * (solo visitatori prenotati, uno per mostra) ed elenco dei commenti; l'admin può eliminarli.
+ *
+ * @module components/SezioneFeedback
+ */
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, Rating, TextField, Button, Alert, Divider } from '@mui/material';
@@ -20,7 +24,18 @@ const inputStyle = {
 // data di oggi nel formato AAAA-MM-GG, confrontabile come testo con le date delle mostre
 const oggiIso = () => new Date().toISOString().slice(0, 10);
 
-// admin = true quando la pagina è aperta dall'amministratore: legge ed elimina i feedback, ma non ne scrive.
+/**
+ * Sezione dei feedback di una mostra.
+ *
+ * Sotto la media dei voti mostra, in ordine di priorità: il messaggio per l'admin, l'avviso di mostra
+ * non ancora iniziata, l'invito ad accedere, il feedback già lasciato, l'invito a prenotare oppure il form.
+ *
+ * @param {object} props Proprietà del componente.
+ * @param {module:tipi~Mostra} props.mostra Mostra di cui mostrare i feedback.
+ * @param {boolean} [props.admin=false] `true` per l'amministratore: legge ed elimina i feedback, ma non ne scrive.
+ * @returns {JSX.Element} La sezione dei feedback.
+ * @alias module:components/SezioneFeedback.SezioneFeedback
+ */
 export default function SezioneFeedback({ mostra, admin = false }) {
     const utente = useUtente();
     const { t, lingua } = useLingua();

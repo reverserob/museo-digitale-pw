@@ -48,7 +48,15 @@ def _firma(payload: str) -> str:
 
 
 def verifica_credenziali(email: str, password: str) -> bool:
-    """Controlla email e password dell'amministratore (lette dalle variabili d'ambiente)."""
+    """Controlla email e password dell'amministratore (lette dalle variabili d'ambiente).
+
+    Args:
+        email: Email inserita nel form (maiuscole e spazi ignorati).
+        password: Password inserita nel form.
+
+    Returns:
+        True se coincidono con ADMIN_EMAIL e ADMIN_PASSWORD.
+    """
     # compare_digest evita attacchi basati sui tempi di risposta
     email_ok = secrets.compare_digest(email.strip().lower(), settings.ADMIN_EMAIL.lower())
     password_ok = secrets.compare_digest(password, settings.ADMIN_PASSWORD)
@@ -61,7 +69,14 @@ ITERAZIONI_PASSWORD = 200_000
 
 
 def hash_password(password: str) -> str:
-    """Restituisce l'hash da salvare nel database, nel formato algoritmo$iterazioni$sale$hash."""
+    """Calcola l'hash PBKDF2-SHA256 della password con un sale casuale.
+
+    Args:
+        password: Password in chiaro.
+
+    Returns:
+        Stringa da salvare nel database, nel formato `algoritmo$iterazioni$sale$hash`.
+    """
     # sale casuale diverso per ogni utente: due password uguali producono hash diversi
     sale = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), sale, ITERAZIONI_PASSWORD)
@@ -69,7 +84,15 @@ def hash_password(password: str) -> str:
 
 
 def verifica_password(password: str, hash_salvato: str) -> bool:
-    """Ricalcola l'hash della password inserita con lo stesso sale e lo confronta con quello salvato."""
+    """Ricalcola l'hash della password inserita con lo stesso sale e lo confronta con quello salvato.
+
+    Args:
+        password: Password inserita dall'utente.
+        hash_salvato: Valore prodotto da `hash_password`.
+
+    Returns:
+        True se la password è corretta; False anche se l'hash salvato non è leggibile.
+    """
     try:
         algoritmo, iterazioni, sale, digest = hash_salvato.split("$")
         if algoritmo != "pbkdf2_sha256":
@@ -83,7 +106,16 @@ def verifica_password(password: str, hash_salvato: str) -> bool:
 
 # --- Token di accesso ---
 def crea_token(email: str, ruolo: str = "admin", utente_id: Optional[int] = None) -> str:
-    """Token firmato con scadenza; il ruolo distingue l'amministratore dai visitatori."""
+    """Crea un token firmato con scadenza; il ruolo distingue l'amministratore dai visitatori.
+
+    Args:
+        email: Email del titolare del token.
+        ruolo: `"admin"`, `"utente"` oppure `"reset"`.
+        utente_id: Id del visitatore (solo per i ruoli dei visitatori).
+
+    Returns:
+        Token nel formato `contenuto.firma`, entrambi in Base64.
+    """
     scadenza = int(time.time()) + settings.TOKEN_DURATA_ORE * 3600
     # "sub" = soggetto (chi è), "exp" = scadenza in secondi dal 1970 (come nei JWT)
     dati = {"sub": email, "ruolo": ruolo, "exp": scadenza}
@@ -119,6 +151,15 @@ def richiedi_admin(credenziali: Optional[HTTPAuthorizationCredentials] = Depends
     """Dipendenza FastAPI: lascia passare solo l'amministratore e restituisce la sua email.
 
     Si usa nelle rotte riservate con `_admin: str = Depends(richiedi_admin)`.
+
+    Args:
+        credenziali: Header `Authorization: Bearer <token>` letto da FastAPI.
+
+    Returns:
+        Email dell'amministratore contenuta nel token.
+
+    Raises:
+        HTTPException: 401 se il token manca, non è valido, è scaduto o non ha ruolo `admin`.
     """
     dati = _leggi_token(credenziali.credentials) if credenziali else None
     if dati is None or dati.get("ruolo") != "admin":
@@ -130,7 +171,19 @@ def richiedi_utente(
     credenziali: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> models.Utente:
-    """Dipendenza FastAPI: lascia passare solo un visitatore registrato e restituisce il suo account."""
+    """Dipendenza FastAPI: lascia passare solo un visitatore registrato e restituisce il suo account.
+
+    Args:
+        credenziali: Header `Authorization: Bearer <token>` letto da FastAPI.
+        db: Sessione del database.
+
+    Returns:
+        L'account del visitatore indicato nel token.
+
+    Raises:
+        HTTPException: 401 se il token manca, non è valido, è scaduto o l'account non esiste più;
+            403 se il token è valido ma di un altro ruolo (es. l'amministratore che prova a prenotare).
+    """
     dati = _leggi_token(credenziali.credentials) if credenziali else None
     if dati is None:
         # nessun token o token non valido: il visitatore deve accedere (401)
@@ -156,7 +209,17 @@ def _impronta_password(utente: models.Utente) -> str:
 
 
 def crea_token_reset(utente: models.Utente) -> str:
-    """Token da inserire nel link di reset: ruolo "reset", scadenza breve e impronta della password."""
+    """Crea il token da inserire nel link di reimpostazione della password.
+
+    Il token ha ruolo `reset`, scade dopo `RESET_PASSWORD_MINUTI` minuti e contiene un'impronta
+    della password attuale: dopo il cambio della password lo stesso link non funziona più.
+
+    Args:
+        utente: Account del visitatore.
+
+    Returns:
+        Token firmato.
+    """
     scadenza = int(time.time()) + settings.RESET_PASSWORD_MINUTI * 60
     dati = {"sub": utente.email, "ruolo": "reset", "uid": utente.id, "pw": _impronta_password(utente), "exp": scadenza}
     payload = _b64(json.dumps(dati).encode())
@@ -164,7 +227,15 @@ def crea_token_reset(utente: models.Utente) -> str:
 
 
 def leggi_token_reset(token: str, db: Session) -> Optional[models.Utente]:
-    """Restituisce il visitatore se il link è valido, non scaduto e non ancora usato."""
+    """Restituisce il visitatore se il link di reset è valido, non scaduto e non ancora usato.
+
+    Args:
+        token: Token ricevuto nel link.
+        db: Sessione del database.
+
+    Returns:
+        L'account del visitatore, oppure None se il token non è valido.
+    """
     dati = _leggi_token(token)
     # un token di accesso normale non può essere usato come token di reset (e viceversa)
     if dati is None or dati.get("ruolo") != "reset":

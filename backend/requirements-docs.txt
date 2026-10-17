@@ -1,0 +1,5 @@
+# Strumenti per generare la documentazione (MkDocs + mkdocstrings); non servono per eseguire il backend
+mkdocs==1.6.1
+mkdocs-material==9.7.7
+mkdocstrings==1.0.7
+mkdocstrings-python==2.0.9

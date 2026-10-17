@@ -53,7 +53,12 @@ def registrazione(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """Crea l'account del visitatore (email unica) e invia l'email di benvenuto."""
+    """`POST /api/utenti/registrazione` · Crea l'account del visitatore (email unica) e invia l'email di benvenuto.
+
+    Raises:
+        HTTPException: 409 se l'email è già registrata (e il titolare riceve un avviso);
+            422 per dati non validi; 429 oltre il limite di tentativi.
+    """
     # l'email è già normalizzata (minuscolo, senza spazi) dal validatore dello schema
     esistente = db.query(models.Utente).filter(models.Utente.email == dati.email).first()
     if esistente:
@@ -91,7 +96,11 @@ def registrazione(
 @router.post("/login", response_model=schemas.SessioneUtenteResponse)
 @limiter.limit(settings.LOGIN_RATE_LIMIT)
 def login_utente(request: Request, dati: schemas.LoginRequest, db: Session = Depends(get_db)):
-    """Accesso del visitatore con email e password."""
+    """`POST /api/utenti/login` · Accesso del visitatore con email e password.
+
+    Raises:
+        HTTPException: 401 se email o password sono errate (stesso messaggio in entrambi i casi).
+    """
     email = dati.email.strip().lower()
     utente = db.query(models.Utente).filter(models.Utente.email == email).first()
     # stesso messaggio per email inesistente e password sbagliata: non si rivela quali email sono registrate
@@ -120,7 +129,7 @@ def password_dimenticata(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """Se l'email è registrata invia un link (valido pochi minuti, monouso) per scegliere una nuova password."""
+    """`POST /api/utenti/password-dimenticata` · Se l'email è registrata invia un link (valido pochi minuti, monouso) per scegliere una nuova password."""
     utente = db.query(models.Utente).filter(models.Utente.email == dati.email).first()
     if utente is not None:
         # il token firmato viaggia come parametro dell'URL della pagina di reimpostazione
@@ -140,7 +149,11 @@ def password_dimenticata(
 @router.post("/reimposta-password")
 @limiter.limit(settings.LOGIN_RATE_LIMIT)
 def reimposta_password(request: Request, dati: schemas.ReimpostaPasswordRequest, db: Session = Depends(get_db)):
-    """Imposta la nuova password se il token è valido, non scaduto e non già usato."""
+    """`POST /api/utenti/reimposta-password` · Imposta la nuova password se il token è valido, non scaduto e non già usato.
+
+    Raises:
+        HTTPException: 400 se il link non è valido o è scaduto; 422 se la password non rispetta le regole.
+    """
     # leggi_token_reset restituisce None se il token è falsificato, scaduto o già usato
     utente = leggi_token_reset(dati.token, db)
     if utente is None:
@@ -157,14 +170,14 @@ def reimposta_password(request: Request, dati: schemas.ReimpostaPasswordRequest,
 # GET /api/utenti/me
 @router.get("/me", response_model=schemas.UtenteResponse)
 def profilo(utente: models.Utente = Depends(richiedi_utente)):
-    """Dati del visitatore collegato (ricavato dal token)."""
+    """`GET /api/utenti/me` · Dati del visitatore collegato (ricavato dal token)."""
     return utente
 
 
 # GET /api/utenti/me/prenotazioni
 @router.get("/me/prenotazioni", response_model=list[schemas.MiaPrenotazioneResponse])
 def mie_prenotazioni(utente: models.Utente = Depends(richiedi_utente), db: Session = Depends(get_db)):
-    """Prenotazioni del visitatore collegato, dalla più recente, con titolo e date della mostra."""
+    """`GET /api/utenti/me/prenotazioni` · Prenotazioni del visitatore collegato, dalla più recente, con titolo e date della mostra."""
     prenotazioni = (
         db.query(models.Prenotazione)
         .filter(models.Prenotazione.utente_id == utente.id)
@@ -188,7 +201,7 @@ def mie_prenotazioni(utente: models.Utente = Depends(richiedi_utente), db: Sessi
 # GET /api/utenti/me/feedback (serve al frontend per nascondere il form dove ho già recensito)
 @router.get("/me/feedback", response_model=list[schemas.FeedbackResponse])
 def miei_feedback(utente: models.Utente = Depends(richiedi_utente), db: Session = Depends(get_db)):
-    """Feedback lasciati dal visitatore collegato."""
+    """`GET /api/utenti/me/feedback` · Feedback lasciati dal visitatore collegato."""
     return (
         db.query(models.Feedback)
         .filter(models.Feedback.utente_id == utente.id)
@@ -205,7 +218,11 @@ def annulla_prenotazione(
     utente: models.Utente = Depends(richiedi_utente),
     db: Session = Depends(get_db),
 ):
-    """Annulla una prenotazione del visitatore collegato; dopo l'annullamento può prenotare di nuovo."""
+    """`DELETE /api/utenti/me/prenotazioni/{prenotazione_id}` · Annulla una prenotazione del visitatore collegato; dopo l'annullamento può prenotare di nuovo.
+
+    Raises:
+        HTTPException: 404 se la prenotazione non esiste o appartiene a un altro visitatore.
+    """
     # il filtro su utente_id garantisce che si possano annullare solo le proprie prenotazioni
     prenotazione = (
         db.query(models.Prenotazione)

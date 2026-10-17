@@ -1,3 +1,8 @@
+/**
+ * Pagina Contatti (`/contatti`).
+ *
+ * @module pages/Contatti
+ */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Card, CardContent, Typography, Box, TextField, Button, Alert, Grid } from '@mui/material';
@@ -22,7 +27,13 @@ const campo = {
 // controllo semplice del formato dell'email
 const emailValida = (v) => /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(v.trim());
 
-// Modulo Contatti: le domande dei visitatori registrati arrivano per email al museo
+/**
+ * Modulo Contatti: le domande dei visitatori registrati arrivano per email al museo.
+ * Il form è precompilato con i dati dell'account; admin e utenti non collegati vedono solo un avviso.
+ *
+ * @returns {JSX.Element} La pagina.
+ * @alias module:pages/Contatti.Contatti
+ */
 export default function Contatti() {
     const utente = useUtente();
     const admin = useAdmin();

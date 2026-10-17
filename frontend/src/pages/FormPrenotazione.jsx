@@ -1,3 +1,8 @@
+/**
+ * Pagina di prenotazione di una mostra (`/prenota/:id`).
+ *
+ * @module pages/FormPrenotazione
+ */
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
@@ -19,8 +24,13 @@ import useUtente from '../hooks/useUtente';
 import useLingua from '../hooks/useLingua';
 import { getMiePrenotazioni } from '../services/utentiService';
 
-// Pagina di prenotazione (protetta: solo visitatori registrati). Nome, cognome ed email sono quelli
-// dell'account e non si modificano; si può indicare un numero di telefono diverso.
+/**
+ * Pagina di prenotazione (protetta: solo visitatori registrati). Nome, cognome ed email sono quelli
+ * dell'account e non si modificano; si può indicare un numero di telefono diverso.
+ *
+ * @returns {JSX.Element} La pagina.
+ * @alias module:pages/FormPrenotazione.FormPrenotazione
+ */
 export default function FormPrenotazione() {
     const { id } = useParams();
     const navigate = useNavigate();

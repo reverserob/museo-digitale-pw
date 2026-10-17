@@ -1,3 +1,8 @@
+/**
+ * Pagina Reimposta password (`/reimposta-password?token=...`).
+ *
+ * @module pages/ReimpostaPassword
+ */
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Container, Card, CardContent, Typography, Box, TextField, Button, Alert } from '@mui/material';
@@ -19,7 +24,13 @@ const campo = {
     sx: { input: { color: 'white' }, label: { color: '#999999' } },
 };
 
-// Pagina aperta dal link ricevuto per email (/reimposta-password?token=...): permette di scegliere la nuova password
+/**
+ * Pagina aperta dal link ricevuto per email: permette di scegliere la nuova password.
+ * Il token arriva nel parametro `token` dell'indirizzo.
+ *
+ * @returns {JSX.Element} La pagina.
+ * @alias module:pages/ReimpostaPassword.ReimpostaPassword
+ */
 export default function ReimpostaPassword() {
     const [parametri] = useSearchParams();
     const { t } = useLingua();

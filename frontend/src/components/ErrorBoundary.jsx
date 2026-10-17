@@ -1,9 +1,21 @@
+/**
+ * Componente che intercetta gli errori di rendering delle pagine.
+ *
+ * @module components/ErrorBoundary
+ */
 import { Component } from 'react';
 import { Container, Alert, Button, Typography } from '@mui/material';
 import { traduci } from '../i18n/lingua';
 
-// Cattura gli errori di rendering delle pagine e mostra un messaggio invece di una pagina bianca.
-// È una classe perché React offre questa funzione solo ai componenti a classe.
+/**
+ * Cattura gli errori di rendering delle pagine e mostra un messaggio invece di una pagina bianca.
+ * È una classe perché React offre questa funzione solo ai componenti a classe.
+ *
+ * @extends React.Component
+ * @param {object} props Proprietà del componente.
+ * @param {React.ReactNode} props.children Pagina da proteggere.
+ * @alias module:components/ErrorBoundary.ErrorBoundary
+ */
 export default class ErrorBoundary extends Component {
     constructor(props) {
         super(props);

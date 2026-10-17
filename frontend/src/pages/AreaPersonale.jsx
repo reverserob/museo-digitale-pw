@@ -1,3 +1,8 @@
+/**
+ * Area personale del visitatore (`/profilo`).
+ *
+ * @module pages/AreaPersonale
+ */
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Container, Card, CardContent, Typography, Box, Button, Alert, CircularProgress, Divider } from '@mui/material';
@@ -14,7 +19,12 @@ const cardSx = {
     p: { xs: 1, sm: 4 },
 };
 
-// Area personale del visitatore (/profilo): dati dell'account, elenco delle prenotazioni e annullamento
+/**
+ * Area personale: dati dell'account, elenco delle prenotazioni e annullamento.
+ *
+ * @returns {?JSX.Element} La pagina, oppure `null` dopo il logout.
+ * @alias module:pages/AreaPersonale.AreaPersonale
+ */
 export default function AreaPersonale() {
     const navigate = useNavigate();
     const location = useLocation();

@@ -152,12 +152,29 @@ def invia_con_smtp(destinatario: str, oggetto: str, html_content: str, rispondi_
 
 
 def email_configurata() -> bool:
-    """True se è configurato almeno un canale di invio (Brevo oppure SMTP)."""
+    """Indica se è configurato almeno un canale di invio.
+
+    Returns:
+        True se è impostata `BREVO_API_KEY` oppure `SMTP_USER` e `SMTP_PASSWORD`.
+    """
     return bool(settings.BREVO_API_KEY) or bool(settings.SMTP_USER and settings.SMTP_PASSWORD)
 
 
 def _invia(destinatario: str, nome: str, oggetto: str, html_content: str, rispondi_a: Optional[str] = None) -> bool:
-    """Invia con Brevo (se configurato) o con SMTP. Non solleva eccezioni: restituisce True se l'email è partita."""
+    """Invia un'email con Brevo (se configurato) o con SMTP.
+
+    Non solleva eccezioni: un errore di invio viene solo registrato nel log.
+
+    Args:
+        destinatario: Indirizzo del destinatario.
+        nome: Nome del destinatario.
+        oggetto: Oggetto dell'email.
+        html_content: Corpo HTML.
+        rispondi_a: Indirizzo per "Rispondi" (facoltativo).
+
+    Returns:
+        True se l'email è partita.
+    """
     usa_brevo = bool(settings.BREVO_API_KEY)
     if not email_configurata():
         logger.warning(f"Email non configurata (né BREVO_API_KEY né SMTP): '{oggetto}' per {destinatario} non inviata.")

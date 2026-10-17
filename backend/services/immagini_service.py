@@ -11,15 +11,31 @@ import settings
 
 
 def file_presenti(immagini: Optional[list[UploadFile]]) -> list[UploadFile]:
-    """Scarta i campi file vuoti (senza nome) che il browser può inviare quando non si sceglie nulla."""
+    """Scarta i campi file vuoti (senza nome) che il browser può inviare quando non si sceglie nulla.
+
+    Args:
+        immagini: File ricevuti dal form, oppure None.
+
+    Returns:
+        Solo i file effettivamente caricati.
+    """
     return [f for f in (immagini or []) if f is not None and f.filename]
 
 
 def immagini_da_tenere(attuali: str, richieste: Optional[str]) -> list[str]:
     """Restituisce le immagini già salvate che l'amministratore ha scelto di mantenere.
 
-    attuali: percorsi salvati nel database, separati da virgola.
-    richieste: elenco JSON inviato dal form di modifica (None = mantieni tutte).
+    Sono accettati solo percorsi che appartengono già alla mostra, senza duplicati.
+
+    Args:
+        attuali: Percorsi salvati nel database, separati da virgola.
+        richieste: Elenco JSON inviato dal form di modifica (None = mantieni tutte).
+
+    Returns:
+        Percorsi da mantenere, nell'ordine richiesto.
+
+    Raises:
+        HTTPException: 400 se `richieste` non è un elenco JSON valido.
     """
     elenco_attuale = [p.strip() for p in (attuali or "").split(",") if p.strip()]
     if richieste is None:
@@ -42,7 +58,19 @@ def immagini_da_tenere(attuali: str, richieste: Optional[str]) -> list[str]:
 
 
 async def salva_immagini(immagini: list[UploadFile]) -> list[str]:
-    """Controlla e salva le immagini caricate; restituisce i percorsi pubblici (/static/uploads/...)."""
+    """Controlla e salva le immagini caricate.
+
+    I file vengono scritti su disco con un nome casuale solo dopo aver controllato tutti i file.
+
+    Args:
+        immagini: File caricati dal form.
+
+    Returns:
+        Percorsi pubblici delle immagini salvate (`/static/uploads/...`).
+
+    Raises:
+        HTTPException: 400 se un file non è un'immagine supportata o supera `UPLOAD_MAX_MB`.
+    """
     limite = settings.UPLOAD_MAX_MB * 1024 * 1024
     da_scrivere = []
     for file in immagini:

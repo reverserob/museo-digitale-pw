@@ -1,4 +1,8 @@
-// Form dell'amministratore per creare una nuova mostra (/admin/nuova) o modificarne una (/admin/modifica/:id)
+/**
+ * Form dell'amministratore per creare una nuova mostra (`/admin/nuova`) o modificarne una (`/admin/modifica/:id`).
+ *
+ * @module pages/AdminForm
+ */
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Typography, Card, CardContent, Button, Box, TextField, Grid, Alert } from '@mui/material';
@@ -11,7 +15,17 @@ const inputStyle = {
     textarea: { color: 'white' },
 };
 
-// Miniatura di un'immagine con il pulsante per toglierla
+/**
+ * Miniatura di un'immagine con il pulsante per toglierla.
+ *
+ * @private
+ * @param {object} props Proprietà del componente.
+ * @param {string} props.src Indirizzo dell'immagine (o anteprima locale).
+ * @param {string} props.nome Nome del file, mostrato sotto la miniatura.
+ * @param {function(): void} props.onRimuovi Chiamata quando si preme ✕.
+ * @returns {JSX.Element} La miniatura.
+ * @alias module:pages/AdminForm.Miniatura
+ */
 function Miniatura({ src, nome, onRimuovi }) {
     return (
         <Box sx={{ position: 'relative', width: 110, border: '1px solid rgba(197, 160, 89, 0.4)' }}>
@@ -43,6 +57,13 @@ function Miniatura({ src, nome, onRimuovi }) {
 // "/static/uploads/abc.webp" -> "abc.webp"
 const nomeFile = (percorso) => percorso.split('/').pop();
 
+/**
+ * Form di creazione o modifica di una mostra. In modifica (id presente nell'indirizzo)
+ * precompila i campi e permette di togliere immagini già salvate e aggiungerne di nuove.
+ *
+ * @returns {JSX.Element} La pagina.
+ * @alias module:pages/AdminForm.AdminForm
+ */
 export default function AdminForm() {
     const navigate = useNavigate();
     const { id } = useParams();

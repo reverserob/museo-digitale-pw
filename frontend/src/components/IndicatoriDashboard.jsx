@@ -1,7 +1,11 @@
 import { Box, Typography } from '@mui/material';
 
-// Riquadri con gli indicatori principali + barre delle prenotazioni per mostra.
-// I numeri arrivano già calcolati da GET /api/statistiche.
+/**
+ * Riquadri con gli indicatori principali e barre delle prenotazioni per mostra.
+ * I numeri arrivano già calcolati da `GET /api/statistiche`.
+ *
+ * @module components/IndicatoriDashboard
+ */
 
 // stile comune dei riquadri
 const boxSx = {
@@ -11,7 +15,17 @@ const boxSx = {
     borderRadius: 1,
 };
 
-// Un singolo riquadro: etichetta, numero grande e (facoltativo) una riga di dettaglio
+/**
+ * Un singolo riquadro: etichetta, numero grande e (facoltativo) una riga di dettaglio.
+ *
+ * @private
+ * @param {object} props Proprietà del componente.
+ * @param {string} props.etichetta Nome dell'indicatore.
+ * @param {(number|string)} props.valore Valore da mostrare in grande.
+ * @param {string} [props.dettaglio] Riga di dettaglio facoltativa.
+ * @returns {JSX.Element} Il riquadro.
+ * @alias module:components/IndicatoriDashboard.Indicatore
+ */
 function Indicatore({ etichetta, valore, dettaglio }) {
     return (
         <Box sx={boxSx}>
@@ -30,6 +44,14 @@ function Indicatore({ etichetta, valore, dettaglio }) {
     );
 }
 
+/**
+ * Indicatori della dashboard amministratore.
+ *
+ * @param {object} props Proprietà del componente.
+ * @param {?module:tipi~Statistiche} props.statistiche Indicatori calcolati dal backend; con `null` non mostra nulla.
+ * @returns {?JSX.Element} Riquadri e barre, oppure `null` finché i dati non arrivano.
+ * @alias module:components/IndicatoriDashboard.IndicatoriDashboard
+ */
 export default function IndicatoriDashboard({ statistiche }) {
     // finché i dati non sono arrivati non mostro nulla
     if (!statistiche) return null;

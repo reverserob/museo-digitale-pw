@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/mostre", tags=["Mostre"])
 # GET /api/mostre (pubblica)
 @router.get("", response_model=list[schemas.MostraResponse])
 def leggi_mostre(db: Session = Depends(get_db)):
-    """Elenco di tutte le mostre, ordinate per data di inizio."""
+    """`GET /api/mostre` · Elenco di tutte le mostre, ordinate per data di inizio."""
     try:
         return db.query(models.Mostra).order_by(models.Mostra.data_inizio).all()
     except Exception as e:
@@ -35,7 +35,7 @@ def leggi_mostre(db: Session = Depends(get_db)):
 # GET /api/mostre/{id} (pubblica)
 @router.get("/{mostra_id}", response_model=schemas.MostraResponse)
 def leggi_singola_mostra(mostra_id: int, db: Session = Depends(get_db)):
-    """Dettaglio di una mostra (404 se non esiste)."""
+    """`GET /api/mostre/{mostra_id}` · Dettaglio di una mostra (404 se non esiste)."""
     return trova_mostra(db, mostra_id)
 
 
@@ -54,7 +54,12 @@ async def crea_mostra(
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
-    """Pubblica una nuova mostra con una o più immagini."""
+    """`POST /api/mostre` · Pubblica una nuova mostra con una o più immagini (solo amministratore).
+
+    Raises:
+        HTTPException: 400 per date non valide o immagini mancanti/non valide;
+            401 senza token admin; 422 per campi del form non validi.
+    """
     inizio, fine = converti_date(data_inizio, data_fine)
     # ignoro eventuali campi file vuoti inviati dal browser
     file_validi = file_presenti(immagini)
@@ -97,7 +102,12 @@ async def aggiorna_mostra(
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
-    """Modifica una mostra: mantiene le immagini scelte e aggiunge quelle nuove."""
+    """`PUT /api/mostre/{mostra_id}` · Modifica una mostra: mantiene le immagini scelte e aggiunge quelle nuove (solo amministratore).
+
+    Raises:
+        HTTPException: 400 per date non valide o se la mostra resterebbe senza immagini;
+            401 senza token admin; 404 se la mostra non esiste.
+    """
     mostra = trova_mostra(db, mostra_id)
     inizio, fine = converti_date(data_inizio, data_fine)
     da_tenere = immagini_da_tenere(mostra.immagini, immagini_esistenti)
@@ -131,7 +141,11 @@ def elimina_mostra(
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
-    """Elimina una mostra insieme alle sue prenotazioni e ai suoi feedback."""
+    """`DELETE /api/mostre/{mostra_id}` · Elimina una mostra insieme alle sue prenotazioni e ai suoi feedback (solo amministratore).
+
+    Raises:
+        HTTPException: 401 senza token admin; 404 se la mostra non esiste.
+    """
     mostra = trova_mostra(db, mostra_id)
     try:
         db.delete(mostra)  # elimina anche prenotazioni e feedback collegati (cascade)

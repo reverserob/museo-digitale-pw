@@ -12,7 +12,18 @@ import schemas
 
 
 def trova_mostra(db: Session, mostra_id: int) -> models.Mostra:
-    """Restituisce la mostra con l'id indicato oppure risponde 404 se non esiste."""
+    """Restituisce la mostra con l'id indicato.
+
+    Args:
+        db: Sessione del database.
+        mostra_id: Identificativo della mostra.
+
+    Returns:
+        La mostra trovata.
+
+    Raises:
+        HTTPException: 404 se la mostra non esiste.
+    """
     mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
     if mostra is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mostra non trovata")
@@ -20,7 +31,18 @@ def trova_mostra(db: Session, mostra_id: int) -> models.Mostra:
 
 
 def converti_date(data_inizio: str, data_fine: str) -> tuple[date, date]:
-    """Controlla le date ricevute dal form e le restituisce come oggetti date."""
+    """Controlla le date ricevute dal form e le restituisce come oggetti date.
+
+    Args:
+        data_inizio: Data di apertura (`AAAA-MM-GG`).
+        data_fine: Data di chiusura (`AAAA-MM-GG`).
+
+    Returns:
+        Coppia (inizio, fine).
+
+    Raises:
+        HTTPException: 400 se le date non sono valide o sono invertite.
+    """
     try:
         return schemas.valida_date(data_inizio, data_fine)
     # stessa regola dello schema Pydantic, ma trasformata in errore HTTP 400 per i form multipart

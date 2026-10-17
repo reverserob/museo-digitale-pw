@@ -12,7 +12,15 @@ import models
 
 
 def stato_mostra(mostra: models.Mostra, oggi: date) -> str:
-    """Stato della mostra rispetto alla data di oggi: "conclusa", "futura" o "in corso"."""
+    """Stato della mostra rispetto a una data.
+
+    Args:
+        mostra: Mostra da valutare.
+        oggi: Data di riferimento.
+
+    Returns:
+        `"conclusa"`, `"futura"` oppure `"in corso"`.
+    """
     if mostra.data_fine < oggi:
         return "conclusa"
     if mostra.data_inizio > oggi:
@@ -26,7 +34,16 @@ def _arrotonda(valore) -> Optional[float]:
 
 
 def calcola_statistiche(db: Session) -> dict:
-    """Totali generali e dettaglio per mostra (prenotazioni, feedback, voto medio)."""
+    """Calcola totali generali e dettaglio per mostra (prenotazioni, feedback, voto medio).
+
+    I conteggi sono raggruppati per mostra con una query per tabella invece di una per mostra.
+
+    Args:
+        db: Sessione del database.
+
+    Returns:
+        Dizionario con le chiavi di `schemas.StatisticheResponse`.
+    """
     oggi = date.today()
     mostre = db.query(models.Mostra).order_by(models.Mostra.data_inizio).all()
 
