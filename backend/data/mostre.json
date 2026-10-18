@@ -24,7 +24,19 @@
       "/static/uploads/leonardo-da-vinci-3.webp"
     ],
     "data_inizio": "2026-11-01",
-    "data_fine": "2027-02-28"
+    "data_fine": "2027-02-28",
+    "feedback": [
+      {
+        "nome": "Francesco",
+        "voto": 5,
+        "commento": "Fantastica mostra, super interessante"
+      },
+      {
+        "nome": "Gaia",
+        "voto": 5,
+        "commento": "Bellissima esperienza"
+      }
+    ]
   },
   {
     "titolo": "Monet: La Natura",
