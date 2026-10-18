@@ -16,6 +16,7 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
+from urllib.parse import urlparse
 
 import settings
 
@@ -71,12 +72,17 @@ def crea_html_conferma(
             if url_qr
             else ""
         )
+        dove_qr = (
+            "Mostra all'ingresso il QR code (lo trovi anche in allegato)"
+            if url_qr
+            else "Mostra all'ingresso il QR code che trovi in allegato a questa email"
+        )
         blocco_codice = f"""
             <div style="background: #1a1a1a; padding: 20px; border: 1px solid #c5a059; margin: 20px 0; text-align: center;">
                 <p style="margin: 0; color: #aaa; font-size: 13px; letter-spacing: 2px;">CODICE PRENOTAZIONE</p>
                 <p style="margin: 8px 0 0 0; color: #c5a059; font-size: 26px; font-weight: bold; letter-spacing: 3px;">{html.escape(codice)}</p>
                 {immagine}
-                <p style="margin: 10px 0 0 0; color: #ccc; font-size: 13px;">Mostra all'ingresso il QR code (lo trovi anche in allegato)
+                <p style="margin: 10px 0 0 0; color: #ccc; font-size: 13px;">{dove_qr}
                 oppure comunica il codice: il personale verificherà la tua prenotazione.</p>
             </div>"""
     return _layout(f"""
@@ -290,6 +296,22 @@ def invia_email_contatto(dati: dict) -> bool:
     return _invia(settings.CONTATTI_EMAIL, "Museo Civico Digitale", oggetto, crea_html_contatto(dati), dati["email"])
 
 
+def _indirizzo_pubblico(url: Optional[str]) -> bool:
+    """Indica se un indirizzo è raggiungibile da Internet (quindi dai programmi di posta).
+
+    In locale il backend risponde su `127.0.0.1` o `localhost`: un'immagine con quell'indirizzo
+    nell'email risulterebbe rotta, perché il programma di posta non può raggiungere il computer di sviluppo.
+
+    Args:
+        url: Indirizzo del backend.
+
+    Returns:
+        False se l'indirizzo manca o punta al computer locale, True altrimenti.
+    """
+    host = (urlparse(url).hostname or "") if url else ""
+    return bool(host) and host not in {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+
+
 # Email di conferma della prenotazione (eseguita in background dopo la risposta)
 def invia_email_background(
     destinatario: str,
@@ -322,7 +344,8 @@ def invia_email_background(
     url_qr = None
     if codice:
         allegati = [(f"prenotazione-{codice}.png", genera_qr_png(codice))]
-        if url_backend:
+        # immagine nel corpo dell'email solo se il backend è pubblico (online); in locale il QR resta in allegato
+        if _indirizzo_pubblico(url_backend):
             url_qr = f"{url_backend.rstrip('/')}/api/prenotazioni/qr/{codice}"
     html_content = crea_html_conferma(nome, titolo_mostra, data_inizio, data_fine, codice, url_qr)
     _invia(destinatario, nome, oggetto, html_content, allegati=allegati)

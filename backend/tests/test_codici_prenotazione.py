@@ -259,3 +259,24 @@ def test_prenotazione_usata_non_si_puo_annullare(client, auth, utente, mostra_in
     r = client.delete(f"/api/utenti/me/prenotazioni/{dati['id']}", headers=utente)
     assert r.status_code == 409
     assert r.json()["detail"] == "La prenotazione è già stata usata per l'ingresso e non può essere annullata."
+
+
+@pytest.mark.parametrize("url_backend", ["http://127.0.0.1:8000/", "http://localhost:8000", None])
+def test_in_locale_il_qr_e_solo_in_allegato(monkeypatch, url_backend):
+    inviate = []
+    monkeypatch.setattr(settings, "BREVO_API_KEY", "chiave")
+    monkeypatch.setattr(email_service, "invia_con_brevo", lambda *argomenti: inviate.append(argomenti))
+    email_service.invia_email_background(
+        destinatario="mario@test.it",
+        nome="Mario",
+        titolo_mostra="Monet",
+        data_inizio=date(2027, 1, 1),
+        data_fine=date(2027, 2, 1),
+        codice="MCD-7K3F-9QXA",
+        url_backend=url_backend,
+    )
+    _dest, _nome, _oggetto, corpo, _rispondi, allegati = inviate[0]
+    # nessuna immagine con un indirizzo irraggiungibile: il QR code è solo in allegato
+    assert "<img" not in corpo
+    assert "che trovi in allegato" in corpo
+    assert allegati[0][1].startswith(PNG)
