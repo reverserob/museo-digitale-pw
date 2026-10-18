@@ -11,7 +11,7 @@ Progettazione di una piattaforma informatica per la gestione di servizi, dati e 
 **Relazione tecnica completa** (contesto, processo AS-IS/TO-BE, architettura, diagrammi UML ed ER, API, test funzionali, sviluppi futuri): [DOCUMENTATION.md](DOCUMENTATION.md)
 
 ### Online Prototype
-#####[Museo Digitale](https://museo-digitale-pw-azure.vercel.app/)
+Go To : [Museo Civico Digitale](https://museo-digitale-pw-azure.vercel.app/)
 
 ### Documentazione
 | | Link |
