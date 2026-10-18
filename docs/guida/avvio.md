@@ -52,7 +52,8 @@ Il backend legge la configurazione da `backend/.env` (e da `.env.local`, che ha 
 | `EMAIL_MITTENTE` / `EMAIL_MITTENTE_NOME` | Mittente delle email (indirizzo verificato su Brevo) |
 | `CONTATTI_EMAIL` | Casella che riceve le richieste del modulo Contatti |
 | `CORS_ORIGINS` | Domini del frontend autorizzati, separati da virgola |
-| `FRONTEND_URL` | Indirizzo del sito usato nel link di reset password |
+| `FRONTEND_URL` | Indirizzo del sito usato nel link di reset password e nel QR code delle prenotazioni |
+| `BACKEND_URL` | Facoltativa: indirizzo pubblico del backend per l'immagine del QR code nelle email |
 | `RESET_PASSWORD_MINUTI` | Durata del link per reimpostare la password (default 30) |
 | `DATABASE_URL` | Database (default `sqlite:///./museo.db`) |
 | `LOGIN_RATE_LIMIT` | Tentativi consentiti per IP su login, registrazione, reset e contatti (default `5/minute`) |
@@ -60,6 +61,21 @@ Il backend legge la configurazione da `backend/.env` (e da `.env.local`, che ha 
 | `VITE_API_URL` | *(frontend)* indirizzo del backend, se diverso da quello predefinito |
 
 Senza servizio email configurato l'applicazione funziona lo stesso: le email non partono e il loro contenuto (ad esempio il link di reset) viene scritto nel log del server.
+
+!!! warning "Se le email non arrivano"
+    Il motivo è sempre nel log del backend, nella riga `Errore invio email a ...`.
+
+    | Messaggio | Soluzione |
+    | --- | --- |
+    | `Email non configurata` | Inserire `BREVO_API_KEY` ed `EMAIL_MITTENTE` nel `.env` (o su Render) e riavviare |
+    | Variabili vuote anche se il `.env` c'è | Attivare il venv (`source venv/bin/activate`) e `pip install -r requirements-dev.txt` |
+    | `Connection unexpectedly closed` | SMTP rifiutato: usare Brevo anche in locale |
+    | `CERTIFICATE_VERIFY_FAILED` | Su macOS eseguire `/Applications/Python 3.x/Install Certificates.command` |
+    | `400 ... valid sender email required` | `EMAIL_MITTENTE` scritto male o non verificato su Brevo |
+    | `401 ... unrecognised IP` | Su Brevo disattivare il blocco degli IP (*Sicurezza → IP autorizzati*) |
+    | Log "inviata" ma nessuna email | Controllare l'indirizzo del destinatario e la posta indesiderata |
+
+    In locale il QR code dell'email è solo in allegato: l'immagine nel testo compare quando il backend è online.
 
 ## Test e controlli
 
