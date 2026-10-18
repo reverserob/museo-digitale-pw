@@ -63,7 +63,19 @@
       "/static/uploads/van-gogh-notte-stellata.webp"
     ],
     "data_inizio": "2026-09-15",
-    "data_fine": "2027-02-28"
+    "data_fine": "2027-02-28",
+    "feedback": [
+      {
+        "nome": "Luca",
+        "voto": 5,
+        "commento": "Mostra Eccellente"
+      },
+      {
+        "nome": "Gianni",
+        "voto": 5,
+        "commento": "Esperienza da ripetere"
+      }
+    ]
   },
   {
     "titolo": "Hokusai: la Grande onda",
