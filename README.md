@@ -14,7 +14,7 @@ Progettazione di una piattaforma informatica per la gestione di servizi, dati e 
 Go To : [Museo Civico Digitale](https://museo-digitale-pw-azure.vercel.app/)
 
 ### Documentazione
-| | Link |
+| Dettaglio | Link |
 |---|---|
 | Relazione tecnica | [DOCUMENTATION.md](DOCUMENTATION.md) |
 | Sito di documentazione (guida, architettura, reference del backend) | [reverserob.github.io/museo-digitale-pw](https://reverserob.github.io/museo-digitale-pw/) |
