@@ -65,6 +65,17 @@ describe('FormPrenotazione', () => {
         expect(screen.getByText(/mario@test\.it/)).toBeInTheDocument();
     });
 
+    it('dopo la prenotazione mostra il codice di riferimento e il QR code', async () => {
+        api.post.mockResolvedValue({ data: { message: 'ok', id: 9, codice: 'MCD-7K3F-9QXA' } });
+        const user = userEvent.setup();
+        const { pulsante } = await apriForm();
+        await user.click(pulsante);
+
+        expect(await screen.findByTestId('codice-prenotazione')).toHaveTextContent('MCD-7K3F-9QXA');
+        const qr = screen.getByRole('img', { name: 'QR code della prenotazione MCD-7K3F-9QXA' });
+        expect(qr.getAttribute('src')).toMatch(/\/api\/prenotazioni\/qr\/MCD-7K3F-9QXA$/);
+    });
+
     it("mostra l'errore restituito dal backend", async () => {
         api.post.mockRejectedValue(erroreHttp(400, 'La mostra è già conclusa: non è più possibile prenotare.'));
         const user = userEvent.setup();

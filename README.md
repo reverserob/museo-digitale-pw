@@ -26,7 +26,8 @@ Progettazione di una piattaforma informatica per la gestione di servizi, dati e 
 #### Funzionalità
 - Catalogo delle mostre con galleria di immagini
 - Account dei visitatori (registrazione e login) per prenotare e lasciare feedback, con area personale
-- Prenotazione della visita con email di conferma
+- Prenotazione della visita con email di conferma, codice di prenotazione e QR code
+- Verifica all'ingresso (area riservata): ricerca per codice o scansione del QR code e registrazione dell'ingresso
 - Feedback dei visitatori (voto da 1 a 5 e commento)
 - Area riservata: gestione delle mostre, prenotazioni, moderazione dei feedback
 - Dashboard con indicatori (prenotazioni, mostre in corso, voto medio, prenotazioni per mostra)

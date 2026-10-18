@@ -5,6 +5,8 @@ fastapi>=0.115,<1
 pydantic>=2.11,<3
 python-dotenv>=1.0,<2
 python-multipart>=0.0.20,<1
+# generazione dei QR code delle prenotazioni (solo Python, nessuna dipendenza)
+segno>=1.6,<2
 slowapi>=0.1.9,<0.2
 SQLAlchemy>=2.0.36,<2.1
 uvicorn>=0.32,<1

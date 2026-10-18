@@ -20,13 +20,17 @@ Chi dimentica la password riceve un link valido 30 minuti e utilizzabile una sol
 
 Il pulsante **PRENOTA** apre il form con nome, cognome ed email dell'account (non modificabili) e il telefono. Dopo la conferma parte l'email di riepilogo. Ogni visitatore può prenotarsi una sola volta a ciascuna mostra: dopo la prenotazione il pulsante diventa **MOSTRA PRENOTATA**.
 
-![Prenotazione confermata](../screenshots/05-prenotazione-confermata.webp){ .screenshot loading=lazy }
+Ogni prenotazione riceve un **codice di riferimento** (es. `MCD-68ZY-MT8U`) e un **QR code**, mostrati subito nella pagina di conferma e inviati nell'email (il QR code anche come allegato PNG).
+
+![Prenotazione con codice e QR code](../screenshots/35-prenotazione-qr.webp){ .screenshot loading=lazy }
+
+![Email di conferma con QR code](../screenshots/39-email-qr.webp){ .screenshot loading=lazy }
 
 ### Area personale
 
-Elenca le prenotazioni del visitatore e permette di annullarle; l'annullamento invia un'email di conferma e consente di prenotare di nuovo.
+Elenca le prenotazioni del visitatore con il loro codice e permette di annullarle; l'annullamento invia un'email di conferma e consente di prenotare di nuovo. Con **Mostra QR code** il visitatore apre il QR code da mostrare all'ingresso. Una prenotazione già usata per entrare non si può più annullare.
 
-![Area personale](../screenshots/28-area-personale-annulla.webp){ .screenshot loading=lazy }
+![Area personale con QR code](../screenshots/36-area-personale-qr.webp){ .screenshot loading=lazy }
 
 ### Feedback
 
@@ -47,3 +51,11 @@ L'**Area Riservata** è accessibile con le credenziali dell'amministratore e sol
 ![Dashboard con indicatori](../screenshots/08-dashboard-indicatori.webp){ .screenshot loading=lazy }
 
 ![Modifica di una mostra](../screenshots/12-modifica-mostra.webp){ .screenshot loading=lazy }
+
+### Verifica all'ingresso
+
+Dalla dashboard, con **Verifica ingresso**, il personale inserisce il codice comunicato dal visitatore (anche in minuscolo o senza trattini) oppure il numero della prenotazione. In alternativa basta inquadrare con la fotocamera del telefono il QR code del visitatore: si apre direttamente la pagina di verifica con il codice già inserito (se serve, prima viene chiesto il login). La pagina indica se la prenotazione è valida per oggi, già usata, per una mostra non ancora iniziata o conclusa, e con **Registra ingresso** segna l'entrata: ogni prenotazione vale per un solo ingresso.
+
+![Verifica della prenotazione](../screenshots/37-verifica-prenotazione.webp){ .screenshot loading=lazy }
+
+![Ingresso registrato](../screenshots/38-ingresso-registrato.webp){ .screenshot loading=lazy }

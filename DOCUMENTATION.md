@@ -117,12 +117,13 @@ Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una
 #### 3.1. Requisiti funzionali
 - **RF1 – Catalogo**: la home presenta il museo e porta, con il pulsante "Scopri le esposizioni correnti", all'elenco delle mostre (/esposizioni) e al dettaglio con la galleria di immagini. Il menu contiene le voci Home, Esposizioni e Contatti. Un footer in ogni pagina riporta orari (lunedì–sabato 09:00–18:30), indirizzo e la modalità di prenotazione: le visite si prenotano solo online, con il pulsante PRENOTA nella pagina di ogni mostra.
 - **RF2 – Prenotazione**: il visitatore registrato prenota una visita; nome, cognome ed email arrivano dal suo account e può indicare un telefono diverso. Non è possibile prenotare una mostra già conclusa.
-- **RF3 – Conferma**: dopo la prenotazione il visitatore riceve un'email di riepilogo.
+- **RF3 – Conferma e codice di prenotazione**: dopo la prenotazione il visitatore riceve un'email di riepilogo con un **codice di riferimento** univoco (es. `MCD-7K3F-9QXA`) e un **QR code**, visibili anche nella pagina di conferma e nell'area personale.
 - **RF4 – Feedback**: il visitatore registrato lascia un voto da 1 a 5 e un commento facoltativo su una mostra già iniziata (uno per mostra); i feedback sono visibili a tutti, anche senza account, con nome e iniziale del cognome.
 - **RF5 – Accesso riservato**: l'amministratore accede con email e password.
 - **RF10 – Account dei visitatori**: chiunque può consultare il catalogo, ma per prenotare e lasciare feedback deve registrarsi (nome, cognome, email, telefono, password) o accedere. Ogni email può essere registrata una sola volta (al secondo tentativo compare l'errore "Utente già registrato"); dopo la registrazione il visitatore riceve un'email di conferma. Nell'area personale il visitatore vede le proprie prenotazioni; può uscire (logout) dall'intestazione del sito e, se dimentica la password, reimpostarla con un link temporaneo ricevuto per email. Può lasciare un feedback solo sulle mostre a cui si è prenotato. Finché un visitatore è collegato, l'area riservata non è accessibile: prima deve uscire.
 - **RF6 – Gestione catalogo**: l'amministratore pubblica, modifica ed elimina le mostre e ne carica le immagini.
-- **RF7 – Consultazione prenotazioni**: l'amministratore vede le prenotazioni ricevute, suddivise per mostra.
+- **RF7 – Consultazione prenotazioni**: l'amministratore vede le prenotazioni ricevute, suddivise per mostra, con il codice di ciascuna.
+- **RF15 – Verifica all'ingresso**: il personale verifica chi si presenta inserendo il codice di prenotazione (o il numero) oppure inquadrando con il telefono il QR code, che apre la pagina di verifica dell'area riservata; la pagina indica se la prenotazione è valida per quel giorno e permette di registrare l'ingresso (una sola volta per prenotazione).
 - **RF8 – Moderazione**: l'amministratore può eliminare i feedback non appropriati, sia dalla dashboard sia dalla pagina della mostra aperta da collegato. I visitatori non vedono mai il pulsante di eliminazione.
 - **RF11 – Ruoli separati**: l'amministratore non prenota (il pulsante PRENOTA non compare né in home né nel dettaglio della mostra e il server rifiuta la sua prenotazione con 403); da collegato l'intestazione mostra "Ciao, Admin" ed "Esci" al posto di Accedi/Registrati. Solo i visitatori registrati possono prenotare, e ognuno può lasciare un solo feedback per mostra.
 - **RF12 – Gestione delle proprie prenotazioni**: ogni visitatore può prenotarsi una sola volta a ciascuna mostra (409 al secondo tentativo; nel catalogo compare "MOSTRA PRENOTATA" e il form non viene mostrato) e può annullare una prenotazione dalla propria area: la prenotazione viene eliminata e arriva un'email di conferma dell'annullamento. Dopo l'annullamento è possibile prenotarsi di nuovo.
@@ -194,13 +195,14 @@ backend/
 │   ├── login.py            → POST /api/login (amministratore)
 │   ├── utenti.py           → registrazione, login, profilo e prenotazioni dei visitatori (/api/utenti)
 │   ├── mostre.py           → CRUD delle mostre (/api/mostre)
-│   ├── prenotazioni.py     → POST /api/prenota (una per mostra), GET /api/prenotazioni
+│   ├── prenotazioni.py     → POST /api/prenota (una per mostra, con codice), GET /api/prenotazioni, QR code, verifica e ingresso
 │   ├── feedback.py         → POST, GET e DELETE /api/feedback
 │   ├── statistiche.py      → GET /api/statistiche (indicatori della dashboard)
 │   └── contatti.py         → POST /api/contatti (modulo Contatti, invio email al museo)
 ├── services/
 │   ├── mostre_service.py   → ricerca di una mostra e controllo delle date (usato da più router)
-│   ├── email_service.py    → email di conferma (API Brevo o SMTP)
+│   ├── email_service.py    → email di conferma (API Brevo o SMTP), con QR code in allegato
+│   ├── prenotazioni_service.py → codice di prenotazione, QR code (libreria segno) e stato dell'ingresso
 │   ├── immagini_service.py → validazione e salvataggio delle immagini caricate
 │   ├── statistiche_service.py → calcolo degli indicatori per la dashboard
 │   ├── rate_limit_service.py → limite ai tentativi di login (slowapi)
@@ -260,6 +262,8 @@ erDiagram
         string email "copiata dall'account"
         string telefono "6-15 cifre"
         datetime creata_il "UTC"
+        string codice "unico, es. MCD-7K3F-9QXA"
+        datetime ingresso_il "UTC, NULL se non ancora entrato"
     }
     FEEDBACK {
         int id PK
@@ -282,7 +286,7 @@ erDiagram
 
 **Vincoli applicativi**: i dati inseriti dagli utenti vengono validati a livello di schema (Pydantic con espressioni regolari e validatori personalizzati) prima di essere salvati. Non è possibile prenotare una mostra già conclusa, né lasciare un feedback su una mostra non ancora iniziata.
 
-**Aggiornamento dei database esistenti**: `create_all` crea le tabelle nuove ma non aggiunge colonne a quelle già presenti. All'avvio `migrazioni_service.py` controlla lo schema e, se manca, aggiunge la colonna `utente_id` alle tabelle `prenotazioni` e `feedback` con `ALTER TABLE`, così un `museo.db` creato con la versione precedente continua a funzionare senza perdere dati.
+**Aggiornamento dei database esistenti**: `create_all` crea le tabelle nuove ma non aggiunge colonne a quelle già presenti. All'avvio `migrazioni_service.py` controlla lo schema e, se manca, aggiunge la colonna `utente_id` alle tabelle `prenotazioni` e `feedback` e le colonne `codice` e `ingresso_il` alla tabella `prenotazioni` con `ALTER TABLE`; alle prenotazioni già presenti assegna un codice e crea l'indice unico sulla colonna. Così un `museo.db` creato con una versione precedente continua a funzionare senza perdere dati.
 
 **Indicatori**: i dati delle tabelle mostre, prenotazioni e feedback alimentano la dashboard. Il servizio `statistiche_service.py` calcola i conteggi con query di aggregazione (`COUNT` e `AVG` raggruppati per mostra con `GROUP BY`), invece di caricare in memoria tutte le righe.
 
@@ -359,6 +363,8 @@ classDiagram
         +str email
         +str telefono
         +datetime creata_il
+        +str codice
+        +datetime ingresso_il
     }
     class Feedback {
         +int id
@@ -402,6 +408,13 @@ classDiagram
         +invia_con_brevo()
         +invia_con_smtp()
         +invia_email_background()
+    }
+    class prenotazioni_service {
+        <<service>>
+        +genera_codice(db) str
+        +normalizza_codice(testo) str
+        +genera_qr_png(codice) bytes
+        +stato_ingresso(prenotazione, oggi) str
     }
     class statistiche_service {
         <<service>>
@@ -463,11 +476,11 @@ sequenceDiagram
             API-->>FE: 404 oppure 400
             FE-->>V: Alert con l'errore
         else Mostra prenotabile
-            API->>DB: INSERT prenotazione (dati dell'account) + COMMIT
+            API->>DB: INSERT prenotazione (dati dell'account + codice MCD-XXXX-XXXX) + COMMIT
             API->>BG: add_task(invia_email_background)
             API-->>FE: 201 Created
-            FE-->>V: "Prenotazione confermata"
-            BG->>EM: Invio email HTML di riepilogo
+            FE-->>V: "Prenotazione confermata" con codice e QR code
+            BG->>EM: Invio email con codice e QR code (anche in allegato PNG)
             EM-->>V: Email nella casella del visitatore
         end
     end
@@ -512,6 +525,39 @@ sequenceDiagram
     end
 ```
 
+#### 6.5. Diagramma di sequenza: verifica della prenotazione all'ingresso
+Il visitatore mostra il QR code ricevuto per email (o comunica il codice); il personale lo inquadra con il telefono e apre direttamente la pagina di verifica.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor V as Visitatore
+    actor P as Personale del museo
+    participant FE as Front-end React
+    participant API as FastAPI (router prenotazioni)
+    participant DB as SQLite
+
+    V->>P: Mostra il QR code (o comunica il codice MCD-XXXX-XXXX)
+    P->>FE: Inquadra il QR: apre /admin/verifica?codice=...
+    alt Personale non collegato
+        FE-->>P: Pagina di login (next = pagina di verifica)
+        P->>FE: Accede come amministratore
+    end
+    FE->>API: GET /api/prenotazioni/verifica/{codice} (token admin)
+    API->>DB: SELECT prenotazione WHERE codice = ...
+    alt Codice inesistente
+        API-->>FE: 404 Nessuna prenotazione trovata
+    else Prenotazione trovata
+        API-->>FE: Dati del visitatore e della mostra + stato
+        FE-->>P: "Prenotazione valida" (oppure già usata, mostra non iniziata o conclusa)
+        P->>FE: Registra ingresso
+        FE->>API: POST /api/prenotazioni/verifica/{codice}/ingresso
+        API->>DB: UPDATE ingresso_il = ora attuale
+        API-->>FE: 200 (un secondo tentativo riceve 409)
+        FE-->>P: "Ingresso registrato"
+    end
+```
+
 ### 7. Documentazione delle API
 FastAPI genera in modo automatico e nativo la documentazione interattiva delle API basata sullo standard OpenAPI. La Swagger UI, con gli endpoint raggruppati per router, è disponibile in tre punti:
 - **in locale**, con il back-end avviato: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs), dove si possono esplorare e provare gli endpoint in tempo reale;
@@ -531,7 +577,7 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 | Visitatori | 👤 GET /api/utenti/me | Profilo del visitatore collegato. | 200, 401, 403 |
 | Visitatori | 👤 GET /api/utenti/me/prenotazioni | Prenotazioni del visitatore collegato, con titolo e periodo della mostra. | 200, 401, 403 |
 | Contatti | 👤 POST /api/contatti | Riceve titolo, descrizione, nome, cognome, email e telefono del visitatore registrato e li invia per email alla casella del museo (con l'email del visitatore come indirizzo di risposta). Senza servizio email configurato (sviluppo locale) la richiesta viene scritta nel log. | 200, 401, 403, 422, 429, 503 |
-| Visitatori | 👤 DELETE /api/utenti/me/prenotazioni/{prenotazione_id} | Annulla una prenotazione del visitatore collegato e invia in background l'email di conferma dell'annullamento. La prenotazione di un altro visitatore risulta "non trovata". | 200, 401, 403, 404 |
+| Visitatori | 👤 DELETE /api/utenti/me/prenotazioni/{prenotazione_id} | Annulla una prenotazione del visitatore collegato e invia in background l'email di conferma dell'annullamento. La prenotazione di un altro visitatore risulta "non trovata"; una prenotazione già usata per l'ingresso non si può annullare (409). | 200, 401, 403, 404, 409 |
 | Visitatori | 👤 GET /api/utenti/me/feedback | Feedback già lasciati dal visitatore collegato (il frontend nasconde il form sulle mostre già recensite). | 200, 401, 403 |
 | Area riservata | 🔒 GET /api/statistiche | Indicatori per la dashboard: conteggi di mostre, prenotazioni e feedback, voto medio, dettaglio per mostra. | 200, 401 |
 | Mostre | GET /api/mostre | Restituisce la lista di tutte le esposizioni, ordinate per data di inizio. | 200 |
@@ -539,8 +585,11 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 | Mostre | 🔒 POST /api/mostre | Caricamento di una nuova mostra e delle relative immagini (multipart/form-data). | 201, 400, 401, 422 |
 | Mostre | 🔒 PUT /api/mostre/{mostra_id} | Aggiornamento di un'esposizione esistente. Il campo `immagini_esistenti` (lista JSON) indica quali immagini attuali tenere; le nuove immagini caricate si aggiungono in coda. Deve restare almeno un'immagine. | 200, 400, 401, 404 |
 | Mostre | 🔒 DELETE /api/mostre/{mostra_id} | Eliminazione di un'esposizione, delle sue prenotazioni e dei suoi feedback. | 200, 401, 404 |
-| Prenotazioni | 👤 POST /api/prenota | Salva la prenotazione con i dati dell'account e avvia in background l'invio dell'email di conferma. Una sola prenotazione per visitatore su ogni mostra. | 201, 400, 401, 403, 404, 409, 422 |
-| Prenotazioni | 🔒 GET /api/prenotazioni | Elenco delle prenotazioni, filtrabile per mostra (`?mostra_id=`). | 200, 401 |
+| Prenotazioni | 👤 POST /api/prenota | Salva la prenotazione con i dati dell'account e un codice di riferimento, restituito nella risposta, e avvia in background l'invio dell'email di conferma con codice e QR code. Una sola prenotazione per visitatore su ogni mostra. | 201, 400, 401, 403, 404, 409, 422 |
+| Prenotazioni | 🔒 GET /api/prenotazioni | Elenco delle prenotazioni (con codice e ingresso), filtrabile per mostra (`?mostra_id=`). | 200, 401 |
+| Prenotazioni | GET /api/prenotazioni/qr/{codice} | Immagine PNG del QR code di una prenotazione, usata nell'email e nell'area personale. Contiene solo l'indirizzo della pagina di verifica. | 200, 404 |
+| Prenotazioni | 🔒 GET /api/prenotazioni/verifica/{riferimento} | Verifica all'ingresso: dati della prenotazione e della mostra e stato (`valida`, `gia_entrato`, `non_iniziata`, `conclusa`). Il riferimento è il codice (anche in minuscolo o senza trattini) o il numero della prenotazione. | 200, 401, 404 |
+| Prenotazioni | 🔒 POST /api/prenotazioni/verifica/{riferimento}/ingresso | Registra l'ingresso del visitatore: una sola volta e solo mentre la mostra è aperta. | 200, 400, 401, 404, 409 |
 | Feedback | 👤 POST /api/feedback | Salva il feedback del visitatore su una mostra già iniziata (uno per mostra). | 201, 400, 401, 403, 404, 409, 422 |
 | Feedback | GET /api/feedback | Elenco pubblico dei feedback, filtrabile per mostra (`?mostra_id=`), dal più recente. | 200 |
 | Feedback | 🔒 DELETE /api/feedback/{feedback_id} | Eliminazione di un feedback (moderazione). | 200, 401, 404 |
@@ -616,7 +665,7 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 | 401 Unauthorized | Credenziali errate, token assente, manomesso, scaduto o del ruolo sbagliato per l'area riservata |
 | 403 Forbidden | Token valido ma del ruolo sbagliato: l'amministratore che prova a prenotare o a lasciare un feedback |
 | 404 Not Found | Mostra o feedback inesistente |
-| 409 Conflict | Email già registrata, oppure secondo feedback dello stesso visitatore sulla stessa mostra |
+| 409 Conflict | Email già registrata, seconda prenotazione o secondo feedback dello stesso visitatore sulla stessa mostra, ingresso già registrato, annullamento di una prenotazione già usata |
 | 422 Unprocessable Entity | Dati che non rispettano lo schema (con messaggio leggibile) |
 | 429 Too Many Requests | Troppi tentativi di login o di registrazione dallo stesso indirizzo IP |
 | 500 Internal Server Error | Errore imprevisto nel salvataggio (la transazione viene annullata con rollback) |
@@ -707,6 +756,8 @@ Il controllo delle credenziali avviene sul server e non nel browser. L'endpoint 
 
 **Recupero della password.** Con `POST /api/utenti/password-dimenticata` il server crea un token firmato con ruolo `reset`, scadenza di 30 minuti (`RESET_PASSWORD_MINUTI`) e un'"impronta" dell'hash della password attuale: appena la password cambia l'impronta non corrisponde più, quindi il link funziona una sola volta. Il link punta al sito da cui è partita la richiesta (se è tra i `CORS_ORIGINS`) oppure a `FRONTEND_URL`. Un token di reset non vale come accesso e un token di accesso non vale come reset. Se il servizio email non è configurato (sviluppo locale) il link viene scritto nel log del backend, così la funzione si può provare comunque.
 
+**Codice di prenotazione e QR code.** Il numero progressivo della prenotazione è prevedibile, quindi per la verifica all'ingresso ogni prenotazione riceve anche un codice casuale nel formato `MCD-XXXX-XXXX`, generato con il modulo `secrets` (generatore crittograficamente sicuro). I caratteri sono scelti da un alfabeto di 31 simboli senza quelli che si confondono leggendo o dettando il codice (0/O, 1/I/L): con 8 caratteri le combinazioni sono circa 850 miliardi, quindi un codice non si può indovinare per tentativi. Il QR code, generato con la libreria `segno` (solo Python), non contiene dati personali ma l'indirizzo della pagina di verifica dell'area riservata (`/admin/verifica?codice=...`): inquadrandolo con la fotocamera del telefono il personale apre la pagina e, se non ha ancora fatto il login, dopo l'accesso torna automaticamente alla verifica (parametro `next`). I dati della prenotazione sono visibili solo con il token dell'amministratore. L'immagine del QR code è inserita nel corpo dell'email (servita dal backend) e anche in allegato PNG, così resta disponibile se il programma di posta blocca le immagini esterne. Ogni prenotazione vale per un solo ingresso: la registrazione salva data e ora in `ingresso_il`, un secondo tentativo restituisce 409 e una prenotazione già usata non si può più annullare.
+
 #### 9.6. Gestione sicura del caricamento file
 Il caricamento delle immagini è gestito da `services/immagini_service.py`. Le immagini vengono accettate solo se hanno un'estensione e un tipo MIME da immagine (jpg, png, webp, gif) e non superano la dimensione massima configurata. Il nome del file su disco viene generato dal server (UUID), evitando sia la sovrascrittura di file esistenti sia attacchi di tipo path traversal. In modifica il client invia l'elenco delle immagini attuali da mantenere: il server accetta solo percorsi già associati a quella mostra, così dal form non è possibile collegare file arbitrari. Nel database si salvano percorsi relativi: è il frontend ad anteporre l'indirizzo del backend, così l'applicazione funziona sia in locale sia in produzione. I dati inseriti dagli utenti vengono inoltre "escapati" prima di essere inseriti nel corpo HTML dell'email di conferma.
 
@@ -724,8 +775,8 @@ Il front-end è stato sviluppato come una Single Page Application (SPA) modulare
 frontend/src/
 ├── App.jsx        → tema, router e rotte
 ├── config/        → routes.json (elenco delle rotte) e background.json (immagine di sfondo)
-├── pages/         → una pagina per rotta: Home (presentazione), Esposizioni (catalogo), GalleriaMostra, FormPrenotazione, Accedi, AreaPersonale, PasswordDimenticata, ReimpostaPassword, AdminDashboard, AdminForm, NotFound
-├── components/    → componenti riutilizzabili: AppHeader (con icona del museo e menu della lingua), AppFooter, IconaMuseo, ProtectedRoute, ErrorBoundary, SezioneFeedback, IndicatoriDashboard
+├── pages/         → una pagina per rotta: Home (presentazione), Esposizioni (catalogo), GalleriaMostra, FormPrenotazione, Accedi, AreaPersonale, PasswordDimenticata, ReimpostaPassword, AdminDashboard, AdminForm, AdminVerifica (verifica all'ingresso), NotFound
+├── components/    → componenti riutilizzabili: AppHeader (con icona del museo e menu della lingua), AppFooter, IconaMuseo, QrPrenotazione (codice e QR code), ProtectedRoute, ErrorBoundary, SezioneFeedback, IndicatoriDashboard
 ├── hooks/         → useUtente, useAdmin (chi è collegato) e useLingua (lingua e funzione t())
 ├── i18n/          → testi.js (testi italiani e inglesi, traduzioni dei messaggi del server) e lingua.js (lingua scelta e traduzione)
 ├── services/      → api.js (istanza Axios) e un servizio per area: mostre, prenotazioni, feedback, statistiche, auth (admin), utenti (visitatori)
@@ -794,9 +845,9 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (154 test) | Vitest + React Testing Library (141 test) |
+| Test automatici | pytest + TestClient di FastAPI (188 test) | Vitest + React Testing Library (150 test) |
 
-**Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra e solo dopo la prenotazione, email di registrazione e avviso di registrazione doppia, recupero della password (link valido, scaduto, già usato, token non valido), aggiornamento di un database della versione precedente. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
+**Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra e solo dopo la prenotazione, email di registrazione e avviso di registrazione doppia, recupero della password (link valido, scaduto, già usato, token non valido), codice di prenotazione (formato, unicità, varianti di scrittura accettate), QR code (contenuto e immagine PNG), email con codice e allegato, verifica e registrazione dell'ingresso (solo admin, una sola volta, mostre non iniziate o concluse), aggiornamento di un database della versione precedente con assegnazione dei codici mancanti. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 
 **Test del front-end** (cartella `frontend/src/tests/`): montano le pagine in un browser simulato (jsdom) e sostituiscono le risposte del backend con dati finti. Verificano la visualizzazione delle mostre, la validazione dei form, l'invio delle prenotazioni e dei feedback, login e logout dell'area riservata, registrazione e accesso dei visitatori con ritorno alla pagina richiesta, area personale, scelta del token per ogni chiamata, gli indicatori della dashboard, la protezione delle rotte, la pagina 404 e il caricamento delle pagine "lazy".
 
@@ -854,6 +905,11 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 | TF36 | Contatti senza account | Visitatore anonimo | Menu → Contatti | Invito ad accedere al posto del modulo; dopo l'accesso si torna su Contatti | ✅ Superato |
 | TF37 | Invio di una domanda | Visitatore registrato | Compilare titolo e descrizione (i dati personali sono già inseriti) e premere "Invia richiesta" | Messaggio "Richiesta inviata…"; l'email arriva alla casella del museo con tutti i campi | ✅ Superato |
 | TF38 | Voce Home | Visitatore | Da qualsiasi pagina premere "Home" nel menu | Si torna alla home di presentazione | ✅ Superato |
+| TF39 | Codice e QR code della prenotazione | Visitatore | Prenotare una mostra | La conferma mostra il codice (es. MCD-68ZY-MT8U) e il QR code; l'email contiene codice, QR code e allegato PNG | ✅ Superato |
+| TF40 | QR code nell'area personale | Visitatore | Area personale → "Mostra QR code" | Compaiono codice e QR code da mostrare all'ingresso | ✅ Superato |
+| TF41 | Verifica dal QR code | Amministratore | Inquadrare il QR code (indirizzo /admin/verifica?codice=...) senza essere collegato, poi accedere | Dopo il login si torna alla verifica: dati del visitatore, mostra e "Prenotazione valida" | ✅ Superato |
+| TF42 | Verifica dal codice | Amministratore | Dashboard → "Verifica ingresso", digitare il codice in minuscolo e senza trattini | Viene trovata la stessa prenotazione; un codice inesistente mostra "Nessuna prenotazione trovata con questo codice." | ✅ Superato |
+| TF43 | Registrazione dell'ingresso | Amministratore | Su una prenotazione valida premere "Registra ingresso" | Compare "Ingresso registrato per …"; un secondo ingresso è rifiutato e il visitatore non può più annullare la prenotazione | ✅ Superato |
 | TF13 | Accesso diretto a una pagina riservata | Visitatore | Aprire `/admin/nuova` senza login | Si viene reindirizzati alla pagina di accesso | ✅ Superato |
 | TF14 | Troppi tentativi di accesso | Chiunque | Sbagliare la password più di 5 volte in un minuto | Messaggio "Troppi tentativi di accesso. Riprova tra qualche minuto." | ✅ Superato |
 
@@ -959,6 +1015,21 @@ Nella sezione delle opinioni l'amministratore legge ed elimina i feedback, ma no
 
 **TF36 – Contatti senza account**
 ![Contatti senza login](docs/screenshots/34-contatti-senza-login.webp)
+
+**TF39 – Conferma della prenotazione con codice e QR code**
+![Prenotazione con QR code](docs/screenshots/35-prenotazione-qr.webp)
+
+**TF39 – Email di conferma con codice e QR code**
+![Email con QR code](docs/screenshots/39-email-qr.webp)
+
+**TF40 – QR code nell'area personale**
+![Area personale con QR code](docs/screenshots/36-area-personale-qr.webp)
+
+**TF41 – Verifica della prenotazione aperta dal QR code**
+![Verifica della prenotazione](docs/screenshots/37-verifica-prenotazione.webp)
+
+**TF43 – Ingresso registrato**
+![Ingresso registrato](docs/screenshots/38-ingresso-registrato.webp)
 
 ### 13. Istruzioni per l'esecuzione
 #### 13.1. Prerequisiti

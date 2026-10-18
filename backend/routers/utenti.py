@@ -193,6 +193,8 @@ def mie_prenotazioni(utente: models.Utente = Depends(richiedi_utente), db: Sessi
             "data_inizio": p.mostra.data_inizio,
             "data_fine": p.mostra.data_fine,
             "creata_il": p.creata_il,
+            "codice": p.codice,
+            "ingresso_il": p.ingresso_il,
         }
         for p in prenotazioni
     ]
@@ -221,7 +223,8 @@ def annulla_prenotazione(
     """`DELETE /api/utenti/me/prenotazioni/{prenotazione_id}` · Annulla una prenotazione del visitatore collegato; dopo l'annullamento può prenotare di nuovo.
 
     Raises:
-        HTTPException: 404 se la prenotazione non esiste o appartiene a un altro visitatore.
+        HTTPException: 404 se la prenotazione non esiste o appartiene a un altro visitatore;
+            409 se è già stata usata per l'ingresso.
     """
     # il filtro su utente_id garantisce che si possano annullare solo le proprie prenotazioni
     prenotazione = (
@@ -232,6 +235,12 @@ def annulla_prenotazione(
     # anche la prenotazione di un altro visitatore risulta "non trovata": non si rivela che esiste
     if prenotazione is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prenotazione non trovata.")
+    # una prenotazione già usata per entrare al museo resta nello storico
+    if prenotazione.ingresso_il is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="La prenotazione è già stata usata per l'ingresso e non può essere annullata.",
+        )
     # salvo la mostra prima di eliminare la prenotazione: servono titolo e date per l'email
     mostra = prenotazione.mostra
     db.delete(prenotazione)

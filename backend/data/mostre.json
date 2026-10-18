@@ -1,7 +1,7 @@
 [
   {
     "titolo": "Caravaggio e il suo tempo",
-    "descrizione": "Un viaggio tra luce e ombra nelle opere milanesi del maestro.",
+    "descrizione": "Michelangelo Merisi, detto Caravaggio, nacque a Milano nel 1571 e si formò nella bottega del pittore Simone Peterzano prima di trasferirsi a Roma, dove rivoluzionò la pittura del suo tempo. La mostra racconta questo legame con la città attraverso le riproduzioni delle sue opere più celebri, dalla Canestra di frutta della Pinacoteca Ambrosiana alla Cena in Emmaus della Pinacoteca di Brera. Il percorso spiega il suo uso drammatico della luce, che emerge dal buio e scolpisce i corpi (il chiaroscuro), e la scelta di dipingere santi e personaggi sacri con i volti della gente comune. Una sezione è dedicata ai pittori che seguirono la sua lezione, i cosiddetti caravaggeschi, in Italia e in Europa.",
     "immagini": [
       "/static/uploads/caravaggio.webp"
     ],
@@ -28,7 +28,7 @@
   },
   {
     "titolo": "Monet: La Natura",
-    "descrizione": "Le opere di Monet, i colori, le sfumature e lo spettacolo della natura.",
+    "descrizione": "Claude Monet è il pittore che più di ogni altro ha dato forma all'Impressionismo: il movimento prese il nome proprio da un suo quadro, Impressione, levar del sole, esposto a Parigi nel 1874. La mostra segue il suo modo di dipingere all'aperto, davanti al paesaggio, per catturare la luce che cambia con le ore e con le stagioni. Il percorso presenta le grandi serie, in cui lo stesso soggetto è ritratto più volte in momenti diversi, come i covoni di grano e la cattedrale di Rouen, e si chiude nel giardino di Giverny, con lo stagno delle ninfee che Monet dipinse per quasi trent'anni, fino a trasformarlo in pura superficie di colore.",
     "immagini": [
       "/static/uploads/monet.webp"
     ],
@@ -37,7 +37,7 @@
   },
   {
     "titolo": "Dalí e le forme",
-    "descrizione": "Un viaggio nelle forme e nei colori di Dalí, dove immaginazione e colori si fondono in rappresentazioni uniche.",
+    "descrizione": "Salvador Dalí è il più famoso esponente del Surrealismo, il movimento che voleva portare nell'arte il mondo dei sogni e dell'inconscio. La mostra parte dalla Persistenza della memoria del 1931, con i celebri orologi molli che si sciolgono in un paesaggio deserto, e accompagna il visitatore tra immagini doppie, prospettive impossibili e oggetti trasformati. Il percorso spiega il metodo paranoico-critico con cui Dalí costruiva le sue visioni, il suo legame con la Catalogna e con il Teatro-Museo di Figueres, e il dialogo con il cinema, la fotografia e il design, che fece di lui uno degli artisti più riconoscibili del Novecento.",
     "immagini": [
       "/static/uploads/salvador-dali-.webp"
     ],

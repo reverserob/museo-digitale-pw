@@ -9,8 +9,8 @@ del codice in `frontend/src` ed è pubblicata insieme a questo sito.
 
 | Sezione | Moduli |
 | --- | --- |
-| **Pagine** | `pages/Home`, `pages/Esposizioni`, `pages/GalleriaMostra`, `pages/FormPrenotazione`, `pages/Accedi`, `pages/AreaPersonale`, `pages/Contatti`, `pages/AdminDashboard`, `pages/AdminForm`, ... |
-| **Componenti** | `components/AppHeader`, `components/AppFooter`, `components/IconaMuseo`, `components/SezioneFeedback`, `components/IndicatoriDashboard`, `components/ProtectedRoute`, `components/ErrorBoundary` |
+| **Pagine** | `pages/Home`, `pages/Esposizioni`, `pages/GalleriaMostra`, `pages/FormPrenotazione`, `pages/Accedi`, `pages/AreaPersonale`, `pages/Contatti`, `pages/AdminDashboard`, `pages/AdminForm`, `pages/AdminVerifica`, ... |
+| **Componenti** | `components/AppHeader`, `components/AppFooter`, `components/IconaMuseo`, `components/QrPrenotazione`, `components/SezioneFeedback`, `components/IndicatoriDashboard`, `components/ProtectedRoute`, `components/ErrorBoundary` |
 | **Servizi** | `services/api` (client HTTP e token), `services/mostreService`, `services/prenotazioniService`, `services/feedbackService`, `services/utentiService`, `services/authService`, `services/statisticheService`, `services/contattiService` |
 | **Hook** | `hooks/useUtente`, `hooks/useAdmin`, `hooks/useLingua` |
 | **Lingua** | `i18n/lingua` (traduzione), `i18n/testi` (testi IT/EN) |

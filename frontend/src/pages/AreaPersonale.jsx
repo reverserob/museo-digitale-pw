@@ -11,6 +11,7 @@ import { annullaPrenotazione, getMiePrenotazioni, logoutUtente } from '../servic
 import { formatoData, traduciServer } from '../i18n/lingua';
 import useUtente from '../hooks/useUtente';
 import useLingua from '../hooks/useLingua';
+import QrPrenotazione from '../components/QrPrenotazione';
 
 const cardSx = {
     backdropFilter: 'blur(12px)',
@@ -35,6 +36,8 @@ export default function AreaPersonale() {
     const [messaggio, setMessaggio] = useState('');
     // id della prenotazione in corso di annullamento (per disattivarne il pulsante)
     const [inAnnullamento, setInAnnullamento] = useState(null);
+    // id della prenotazione di cui è aperto il QR code (uno alla volta)
+    const [qrAperto, setQrAperto] = useState(null);
 
     useEffect(() => {
         getMiePrenotazioni()
@@ -147,18 +150,47 @@ export default function AreaPersonale() {
                                         data: formatoData(p.creata_il + 'Z', lingua),
                                     })}
                                 </Typography>
+                                {p.codice && (
+                                    <Typography variant="body2" sx={{ color: '#c5a059', fontFamily: 'monospace' }}>
+                                        {t('profilo.codice', { codice: p.codice })}
+                                    </Typography>
+                                )}
+                                {p.ingresso_il && (
+                                    <Typography variant="body2" sx={{ color: '#81c784' }}>
+                                        ✓ {t('profilo.ingresso', { data: formatoData(p.ingresso_il + 'Z', lingua) })}
+                                    </Typography>
+                                )}
                             </Box>
-                            <Button
-                                onClick={() => annulla(p)}
-                                color="error"
-                                variant="outlined"
-                                size="small"
-                                disabled={inAnnullamento === p.id}
-                                aria-label={t('profilo.annullaDi', { titolo: p.titolo_mostra })}
-                                sx={{ borderRadius: 0 }}
-                            >
-                                {t('profilo.annulla')}
-                            </Button>
+                            {p.codice && (
+                                <Button
+                                    onClick={() => setQrAperto(qrAperto === p.id ? null : p.id)}
+                                    variant="outlined"
+                                    size="small"
+                                    aria-expanded={qrAperto === p.id}
+                                    sx={{ borderRadius: 0 }}
+                                >
+                                    {qrAperto === p.id ? t('profilo.nascondiQr') : t('profilo.mostraQr')}
+                                </Button>
+                            )}
+                            {/* una prenotazione già usata per entrare non si può più annullare */}
+                            {!p.ingresso_il && (
+                                <Button
+                                    onClick={() => annulla(p)}
+                                    color="error"
+                                    variant="outlined"
+                                    size="small"
+                                    disabled={inAnnullamento === p.id}
+                                    aria-label={t('profilo.annullaDi', { titolo: p.titolo_mostra })}
+                                    sx={{ borderRadius: 0 }}
+                                >
+                                    {t('profilo.annulla')}
+                                </Button>
+                            )}
+                            {qrAperto === p.id && (
+                                <Box sx={{ width: '100%', textAlign: 'center', pt: 1 }}>
+                                    <QrPrenotazione codice={p.codice} />
+                                </Box>
+                            )}
                         </Box>
                     ))}
                 </CardContent>

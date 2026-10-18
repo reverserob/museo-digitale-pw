@@ -18,7 +18,7 @@ Una copia della Swagger UI è pubblicata anche in questo sito: [Swagger UI](swag
 | Visitatori | 👤 GET /api/utenti/me | Profilo del visitatore collegato. | 200, 401, 403 |
 | Visitatori | 👤 GET /api/utenti/me/prenotazioni | Prenotazioni del visitatore collegato, con titolo e periodo della mostra. | 200, 401, 403 |
 | Contatti | 👤 POST /api/contatti | Riceve titolo, descrizione, nome, cognome, email e telefono del visitatore registrato e li invia per email alla casella del museo (con l'email del visitatore come indirizzo di risposta). Senza servizio email configurato (sviluppo locale) la richiesta viene scritta nel log. | 200, 401, 403, 422, 429, 503 |
-| Visitatori | 👤 DELETE /api/utenti/me/prenotazioni/{prenotazione_id} | Annulla una prenotazione del visitatore collegato e invia in background l'email di conferma dell'annullamento. La prenotazione di un altro visitatore risulta "non trovata". | 200, 401, 403, 404 |
+| Visitatori | 👤 DELETE /api/utenti/me/prenotazioni/{prenotazione_id} | Annulla una prenotazione del visitatore collegato e invia in background l'email di conferma dell'annullamento. La prenotazione di un altro visitatore risulta "non trovata"; una prenotazione già usata per l'ingresso non si può annullare (409). | 200, 401, 403, 404, 409 |
 | Visitatori | 👤 GET /api/utenti/me/feedback | Feedback già lasciati dal visitatore collegato (il frontend nasconde il form sulle mostre già recensite). | 200, 401, 403 |
 | Area riservata | 🔒 GET /api/statistiche | Indicatori per la dashboard: conteggi di mostre, prenotazioni e feedback, voto medio, dettaglio per mostra. | 200, 401 |
 | Mostre | GET /api/mostre | Restituisce la lista di tutte le esposizioni, ordinate per data di inizio. | 200 |
@@ -26,8 +26,11 @@ Una copia della Swagger UI è pubblicata anche in questo sito: [Swagger UI](swag
 | Mostre | 🔒 POST /api/mostre | Caricamento di una nuova mostra e delle relative immagini (multipart/form-data). | 201, 400, 401, 422 |
 | Mostre | 🔒 PUT /api/mostre/{mostra_id} | Aggiornamento di un'esposizione esistente. Il campo `immagini_esistenti` (lista JSON) indica quali immagini attuali tenere; le nuove immagini caricate si aggiungono in coda. Deve restare almeno un'immagine. | 200, 400, 401, 404 |
 | Mostre | 🔒 DELETE /api/mostre/{mostra_id} | Eliminazione di un'esposizione, delle sue prenotazioni e dei suoi feedback. | 200, 401, 404 |
-| Prenotazioni | 👤 POST /api/prenota | Salva la prenotazione con i dati dell'account e avvia in background l'invio dell'email di conferma. Una sola prenotazione per visitatore su ogni mostra. | 201, 400, 401, 403, 404, 409, 422 |
-| Prenotazioni | 🔒 GET /api/prenotazioni | Elenco delle prenotazioni, filtrabile per mostra (`?mostra_id=`). | 200, 401 |
+| Prenotazioni | 👤 POST /api/prenota | Salva la prenotazione con i dati dell'account e un codice di riferimento, restituito nella risposta, e avvia in background l'invio dell'email di conferma con codice e QR code. Una sola prenotazione per visitatore su ogni mostra. | 201, 400, 401, 403, 404, 409, 422 |
+| Prenotazioni | 🔒 GET /api/prenotazioni | Elenco delle prenotazioni (con codice e ingresso), filtrabile per mostra (`?mostra_id=`). | 200, 401 |
+| Prenotazioni | GET /api/prenotazioni/qr/{codice} | Immagine PNG del QR code di una prenotazione, usata nell'email e nell'area personale. Contiene solo l'indirizzo della pagina di verifica. | 200, 404 |
+| Prenotazioni | 🔒 GET /api/prenotazioni/verifica/{riferimento} | Verifica all'ingresso: dati della prenotazione e della mostra e stato (`valida`, `gia_entrato`, `non_iniziata`, `conclusa`). Il riferimento è il codice (anche in minuscolo o senza trattini) o il numero della prenotazione. | 200, 401, 404 |
+| Prenotazioni | 🔒 POST /api/prenotazioni/verifica/{riferimento}/ingresso | Registra l'ingresso del visitatore: una sola volta e solo mentre la mostra è aperta. | 200, 400, 401, 404, 409 |
 | Feedback | 👤 POST /api/feedback | Salva il feedback del visitatore su una mostra già iniziata (uno per mostra). | 201, 400, 401, 403, 404, 409, 422 |
 | Feedback | GET /api/feedback | Elenco pubblico dei feedback, filtrabile per mostra (`?mostra_id=`), dal più recente. | 200 |
 | Feedback | 🔒 DELETE /api/feedback/{feedback_id} | Eliminazione di un feedback (moderazione). | 200, 401, 404 |
@@ -40,7 +43,7 @@ Una copia della Swagger UI è pubblicata anche in questo sito: [Swagger UI](swag
 | 401 Unauthorized | Credenziali errate, token assente, manomesso, scaduto o del ruolo sbagliato per l'area riservata |
 | 403 Forbidden | Token valido ma del ruolo sbagliato (l'amministratore che prova a prenotare), oppure feedback di un visitatore non prenotato alla mostra |
 | 404 Not Found | Mostra, feedback o prenotazione inesistente |
-| 409 Conflict | Email già registrata, seconda prenotazione o secondo feedback dello stesso visitatore sulla stessa mostra |
+| 409 Conflict | Email già registrata, seconda prenotazione o secondo feedback dello stesso visitatore sulla stessa mostra, ingresso già registrato, annullamento di una prenotazione già usata |
 | 422 Unprocessable Entity | Dati che non rispettano lo schema (con messaggio leggibile) |
 | 429 Too Many Requests | Troppi tentativi di login, registrazione, reset password o invio contatti dallo stesso indirizzo IP |
 | 500 Internal Server Error | Errore imprevisto nel salvataggio (la transazione viene annullata con rollback) |

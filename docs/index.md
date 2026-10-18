@@ -5,7 +5,7 @@ hide:
 
 # Museo Civico Digitale
 
-Piattaforma web per la **digitalizzazione dei processi di un museo civico**: catalogo delle mostre, prenotazione delle visite con email di conferma, account dei visitatori, feedback e un'area riservata con dashboard per il personale.
+Piattaforma web per la **digitalizzazione dei processi di un museo civico**: catalogo delle mostre, prenotazione delle visite con email di conferma, codice di prenotazione e QR code per la verifica all'ingresso, account dei visitatori, feedback e un'area riservata con dashboard per il personale.
 
 Questo sito raccoglie la documentazione tecnica del Project Work. La reference del codice viene **generata automaticamente dai commenti** dei sorgenti, quindi resta allineata al codice a ogni modifica.
 
