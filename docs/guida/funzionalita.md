@@ -20,7 +20,7 @@ Chi dimentica la password riceve un link valido 30 minuti e utilizzabile una sol
 
 Il pulsante **PRENOTA** apre il form con nome, cognome ed email dell'account (non modificabili) e il telefono. Dopo la conferma parte l'email di riepilogo. Ogni visitatore può prenotarsi una sola volta a ciascuna mostra: dopo la prenotazione il pulsante diventa **MOSTRA PRENOTATA**.
 
-Ogni prenotazione riceve un **codice di riferimento** (es. `MCD-68ZY-MT8U`) e un **QR code**, mostrati subito nella pagina di conferma e inviati nell'email (il QR code anche come allegato PNG).
+Ogni prenotazione riceve un **codice di riferimento** (es. `MCD-68ZY-MT8U`) e un **QR code**, mostrati subito nella pagina di conferma e inviati nell'email: il QR code è sempre in allegato PNG e, con il backend online, anche come immagine nel testo.
 
 ![Prenotazione con codice e QR code](../screenshots/35-prenotazione-qr.webp){ .screenshot loading=lazy }
 

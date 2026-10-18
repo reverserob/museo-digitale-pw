@@ -49,6 +49,8 @@ Progettazione di una piattaforma informatica per la gestione di servizi, dati e 
 - Uvicorn: Il server web che farà girare FastAPI.
 - SQLAlchemy: L'ORM (Object-Relational Mapper) per parlare con il database senza scrivere query SQL a mano.
 - Pydantic: Serve per validare i dati JSON in entrata e uscita (FastAPI lo usa di default).
+- segno: genera i QR code delle prenotazioni (PNG), senza dipendenze esterne.
+- slowapi: limita i tentativi di login, registrazione e invio dei moduli.
   pip install -r requirements.txt
 
 ####  Run the backend
@@ -78,6 +80,11 @@ Progettazione di una piattaforma informatica per la gestione di servizi, dati e 
 | `CORS_ORIGINS` | Domini del frontend autorizzati, separati da virgola |
 | `DATABASE_URL` | Facoltativa, default `sqlite:///./museo.db` |
 | `LOGIN_RATE_LIMIT` | Facoltativa, tentativi di login consentiti per IP (default `5/minute`) |
+| `CONTATTI_EMAIL` | Casella che riceve le richieste del modulo Contatti |
+| `FRONTEND_URL` | Facoltativa: indirizzo del sito usato nei link di reset e nel QR code delle prenotazioni |
+| `BACKEND_URL` | Facoltativa: indirizzo pubblico del backend per l'immagine del QR code nelle email |
+
+**Email che non arrivano?** Il motivo è sempre scritto nel log del backend (`Errore invio email a ...`). Le cause più comuni (venv non attivo, `EMAIL_MITTENTE` scritto male, certificati di Python su macOS, IP bloccati da Brevo) e le soluzioni sono in [DOCUMENTATION.md §13.7](DOCUMENTATION.md#137-risoluzione-dei-problemi-con-le-email).
 
 #### Swagger API docs
 - In locale, con il backend avviato: `http://127.0.0.1:8000/docs`

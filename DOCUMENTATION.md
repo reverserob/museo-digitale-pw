@@ -178,7 +178,7 @@ flowchart LR
 1. Il browser scarica da Vercel il front-end, cioè file statici distribuiti tramite una rete di server vicini all'utente (CDN).
 2. L'applicazione React, in esecuzione nel browser, chiama le API REST del back-end su Render scambiando dati in formato JSON.
 3. Le immagini delle mostre sono servite direttamente dal back-end come file statici.
-4. Dopo una prenotazione il back-end invia l'email di conferma tramite l'API HTTPS di Brevo (in locale, in alternativa, tramite SMTP).
+4. Dopo una prenotazione il back-end invia l'email di conferma tramite l'API HTTPS di Brevo (in locale, in alternativa, tramite SMTP). L'email contiene il QR code in allegato e, online, anche come immagine che il programma di posta scarica dal back-end (`/api/prenotazioni/qr/...`).
 
 #### 4.2. Struttura del back-end e separazione delle responsabilità
 All'interno del back-end è stato applicato il principio della separazione delle responsabilità (Separation of Concerns): ogni modulo ha un compito preciso e il file principale si limita a configurare l'applicazione e a unire i moduli. Le rotte sono organizzate con gli `APIRouter` di FastAPI, mentre la logica riutilizzabile è raccolta nella cartella `services/`.
@@ -221,7 +221,7 @@ I vantaggi di questa organizzazione sono:
 - **Documentazione**: ogni router ha un proprio tag, quindi nella Swagger UI le rotte compaiono raggruppate in *Area riservata*, *Visitatori*, *Mostre*, *Prenotazioni* e *Feedback*.
 
 ### 5. Modello dei dati
-Il sistema si appoggia a un database relazionale SQLite, interfacciato tramite l'ORM SQLAlchemy per la gestione trasparente delle entità in oggetti Python. Le tabelle vengono create automaticamente all'avvio e, se il database è vuoto, vengono inserite le mostre dimostrative descritte nel file `data/mostre.json` (seeding): per aggiungere o modificare le mostre iniziali basta modificare il file JSON, senza toccare il codice.
+Il sistema si appoggia a un database relazionale SQLite, interfacciato tramite l'ORM SQLAlchemy per la gestione trasparente delle entità in oggetti Python. Le tabelle vengono create automaticamente all'avvio e, se il database è vuoto, vengono inserite le mostre dimostrative descritte nel file `data/mostre.json` (seeding): per aggiungere o modificare le mostre iniziali basta modificare il file JSON, senza toccare il codice. Il catalogo iniziale comprende sette mostre, ciascuna con una descrizione del percorso espositivo e almeno un'immagine: *Caravaggio e il suo tempo*, *Leonardo: Il Codice Atlantico*, *Monet: La Natura*, *Dalí e le forme*, *Van Gogh: la Notte stellata e il colore*, *Hokusai: la Grande onda* e *Munch: l'Urlo e l'anima moderna*. Le immagini delle mostre iniziali sono riproduzioni di opere di pubblico dominio (per Dalí un'immagine dimostrativa già presente nel progetto) e si trovano in `static/uploads/`.
 
 Nello stesso file ogni mostra può avere un elenco di `feedback` (nome, voto, commento):
 le recensioni indicate vengono inserite insieme alla mostra e collegate a essa tramite la relazione SQLAlchemy, così l'applicazione parte già con dei dati dimostrativi anche per la sezione delle opinioni e per gli indicatori della dashboard. Nei test automatici questi feedback vengono rimossi prima di ogni test, così i conteggi partono sempre da zero.
@@ -717,6 +717,8 @@ Gli stessi dati cambiano rappresentazione mentre passano da un componente all'al
 - **Token di accesso**: è composto da due parti codificate in **Base64 URL-safe** e separate da un punto. La prima contiene i dati in JSON (`{"sub": "admin@museo.it", "ruolo": "admin", "exp": 1792083836}`, dove `ruolo` distingue l'amministratore dai visitatori, che hanno anche il proprio identificativo `uid`, dove `exp` è la scadenza espressa in secondi dal 1° gennaio 1970). La seconda è la **firma HMAC-SHA256**: un'impronta di 256 bit calcolata con la chiave segreta del server. Modificando anche un solo bit del contenuto la firma non corrisponde più e il server rifiuta il token. Base64 è una *codifica*, non una cifratura: il contenuto è leggibile, ma non falsificabile.
 - **Password**: le password dei visitatori non vengono memorizzate. Si salva una stringa con algoritmo, numero di iterazioni, **sale** (16 byte casuali) e **hash** PBKDF2-HMAC-SHA256, entrambi in Base64. Ripetere l'hash 200.000 volte rende lento indovinare le password per tentativi, e il sale fa sì che due password uguali producano hash diversi.
 - **File**: le immagini viaggiano come dati binari in richieste `multipart/form-data`; il server ne controlla tipo ed estensione e assegna un nome casuale (UUID, identificatore di 128 bit).
+- **QR code**: è una matrice bidimensionale di moduli bianchi e neri che codifica un testo, qui l'indirizzo della pagina di verifica (`…/admin/verifica?codice=MCD-XXXX-XXXX`). Ai dati vengono aggiunti dei simboli di controllo calcolati con il codice di correzione d'errore **Reed-Solomon**: con il livello "M" usato nel progetto il QR resta leggibile anche se circa il 15% della superficie è rovinata o coperta. Il server lo genera come immagine PNG (formato con compressione senza perdita, adatto alle immagini a due colori).
+- **Allegati email**: le email sono testo, quindi un allegato binario come il PNG del QR code viene codificato in **Base64** (ogni 3 byte diventano 4 caratteri, +33% circa di dimensione) sia nel formato MIME usato da SMTP sia nel JSON inviato all'API di Brevo.
 
 #### 8.5. Compressione dei dati
 Ridurre i byte da trasferire rende il sito più veloce, soprattutto su rete mobile:
@@ -738,7 +740,13 @@ Per evitare che l'invio delle email di conferma blocchi la risposta HTTP, l'appl
 
 L'invio avviene in due modi alternativi.
 In locale si può usare il protocollo SMTP (ad esempio con un account Gmail e una "password per le app").
-In produzione, invece, il piano gratuito di Render blocca le connessioni in uscita verso le porte SMTP (25, 465, 587): per questo, quando è impostata la variabile `BREVO_API_KEY`, l'email viene inviata tramite l'API del servizio di email transazionale Brevo, che usa una normale richiesta HTTPS (porta 443).
+In produzione, invece, il piano gratuito di Render blocca le connessioni in uscita verso le porte SMTP (25, 465, 587): per questo, quando è impostata la variabile `BREVO_API_KEY`, l'email viene inviata tramite l'API del servizio di email transazionale Brevo, che usa una normale richiesta HTTPS (porta 443). Brevo accetta solo un mittente (`EMAIL_MITTENTE`) verificato nel proprio pannello: con un indirizzo mancante o scritto male risponde `400 valid sender email required`.
+
+**QR code nell'email di conferma.** L'email della prenotazione contiene il codice di riferimento e il QR code in due forme:
+- come **allegato PNG** (`prenotazione-MCD-XXXX-XXXX.png`), sempre presente: si vede anche se il programma di posta blocca le immagini esterne;
+- come **immagine nel testo**, caricata dall'endpoint pubblico `GET /api/prenotazioni/qr/{codice}`. L'indirizzo del backend viene preso dalla variabile `BACKEND_URL` oppure, se non è impostata, dall'indirizzo da cui è arrivata la prenotazione (su Render `https://museo-digitale-pw.onrender.com`). Quando il backend gira in locale (`127.0.0.1` o `localhost`) l'immagine nel testo **non viene inserita**, perché il programma di posta non potrebbe raggiungere il computer di sviluppo e mostrerebbe un'immagine rotta: in quel caso il testo indica che il QR code è in allegato.
+
+Non si usano immagini incorporate come `data:` URI perché Gmail e Outlook le bloccano. Ogni esito dell'invio viene scritto nel log del server (`Email '...' inviata a ... tramite Brevo` oppure `Errore invio email a ...: <motivo>`), così un problema di configurazione si individua subito senza bloccare la prenotazione.
 
 #### 9.4. Sicurezza e variabili sensibili
 Le credenziali del servizio email, quelle dell'amministratore e la chiave di firma dei token non sono scritte nel codice: vengono lette da variabili d'ambiente tramite il modulo `settings.py`. In locale i valori si trovano nei file `.env` o `.env.local`, esclusi dal versionamento tramite `.gitignore`; in produzione si impostano dal pannello Environment di Render. Il file `.env.example` documenta le variabili necessarie senza contenere valori reali.
@@ -845,9 +853,9 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (188 test) | Vitest + React Testing Library (150 test) |
+| Test automatici | pytest + TestClient di FastAPI (191 test) | Vitest + React Testing Library (150 test) |
 
-**Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra e solo dopo la prenotazione, email di registrazione e avviso di registrazione doppia, recupero della password (link valido, scaduto, già usato, token non valido), codice di prenotazione (formato, unicità, varianti di scrittura accettate), QR code (contenuto e immagine PNG), email con codice e allegato, verifica e registrazione dell'ingresso (solo admin, una sola volta, mostre non iniziate o concluse), aggiornamento di un database della versione precedente con assegnazione dei codici mancanti. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
+**Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra e solo dopo la prenotazione, email di registrazione e avviso di registrazione doppia, recupero della password (link valido, scaduto, già usato, token non valido), codice di prenotazione (formato, unicità, varianti di scrittura accettate), QR code (contenuto e immagine PNG), email con codice e allegato (immagine nel testo solo con un backend pubblico, solo allegato in locale), verifica e registrazione dell'ingresso (solo admin, una sola volta, mostre non iniziate o concluse), aggiornamento di un database della versione precedente con assegnazione dei codici mancanti. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 
 **Test del front-end** (cartella `frontend/src/tests/`): montano le pagine in un browser simulato (jsdom) e sostituiscono le risposte del backend con dati finti. Verificano la visualizzazione delle mostre, la validazione dei form, l'invio delle prenotazioni e dei feedback, login e logout dell'area riservata, registrazione e accesso dei visitatori con ritorno alla pagina richiesta, area personale, scelta del token per ogni chiamata, gli indicatori della dashboard, la protezione delle rotte, la pagina 404 e il caricamento delle pagine "lazy".
 
@@ -1069,7 +1077,8 @@ L'applicazione è disponibile su `http://localhost:5173`. In locale, se `ADMIN_E
 | `CONTATTI_EMAIL` | Casella che riceve le richieste del modulo Contatti |
 | `EMAIL_MITTENTE` / `EMAIL_MITTENTE_NOME` | Mittente delle email inviate con Brevo (indirizzo verificato su Brevo) |
 | `CORS_ORIGINS` | Domini del front-end autorizzati, separati da virgola |
-| `FRONTEND_URL` | Facoltativa: indirizzo del sito usato nel link di reset se la richiesta non arriva da un dominio di `CORS_ORIGINS` (default il sito su Vercel) |
+| `FRONTEND_URL` | Facoltativa: indirizzo del sito usato nel link di reset (se la richiesta non arriva da un dominio di `CORS_ORIGINS`) e nel QR code delle prenotazioni (default il sito su Vercel) |
+| `BACKEND_URL` | Facoltativa: indirizzo pubblico del backend per l'immagine del QR code nel testo delle email; se vuota si usa l'indirizzo da cui arriva la richiesta |
 | `RESET_PASSWORD_MINUTI` | Facoltativa: durata del link per reimpostare la password (default 30) |
 | `DATABASE_URL` | Facoltativa, default `sqlite:///./museo.db` |
 | `LOGIN_RATE_LIMIT` | Facoltativa, tentativi di login consentiti per IP (default `5/minute`) |
@@ -1100,13 +1109,28 @@ mkdocs serve -a 127.0.0.1:8001                                 # anteprima su ht
 mkdocs build --strict                                          # sito statico nella cartella site/
 ```
 
+#### 13.7. Risoluzione dei problemi con le email
+Il codice non blocca mai registrazioni e prenotazioni se un'email non parte: il motivo compare nel log del server (terminale di `uvicorn` in locale, scheda **Logs** su Render). I casi incontrati durante lo sviluppo:
+
+| Messaggio nel log o sintomo | Causa | Soluzione |
+|---|---|---|
+| `Email non configurata` | Né `BREVO_API_KEY` né `SMTP_USER`/`SMTP_PASSWORD` sono impostate | Inserirle nel file `backend/.env` (in locale) o in **Environment** (su Render) e riavviare |
+| Il file `.env` esiste ma le variabili risultano vuote | Il venv non è attivo oppure manca la libreria `python-dotenv` | `source venv/bin/activate` e `pip install -r requirements-dev.txt` |
+| `Connection unexpectedly closed` | Invio via SMTP rifiutato al login (password per le app scaduta, oppure casella Outlook/Hotmail che non accetta più l'accesso con password) | Usare Brevo anche in locale (`BREVO_API_KEY` nel `.env`) oppure creare una nuova password per le app di Google |
+| `CERTIFICATE_VERIFY_FAILED` | Python scaricato da python.org su macOS senza i certificati per HTTPS | Eseguire una volta `/Applications/Python 3.x/Install Certificates.command` |
+| `Brevo ha risposto 400 ... valid sender email required` | `EMAIL_MITTENTE` vuoto o scritto male (es. `@gmailcom`) | Correggere l'indirizzo e verificarlo su Brevo in *Mittenti, dominio, IP* |
+| `Brevo ha risposto 401 ... unrecognised IP` | Brevo blocca gli IP non autorizzati | Brevo → *Impostazioni → Sicurezza → IP autorizzati* → disattivare il blocco |
+| `Brevo ha risposto 401 ... Key not found` | Chiave API cancellata o copiata male | Generare una nuova chiave e aggiornarla nel `.env` e su Render |
+| Log `inviata ... tramite Brevo` ma l'email non arriva | Indirizzo del destinatario scritto male in registrazione, oppure email finita nella posta indesiderata | Controllare l'indirizzo nel log e la cartella Spam; il registro di Brevo (*Transazionale → Log*) mostra le email respinte |
+| QR code rotto nel testo dell'email | Immagine con un indirizzo non raggiungibile | Risolto: in locale il QR è solo in allegato; online si può forzare l'indirizzo con `BACKEND_URL` |
+
 ### 14. Deploy
 L'applicazione è pubblicata con due servizi separati, coerentemente con l'architettura disaccoppiata:
 - **Front-end** su Vercel: [museo-digitale-pw-azure.vercel.app](https://museo-digitale-pw-azure.vercel.app/)
 - **Back-end** su Render: `museo-digitale-pw.onrender.com`
 - **Documentazione** su GitHub Pages: [reverserob.github.io/museo-digitale-pw](https://reverserob.github.io/museo-digitale-pw/)
 
-Su Render le variabili d'ambiente (SECRET_KEY, credenziali dell'amministratore, BREVO_API_KEY ed EMAIL_MITTENTE, CORS_ORIGINS, PYTHON_VERSION) sono impostate dal pannello Environment del servizio. Il backend viene avviato con il comando `uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'`, che permette al server di conoscere l'indirizzo IP reale dei visitatori (necessario per il limite ai tentativi di login). In `requirements.txt` le librerie Python sono indicate con intervalli di versioni compatibili (ad esempio `pydantic>=2.11,<3`) invece che con versioni esatte: pip sceglie la versione più recente adatta al Python installato, così il progetto funziona dalla 3.9 fino alle versioni più recenti (verificato nella CI con 3.9, 3.12 e 3.15). Il limite superiore esclude le future versioni principali, che potrebbero introdurre modifiche incompatibili.
+Su Render le variabili d'ambiente (SECRET_KEY, credenziali dell'amministratore, BREVO_API_KEY, EMAIL_MITTENTE ed EMAIL_MITTENTE_NOME, CONTATTI_EMAIL, CORS_ORIGINS, FRONTEND_URL, facoltativamente BACKEND_URL, PYTHON_VERSION) sono impostate dal pannello Environment del servizio. Il backend viene avviato con il comando `uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'`, che permette al server di conoscere l'indirizzo IP reale dei visitatori (necessario per il limite ai tentativi di login). In `requirements.txt` le librerie Python sono indicate con intervalli di versioni compatibili (ad esempio `pydantic>=2.11,<3`) invece che con versioni esatte: pip sceglie la versione più recente adatta al Python installato, così il progetto funziona dalla 3.9 fino alle versioni più recenti (verificato nella CI con 3.9, 3.12 e 3.15). Il limite superiore esclude le future versioni principali, che potrebbero introdurre modifiche incompatibili.
 
 ### 15. Limiti e sviluppi futuri
 #### 15.1. Limiti della soluzione attuale
@@ -1114,14 +1138,15 @@ La piattaforma è un prototipo funzionante; alcune semplificazioni sono accettab
 - **Persistenza su Render free**: sul piano gratuito il disco non è persistente; a ogni riavvio il database SQLite e le immagini caricate dall'area riservata vengono azzerati. Le mostre iniziali vengono ricreate automaticamente dal seeding.
 - **Un solo amministratore**: le credenziali sono configurate tramite variabili d'ambiente; non esistono più account né ruoli diversi (es. curatore e biglietteria).
 - **Nessuna gestione dei posti**: la prenotazione non prevede fasce orarie né un numero massimo di visitatori per giorno.
-- **Feedback legati alla prenotazione, non all'ingresso**: per recensire bisogna essersi prenotati alla mostra, ma non si verifica che il visitatore sia davvero entrato; la moderazione è manuale.
+- **Feedback legati alla prenotazione, non all'ingresso**: per recensire bisogna essersi prenotati alla mostra. L'ingresso viene ora registrato dal personale con il codice o il QR code, ma il feedback non richiede ancora un ingresso registrato (sarebbe un controllo in più su `ingresso_il`); la moderazione è manuale.
+- **Verifica all'ingresso solo con l'account amministratore**: il personale che controlla i QR code usa le stesse credenziali dell'amministratore; servirebbe un ruolo dedicato (es. "biglietteria") che possa solo verificare e registrare gli ingressi.
 - **Traduzione parziale**: l'interfaccia pubblica e l'area visitatori sono in italiano e in inglese, ma titoli e descrizioni delle mostre, email e area riservata restano in italiano. Per tradurre anche le mostre servirebbero campi in più nel database (es. `titolo_en`, `descrizione_en`).
 - **Account semplici**: l'email del visitatore non viene verificata con un link di conferma (riceve solo un'email di benvenuto) e il profilo non si può ancora modificare dall'area personale.
 - **Avvio lento del back-end**: sul piano gratuito il servizio va in pausa dopo un periodo di inattività e la prima richiesta può richiedere alcune decine di secondi.
 
 #### 15.2. Sviluppi futuri
 **Analytics e cruscotto decisionale**
-La dashboard attuale mostra indicatori di sintesi. Il passo successivo è l'analisi nel tempo: grafici dell'andamento delle prenotazioni per settimana, tasso di presenza reale rispetto alle prenotazioni (registrando l'ingresso con un QR code inviato nell'email), fasce orarie più richieste, provenienza dei visitatori. Questi dati aiuterebbero la direzione a pianificare il personale e a scegliere le mostre future.
+La dashboard attuale mostra indicatori di sintesi. Il passo successivo è l'analisi nel tempo: grafici dell'andamento delle prenotazioni per settimana, tasso di presenza reale rispetto alle prenotazioni (i dati ci sono già: l'ingresso viene registrato con il QR code dell'email e salvato in `ingresso_il`), fasce orarie più richieste, provenienza dei visitatori. Questi dati aiuterebbero la direzione a pianificare il personale e a scegliere le mostre future.
 
 **Intelligenza artificiale**
 - *Raccomandazioni*: suggerire al visitatore mostre affini a quelle già prenotate o recensite.
@@ -1151,6 +1176,8 @@ Nello sviluppo del progetto è stato utilizzato l'assistente di intelligenza art
 - il supporto alla riorganizzazione del back-end (router e servizi) e del front-end (pagine, componenti e servizi);
 - la scrittura di parte dei test automatici e della configurazione dell'integrazione continua;
 - l'implementazione delle funzionalità di feedback e della dashboard con indicatori;
+- l'implementazione del codice di prenotazione con QR code e della verifica all'ingresso;
+- la diagnosi dei problemi di configurazione dell'invio delle email;
 - la stesura di parti della documentazione e dei diagrammi.
 
 L'analisi del contesto, le scelte progettuali, la verifica del funzionamento dell'applicazione e la revisione finale del codice e della relazione sono state curate dall'autrice.
