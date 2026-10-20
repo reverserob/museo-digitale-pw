@@ -1,0 +1,19 @@
+@startuml
+!include stile.iuml
+|Visitatore|
+start
+repeat
+  :Cerca informazioni e telefona o scrive per prenotare (solo in orario d'ufficio);
+repeat while (Il museo risponde?) is ([no] riprova più tardi)
+->[sì];
+|Personale di accoglienza|
+:Controlla il registro e trascrive i dati;
+:Scrive a mano l'email di conferma;
+|Visitatore|
+:Riceve la conferma;
+|Personale di accoglienza|
+:A fine mese ricopia i dati per i report;
+|Direzione|
+:Riceve report mensili, non in tempo reale;
+stop
+@enduml

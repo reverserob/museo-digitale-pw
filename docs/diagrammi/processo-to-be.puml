@@ -1,0 +1,29 @@
+@startuml
+!include stile.iuml
+|Visitatore|
+start
+:Consulta il catalogo, accede o si registra;
+repeat
+  :Compila il form di prenotazione;
+  |Piattaforma|
+  :Valida i dati e il periodo della mostra;
+repeat while (Prenotazione valida?) is ([no] segnala il motivo)
+->[sì];
+:Salva la prenotazione con codice e QR code;
+fork
+  :Conferma a video;
+fork again
+  :Email con codice e QR code;
+end fork
+|Visitatore|
+:Mostra il QR code all'ingresso;
+|Personale|
+:Inquadra il QR code e registra l'ingresso;
+|Visitatore|
+:Lascia un feedback;
+|Piattaforma|
+:Aggiorna gli indicatori;
+|Direzione|
+:Consulta la dashboard;
+stop
+@enduml

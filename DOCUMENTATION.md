@@ -50,22 +50,11 @@ Il processo scelto per la digitalizzazione è la **gestione delle mostre tempora
 #### 2.1. Processo attuale (AS-IS)
 Oggi la prenotazione avviene per telefono o per email. L'addetto controlla la disponibilità su un registro (cartaceo o foglio di calcolo), annota i dati del visitatore e risponde con un'email scritta a mano. Il catalogo delle mostre è pubblicato sul sito istituzionale, aggiornato su richiesta da un fornitore esterno.
 
-```mermaid
-flowchart TD
-    A([Il visitatore vuole visitare una mostra]) --> B[Cerca informazioni sul sito istituzionale o sui social]
-    B --> C{Informazioni aggiornate?}
-    C -- No --> D[Telefona o scrive al museo per chiedere]
-    C -- Sì --> E[Telefona o invia un'email per prenotare]
-    D --> E
-    E --> F{Il personale è disponibile?}
-    F -- No --> G[Richiamata o risposta nei giorni successivi]
-    G --> E
-    F -- Sì --> H[L'addetto annota i dati sul registro cartaceo o su Excel]
-    H --> I[L'addetto scrive a mano l'email di conferma]
-    I --> J([Il visitatore riceve la conferma])
-    H -.-> K[(Registro locale non condiviso)]
-    K -.-> L[A fine mese i dati vengono ricopiati per i report alla direzione]
-```
+Il processo è modellato con un **diagramma di attività UML**: le partizioni (swimlane) indicano chi svolge ogni azione, i rombi le decisioni con le condizioni di guardia tra parentesi quadre, il cerchio pieno e il cerchio cerchiato l'inizio e la fine.
+
+![Diagramma di attività UML del processo AS-IS](docs/diagrammi/processo-as-is.png)
+
+*Figura – Diagramma di attività UML del processo AS-IS (sorgente PlantUML: `docs/diagrammi/processo-as-is.puml`).*
 
 **Criticità emerse:**
 - **Tempo del personale**: telefonate ed email occupano gli addetti negli stessi orari in cui accolgono il pubblico.
@@ -78,26 +67,11 @@ flowchart TD
 #### 2.2. Processo digitalizzato (TO-BE)
 Con la piattaforma il visitatore consulta il catalogo e prenota da solo, a qualsiasi ora. La prenotazione viene validata e salvata nel database e la conferma parte automaticamente via email. Il personale gestisce le mostre in autonomia dall'area riservata e la direzione consulta gli indicatori aggiornati in tempo reale.
 
-```mermaid
-flowchart TD
-    A([Il visitatore apre il sito del museo]) --> B[Consulta il catalogo delle mostre]
-    B --> C[Apre il dettaglio: galleria, periodo, opinioni dei visitatori]
-    C --> D[Compila il form di prenotazione]
-    D --> E{Dati validi?}
-    E -- No --> F[Il form segnala subito il campo da correggere]
-    F --> D
-    E -- Sì --> G{Mostra ancora aperta?}
-    G -- No --> H[Messaggio: la mostra è conclusa]
-    G -- Sì --> I[(Prenotazione salvata nel database)]
-    I --> J[Conferma immediata a video]
-    I --> K[Email di conferma inviata automaticamente]
-    J --> L([Visita al museo])
-    L --> M[Il visitatore lascia un feedback con voto e commento]
-    M --> N[(Feedback salvato nel database)]
-    I --> O[Dashboard: indicatori aggiornati in tempo reale]
-    N --> O
-    O --> P([La direzione analizza prenotazioni e gradimento])
-```
+Nel **diagramma di attività UML** del processo digitalizzato compare la partizione della piattaforma, che svolge in automatico controlli, conferme e calcolo degli indicatori; la barra di fork indica le due azioni parallele (conferma a video ed email).
+
+![Diagramma di attività UML del processo TO-BE](docs/diagrammi/processo-to-be.png)
+
+*Figura – Diagramma di attività UML del processo TO-BE (sorgente PlantUML: `docs/diagrammi/processo-to-be.puml`).*
 
 #### 2.3. Benefici attesi
 
@@ -136,7 +110,9 @@ Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una
 - **Sicurezza**: credenziali fuori dal codice, password dei visitatori salvate solo come hash, token firmati con ruolo (amministratore o visitatore), limite ai tentativi di accesso, validazione di tutti i dati in ingresso, controllo dei file caricati.
 - **Usabilità**: interfaccia responsive, messaggi di errore comprensibili, validazione dei form in tempo reale.
 - **Manutenibilità**: codice suddiviso per responsabilità, configurazione tramite variabili d'ambiente, test automatici e integrazione continua.
-- **Portabilità**: il database si può cambiare (SQLite → PostgreSQL) modificando solo la variabile `DATABASE_URL`.
+- **Portabilità**: il database si può cambiare (SQLite → PostgreSQL) modificando solo la variabile `DATABASE_URL`; il back-end funziona con Python dalla 3.9 alla 3.15.
+- **Prestazioni**: email inviate in background dopo la risposta, pagine caricate su richiesta, pacchetto JavaScript principale sotto i 200 KB compresso.
+- **Privacy**: dati personali ridotti al minimo, QR code senza dati personali, modifica ed eliminazione dell'account da parte del visitatore (GDPR).
 
 #### 3.3. La soluzione
 Per soddisfare i requisiti di scalabilità, manutenibilità e separazione delle responsabilità, si è optato per un’architettura disaccoppiata (Client-Server):
@@ -183,6 +159,8 @@ flowchart LR
 
 #### 4.2. Struttura del back-end e separazione delle responsabilità
 All'interno del back-end è stato applicato il principio della separazione delle responsabilità (Separation of Concerns): ogni modulo ha un compito preciso e il file principale si limita a configurare l'applicazione e a unire i moduli. Le rotte sono organizzate con gli `APIRouter` di FastAPI, mentre la logica riutilizzabile è raccolta nella cartella `services/`.
+
+**Pattern architetturale.** Questa organizzazione applica il pattern **a livelli** (*layered architecture*) ed è una declinazione dell'**MVC** per le API REST: i router (`routers/`) svolgono il ruolo di *Controller* (ricevono la richiesta, controllano permessi e dati tramite le dipendenze, restituiscono la risposta); i modelli SQLAlchemy (`models.py`), gli schemi Pydantic (`schemas.py`) e i servizi con la logica di business (`services/`) formano il *Model*; la *View* è il front-end React, che riceve solo dati JSON. Ogni livello dipende solo da quello sottostante (router → servizi → modelli → database), quindi può essere sostituito o testato in isolamento, come avviene nei test con il database temporaneo e l'invio delle email simulato.
 
 ```
 backend/

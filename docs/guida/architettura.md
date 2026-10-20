@@ -34,6 +34,8 @@ flowchart LR
 
 ## Struttura del backend
 
+Il backend applica il pattern **a livelli** (*layered architecture*), una declinazione dell'**MVC** per le API REST: i router fanno da *Controller*, modelli, schemi e servizi formano il *Model*, la *View* è il frontend React che riceve solo JSON. Ogni livello dipende solo da quello sottostante (router → servizi → modelli → database).
+
 ```
 backend/
 ├── main.py                 → crea l'app, configura CORS, file statici e gestori errori, include i router
