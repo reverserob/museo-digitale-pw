@@ -99,6 +99,14 @@ def email_annullamento(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def email_account_eliminato(monkeypatch):
+    # email di conferma dell'eliminazione dell'account
+    chiamate = []
+    monkeypatch.setattr("routers.utenti.invia_email_account_eliminato", lambda **dati: chiamate.append(dati))
+    return chiamate
+
+
+@pytest.fixture(autouse=True)
 def email_reset(monkeypatch):
     # email con il link per reimpostare la password
     chiamate = []

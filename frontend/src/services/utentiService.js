@@ -106,6 +106,7 @@ export const aggiornaProfilo = (dati) =>
 /**
  * Elimina l'account del visitatore collegato (`DELETE /api/utenti/me`) e chiude la sessione.
  * Le prenotazioni non ancora usate vengono annullate; quelle già usate restano anonime.
+ * Il backend invia l'email di conferma dell'eliminazione.
  *
  * @param {string} password Password dell'account, richiesta come conferma.
  * @returns {Promise<string>} Messaggio di conferma (errore 400 se la password è errata).

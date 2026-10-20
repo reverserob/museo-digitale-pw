@@ -93,13 +93,14 @@ export default function AdminUtenti() {
     const elimina = (u) => {
         const conferma =
             `Eliminare l'account di ${u.nome} ${u.cognome} (${u.email})? ` +
-            'Le prenotazioni non ancora usate saranno annullate, quelle già usate resteranno in forma anonima.';
+            'Le prenotazioni non ancora usate saranno annullate, quelle già usate resteranno in forma anonima. ' +
+            "Il titolare riceverà un'email di conferma.";
         if (!window.confirm(conferma)) return;
         setAttesa(true);
         eliminaUtente(u.id)
             .then(() => {
                 setUtenti((elenco) => elenco.filter((x) => x.id !== u.id));
-                avvisa(`Account di ${u.nome} ${u.cognome} eliminato.`);
+                avvisa(`Account di ${u.nome} ${u.cognome} eliminato: inviata l'email di conferma.`);
             })
             .catch((err) => setErrore(messaggioErrore(err, "Impossibile eliminare l'utente.")))
             .finally(() => setAttesa(false));

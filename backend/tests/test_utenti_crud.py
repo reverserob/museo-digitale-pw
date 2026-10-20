@@ -164,3 +164,30 @@ def test_utente_inesistente(client, auth):
     assert client.get("/api/utenti/999", headers=auth).status_code == 404
     assert client.put("/api/utenti/999", json=NUOVI_DATI, headers=auth).status_code == 404
     assert client.delete("/api/utenti/999", headers=auth).status_code == 404
+
+
+# --- Email di conferma dell'eliminazione ---
+def test_eliminazione_dal_profilo_invia_email(client, utente, mostra_futura, email_account_eliminato):
+    client.post("/api/prenota", json={"mostra_id": mostra_futura, "telefono": "3331234567"}, headers=utente)
+    r = client.request("DELETE", "/api/utenti/me", json={"password": "Museo2026"}, headers=utente)
+    assert r.json()["message"] == "Account eliminato. Ti abbiamo inviato un'email di conferma."
+    assert email_account_eliminato == [
+        {"destinatario": "mario.rossi@test.it", "nome": "Mario", "prenotazioni_annullate": 1}
+    ]
+
+
+def test_password_errata_non_invia_email(client, utente, email_account_eliminato):
+    client.request("DELETE", "/api/utenti/me", json={"password": "Sbagliata1"}, headers=utente)
+    assert email_account_eliminato == []
+
+
+def test_eliminazione_da_admin_invia_email(client, auth, utente, email_account_eliminato):
+    client.delete(f"/api/utenti/{_id_utente()}", headers=auth)
+    assert email_account_eliminato == [
+        {
+            "destinatario": "mario.rossi@test.it",
+            "nome": "Mario",
+            "prenotazioni_annullate": 0,
+            "da_amministratore": True,
+        }
+    ]
