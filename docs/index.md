@@ -49,7 +49,7 @@ Questo sito raccoglie la documentazione tecnica del Project Work. La reference d
 
 | | |
 | --- | --- |
-| **Backend** | Python · FastAPI · SQLAlchemy · SQLite · Pydantic v2 · slowapi |
+| **Backend** | Python · FastAPI · SQLAlchemy · PostgreSQL (produzione) / SQLite (sviluppo) · Pydantic v2 · slowapi |
 | **Frontend** | React 18 · Vite · Material UI · React Router · axios |
 | **Email** | API Brevo (HTTPS) oppure SMTP |
 | **Qualità** | pytest, Vitest + Testing Library, ruff, ESLint, Prettier, GitHub Actions |

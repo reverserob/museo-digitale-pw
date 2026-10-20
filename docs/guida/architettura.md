@@ -15,9 +15,12 @@ flowchart LR
     subgraph Render["Render (Web Service)"]
         U["Uvicorn<br/>server ASGI"] --> A["Applicazione FastAPI<br/>router + servizi"]
         A --> O["SQLAlchemy ORM"]
-        O --> D[("SQLite<br/>museo.db")]
-        A --> S["Cartella static/uploads<br/>immagini delle mostre"]
+        A --> S["Cartella static/uploads<br/>immagini delle mostre iniziali"]
     end
+    subgraph Neon["Neon (PostgreSQL gestito)"]
+        D[("PostgreSQL<br/>tabelle + immagini caricate")]
+    end
+    O -- "TLS, porta 5432" --> D
     subgraph Brevo["Brevo"]
         M["API email transazionali"]
     end
@@ -64,7 +67,7 @@ backend/
 │   ├── migrazioni_service.py → aggiunge al database esistente le colonne introdotte dopo la prima versione
 │   └── seed_service.py     → inserimento delle mostre iniziali lette da data/mostre.json
 ├── data/mostre.json        → dati delle mostre iniziali
-├── static/uploads/         → immagini delle mostre
+├── static/uploads/         → immagini delle mostre iniziali (quelle caricate sono nel database)
 └── tests/                  → test automatici (pytest)
 ```
 
@@ -102,6 +105,14 @@ erDiagram
     MOSTRE ||--o{ FEEDBACK : "riceve"
     UTENTI |o--o{ PRENOTAZIONI : "effettua"
     UTENTI |o--o{ FEEDBACK : "scrive"
+
+    IMMAGINI {
+        int id PK
+        string nome "unico, uuid + estensione"
+        string tipo "MIME, es. image/webp"
+        bytes dati "BYTEA in PostgreSQL"
+        datetime creata_il "UTC"
+    }
 
     UTENTI {
         int id PK
@@ -145,7 +156,8 @@ erDiagram
 ```
 
 ### Descrizione delle entità
-- **mostre**: memorizza le esposizioni culturali (il catalogo). Le immagini sono salvate su disco e nel database se ne conservano i percorsi relativi (es. `/static/uploads/<file>.webp`).
+- **immagini**: immagini caricate dall'area riservata, salvate nel database (contenuto binario) e servite da `GET /api/immagini/{nome}`.
+- **mostre**: memorizza le esposizioni culturali (il catalogo). Nella colonna `immagini` si conservano i percorsi: `/api/immagini/<nome>` per quelle caricate, oppure `/static/uploads/<file>.webp`).
 - **prenotazioni**: memorizza le prenotazioni effettuate dai visitatori, con data e ora di creazione.
 - **feedback**: memorizza le recensioni dei visitatori, con voto da 1 a 5 e commento facoltativo.
 - **utenti**: memorizza gli account dei visitatori. La password non viene mai salvata: si conserva solo il suo hash PBKDF2-SHA256, calcolato con un sale casuale e 200.000 iterazioni. L'email è unica.
@@ -167,7 +179,7 @@ sequenceDiagram
     participant FE as Front-end React
     participant API as FastAPI (router prenotazioni)
     participant PY as Schema Pydantic
-    participant DB as SQLite (SQLAlchemy)
+    participant DB as PostgreSQL (SQLAlchemy)
     participant BG as BackgroundTasks
     participant EM as Brevo / SMTP
 
@@ -209,7 +221,7 @@ sequenceDiagram
     participant API as FastAPI
     participant RL as slowapi (limite tentativi)
     participant AU as auth.py
-    participant DB as SQLite
+    participant DB as PostgreSQL
 
     A->>FE: Inserisce email e password
     FE->>API: POST /api/login
@@ -247,7 +259,7 @@ sequenceDiagram
     actor P as Personale del museo
     participant FE as Front-end React
     participant API as FastAPI (router prenotazioni)
-    participant DB as SQLite
+    participant DB as PostgreSQL
 
     V->>P: Mostra il QR code (o comunica il codice MCD-XXXX-XXXX)
     P->>FE: Inquadra il QR: apre /admin/verifica?codice=...

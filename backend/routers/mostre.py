@@ -10,7 +10,7 @@ import models
 import schemas
 from auth import richiedi_admin
 from database import get_db
-from services.immagini_service import file_presenti, immagini_da_tenere, salva_immagini
+from services.immagini_service import file_presenti, immagini_da_tenere, rimuovi_immagini, salva_immagini
 from services.mostre_service import converti_date, trova_mostra
 
 logger = logging.getLogger("uvicorn.error")
@@ -65,8 +65,8 @@ async def crea_mostra(
     file_validi = file_presenti(immagini)
     if not file_validi:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Carica almeno un'immagine.")
-    # salva i file su disco (dopo i controlli su tipo e dimensione) e restituisce i loro percorsi
-    percorsi = await salva_immagini(file_validi)
+    # controlla i file e li aggiunge alla sessione: vengono salvati nel database insieme alla mostra
+    percorsi = await salva_immagini(file_validi, db)
     try:
         nuova_mostra = models.Mostra(
             titolo=titolo.strip(),
@@ -115,8 +115,11 @@ async def aggiorna_mostra(
     # una mostra senza immagini non è ammessa
     if not da_tenere and not file_validi:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra deve avere almeno un'immagine.")
-    nuovi_percorsi = await salva_immagini(file_validi) if file_validi else []
+    nuovi_percorsi = await salva_immagini(file_validi, db) if file_validi else []
+    # immagini tolte dalla mostra: vengono eliminate dal database nella stessa transazione
+    tolte = [p for p in (mostra.immagini or "").split(",") if p.strip() and p not in da_tenere]
     try:
+        rimuovi_immagini(db, tolte)
         mostra.titolo = titolo.strip()
         mostra.descrizione = descrizione.strip()
         mostra.data_inizio = inizio
@@ -148,6 +151,7 @@ def elimina_mostra(
     """
     mostra = trova_mostra(db, mostra_id)
     try:
+        rimuovi_immagini(db, (mostra.immagini or "").split(","))  # immagini caricate per questa mostra
         db.delete(mostra)  # elimina anche prenotazioni e feedback collegati (cascade)
         db.commit()
         return {"message": "Mostra eliminata con successo"}

@@ -55,7 +55,7 @@ Il backend legge la configurazione da `backend/.env` (e da `.env.local`, che ha 
 | `FRONTEND_URL` | Indirizzo del sito usato nel link di reset password e nel QR code delle prenotazioni |
 | `BACKEND_URL` | Facoltativa: indirizzo pubblico del backend per l'immagine del QR code nelle email |
 | `RESET_PASSWORD_MINUTI` | Durata del link per reimpostare la password (default 30) |
-| `DATABASE_URL` | Database (default `sqlite:///./museo.db`) |
+| `DATABASE_URL` | Database: connection string PostgreSQL in produzione (es. Neon); se manca si usa SQLite `sqlite:///./museo.db` |
 | `LOGIN_RATE_LIMIT` | Tentativi consentiti per IP su login, registrazione, reset e contatti (default `5/minute`) |
 | `UPLOAD_MAX_MB` | Dimensione massima di ogni immagine caricata (default 5) |
 | `VITE_API_URL` | *(frontend)* indirizzo del backend, se diverso da quello predefinito |
@@ -85,6 +85,8 @@ Senza servizio email configurato l'applicazione funziona lo stesso: le email non
     cd backend
     pip install -r requirements-dev.txt
     pytest                # test automatici
+    # stessi test su un PostgreSQL vero (database di prova vuoto)
+    TEST_DATABASE_URL=postgresql://postgres@localhost:5432/museo_test pytest
     ruff check .          # linter
     ruff format --check . # formattazione
     ```

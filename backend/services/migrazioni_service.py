@@ -1,4 +1,4 @@
-"""Aggiornamento leggero dello schema di un database SQLite già esistente."""
+"""Aggiornamento leggero dello schema di un database già esistente (SQLite o PostgreSQL)."""
 
 import logging
 import secrets
@@ -14,7 +14,8 @@ COLONNE_AGGIUNTE = {
     "prenotazioni": {
         "utente_id": "INTEGER REFERENCES utenti(id)",
         "codice": "VARCHAR(20)",
-        "ingresso_il": "DATETIME",
+        # TIMESTAMP è valido sia in PostgreSQL sia in SQLite (DATETIME esiste solo in SQLite)
+        "ingresso_il": "TIMESTAMP",
     },
     "feedback": {"utente_id": "INTEGER REFERENCES utenti(id)"},
 }
@@ -35,6 +36,30 @@ def aggiorna_schema(engine):
                     conn.execute(text(f"ALTER TABLE {tabella} ADD COLUMN {nome} {definizione}"))
                     logger.info(f"Aggiunta la colonna {tabella}.{nome} al database esistente")
     _assegna_codici_mancanti(engine)
+    _crea_indici_unici(engine)
+
+
+# Una prenotazione e un feedback per visitatore su ogni mostra: oltre al controllo nelle API,
+# la regola è garantita dal database con un indice unico (anche con due richieste contemporanee).
+# I nomi coincidono con quelli dichiarati in models.py, quindi IF NOT EXISTS evita duplicati.
+INDICI_UNICI = {
+    "uq_prenotazioni_utente_mostra": ("prenotazioni", "utente_id, mostra_id"),
+    "uq_feedback_utente_mostra": ("feedback", "utente_id, mostra_id"),
+}
+
+
+def _crea_indici_unici(engine):
+    """Crea sui database esistenti gli indici unici introdotti dopo la prima versione."""
+    tabelle = set(inspect(engine).get_table_names())
+    for nome, (tabella, colonne) in INDICI_UNICI.items():
+        if tabella not in tabelle:
+            continue
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(f"CREATE UNIQUE INDEX IF NOT EXISTS {nome} ON {tabella} ({colonne})"))
+        except Exception as e:
+            # dati vecchi con duplicati: l'applicazione funziona comunque grazie al controllo nelle API
+            logger.warning(f"Indice unico {nome} non creato: {e}")
 
 
 def _assegna_codici_mancanti(engine):

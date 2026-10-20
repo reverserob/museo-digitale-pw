@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, Date, DateTime, ForeignKey, Index, Integer, LargeBinary, String, Text
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -31,6 +31,9 @@ class Prenotazione(Base):
     """Prenotazione di una visita a una mostra da parte di un visitatore registrato."""
 
     __tablename__ = "prenotazioni"
+    # una sola prenotazione per visitatore su ogni mostra, garantita anche dal database
+    # (i valori NULL di utente_id, cioè gli account eliminati, non entrano in conflitto tra loro)
+    __table_args__ = (Index("uq_prenotazioni_utente_mostra", "utente_id", "mostra_id", unique=True),)
 
     id = Column(Integer, primary_key=True, index=True)
     # chiave esterna verso la mostra; l'indice velocizza i filtri per mostra
@@ -57,6 +60,8 @@ class Feedback(Base):
     """Recensione lasciata da un visitatore su una mostra (voto da 1 a 5 + commento)."""
 
     __tablename__ = "feedback"
+    # un solo feedback per visitatore su ogni mostra
+    __table_args__ = (Index("uq_feedback_utente_mostra", "utente_id", "mostra_id", unique=True),)
 
     id = Column(Integer, primary_key=True, index=True)
     mostra_id = Column(Integer, ForeignKey("mostre.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -90,3 +95,21 @@ class Utente(Base):
     # nessun cascade: eliminando l'account, prenotazioni e feedback restano (utente_id = NULL)
     prenotazioni = relationship("Prenotazione", back_populates="utente")
     feedback = relationship("Feedback", back_populates="utente")
+
+
+class Immagine(Base):
+    """Immagine di una mostra caricata dall'area riservata, salvata nel database.
+
+    Sul piano gratuito di Render il disco del server si azzera a ogni riavvio: salvando il contenuto
+    nel database (BYTEA in PostgreSQL, BLOB in SQLite) le immagini sopravvivono come gli altri dati.
+    Nella tabella mostre resta il percorso pubblico `/api/immagini/<nome>`.
+    """
+
+    __tablename__ = "immagini"
+
+    id = Column(Integer, primary_key=True, index=True)
+    # nome generato dal server (uuid + estensione), usato nell'indirizzo pubblico
+    nome = Column(String(64), unique=True, index=True, nullable=False)
+    tipo = Column(String(50), nullable=False)  # tipo MIME, es. image/webp
+    dati = Column(LargeBinary, nullable=False)
+    creata_il = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)

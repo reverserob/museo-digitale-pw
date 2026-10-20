@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 import models
@@ -76,6 +77,11 @@ def crea_prenotazione(
         db.add(prenotazione)
         db.commit()
         db.refresh(prenotazione)
+    except IntegrityError as e:
+        # due richieste contemporanee: il controllo sopra passa per entrambe, ma l'indice unico
+        # uq_prenotazioni_utente_mostra del database accetta solo la prima
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ti sei già prenotato a questa mostra.") from e
     except Exception as e:
         db.rollback()
         logger.error(f"Errore critico durante la prenotazione: {e}")

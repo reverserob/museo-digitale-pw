@@ -122,7 +122,8 @@ documentazione e nella cartella [`docs/screenshots`](docs/screenshots).
 ### Backend
 - **FastAPI**: il framework per le API REST (con documentazione OpenAPI/Swagger automatica).
 - **Uvicorn**: il server web che esegue FastAPI.
-- **SQLAlchemy** + **SQLite**: l'ORM per parlare con il database senza scrivere query SQL a mano.
+- **SQLAlchemy** + **PostgreSQL** (produzione, su Neon) / **SQLite** (sviluppo): l'ORM genera l'SQL per entrambi i database.
+- **psycopg 3**: driver PostgreSQL.
 - **Pydantic v2**: valida i dati JSON in entrata e in uscita.
 - **segno**: genera i QR code delle prenotazioni (PNG), senza dipendenze esterne.
 - **slowapi**: limita i tentativi di login, registrazione, reset password e invio dei moduli.
@@ -151,7 +152,7 @@ museo-digitale-pw/
 │   ├── routers/             # endpoint: mostre, prenotazioni, utenti, feedback, contatti, statistiche, login
 │   ├── services/            # logica: email, QR e codici di prenotazione, immagini, migrazioni, seed…
 │   ├── data/mostre.json     # mostre di partenza
-│   ├── static/uploads/      # immagini delle mostre
+│   ├── static/uploads/      # immagini delle mostre iniziali (quelle caricate sono nel database)
 │   ├── tests/               # test pytest
 │   └── esporta_openapi.py   # esporta lo schema OpenAPI per la Swagger UI statica
 ├── frontend/                # applicazione React
@@ -231,7 +232,7 @@ Il backend legge la configurazione da `backend/.env` (e da `.env.local`, che ha 
 | `FRONTEND_URL` | Indirizzo del sito usato nel link di reset password e nel QR code delle prenotazioni |
 | `BACKEND_URL` | Facoltativa: indirizzo pubblico del backend per l'immagine del QR code nel testo delle email |
 | `RESET_PASSWORD_MINUTI` | Durata del link per reimpostare la password (default 30) |
-| `DATABASE_URL` | Database (default `sqlite:///./museo.db`) |
+| `DATABASE_URL` | Database: in produzione la connection string PostgreSQL di Neon; se manca si usa SQLite `sqlite:///./museo.db` |
 | `LOGIN_RATE_LIMIT` | Tentativi consentiti per IP su login, registrazione, reset e contatti (default `5/minute`) |
 | `UPLOAD_MAX_MB` | Dimensione massima di ogni immagine caricata (default 5) |
 | `VITE_API_URL` | *(frontend)* indirizzo del backend, se diverso da quello predefinito |
@@ -287,6 +288,7 @@ Endpoint principali (🔒 = amministratore, 👤 = visitatore registrato):
 | 👤 `GET /api/utenti/me/prenotazioni`, 👤 `DELETE /api/utenti/me/prenotazioni/{id}` | Prenotazioni del visitatore e annullamento |
 | 🔒 `GET /api/utenti`, 🔒 `GET` / `PUT` / `DELETE /api/utenti/{id}` | Gestione degli account dall'area riservata |
 | 👤 `POST /api/prenota` | Prenotazione: restituisce il `codice` e invia l'email con il QR code |
+| `GET /api/immagini/{nome}` | Immagine di una mostra caricata dall'area riservata (salvata nel database) |
 | `GET /api/prenotazioni/qr/{codice}` | Immagine PNG del QR code (contiene solo il link di verifica) |
 | 🔒 `GET /api/prenotazioni/verifica/{riferimento}` | Verifica per codice o numero: dati e stato della prenotazione |
 | 🔒 `POST /api/prenotazioni/verifica/{riferimento}/ingresso` | Registra l'ingresso (una sola volta, solo a mostra aperta) |
@@ -300,15 +302,21 @@ L'elenco completo, con permessi e codici di risposta, è nella pagina
 
 ## Test e controlli di qualità
 
-### Backend (211 test pytest)
+### Backend (226 test pytest, su SQLite e su PostgreSQL)
 ```bash
 cd backend
 source venv/bin/activate
 pip install -r requirements-dev.txt
-pytest                # test automatici
+pytest                # test automatici (SQLite)
+# stessi test su un PostgreSQL vero (database di prova vuoto), come nel job CI "Backend (PostgreSQL)"
+TEST_DATABASE_URL=postgresql://postgres@localhost:5432/museo_test pytest
 ruff check .          # linter
 ruff format --check . # formattazione (ruff format . per correggere)
 ```
+
+**Prova di persistenza**: `DATABASE_URL=postgresql://... python verifica_persistenza.py` avvia il backend, crea
+visitatore, mostra con immagine e prenotazione, riavvia il server e controlla che i dati siano ancora presenti
+(la password del database non viene stampata).
 
 ### Frontend (163 test Vitest)
 ```bash
@@ -348,13 +356,26 @@ L'esito si vede nella scheda **Actions** del repository e nel badge in cima a qu
 
 ## Deploy
 
+### Database PostgreSQL su Neon
+Sul piano gratuito di Render il disco del server si azzera a ogni riavvio: per non perdere prenotazioni, account
+e immagini caricate, in produzione il database è un PostgreSQL gestito su **Neon** (piano gratuito senza scadenza:
+1 GB di spazio, 100 ore di calcolo al mese, sospensione dopo 5 minuti di inattività).
+
+1. Su [neon.com](https://neon.com) creare un progetto (regione europea) e copiare la *connection string*
+   (`postgresql://UTENTE:PASSWORD@HOST/neondb?sslmode=require`).
+2. Su Render → servizio del backend → *Environment* aggiungere `DATABASE_URL` con quella stringa e salvare.
+3. Al riavvio il backend crea le tabelle e inserisce le mostre iniziali. Le immagini caricate dall'area riservata
+   vengono salvate nel database (tabella `immagini`), quindi sopravvivono anch'esse ai riavvii.
+
+La stringa contiene la password: va solo nel pannello di Render o nel `.env` locale, mai nel codice.
+
 ### Backend su Render
 Start Command del servizio (necessario perché il limite ai tentativi di login legga l'IP reale dei visitatori):
 ```
 uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'
 ```
 
-Variabili da impostare in *Environment*: `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `SECRET_KEY`, `BREVO_API_KEY`,
+Variabili da impostare in *Environment*: `DATABASE_URL` (PostgreSQL su Neon), `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `SECRET_KEY`, `BREVO_API_KEY`,
 `EMAIL_MITTENTE`, `EMAIL_MITTENTE_NOME`, `CONTATTI_EMAIL`, `CORS_ORIGINS` (dominio Vercel), `FRONTEND_URL`
 (dominio Vercel, usato nel QR code) e, facoltativa, `BACKEND_URL`. Dopo ogni modifica Render riavvia il servizio.
 

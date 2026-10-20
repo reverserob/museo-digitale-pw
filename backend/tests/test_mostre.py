@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import models
+from database import SessionLocal
 from tests.conftest import PNG_FINTO
 
 DATI_MOSTRA = {
@@ -57,9 +59,13 @@ def test_crea_mostra(client, auth, cartella_upload):
     mostra = r.json()
     assert mostra["titolo"] == "Nuova mostra"
     percorso = mostra["immagini"]
-    assert percorso.startswith("/static/uploads/") and percorso.endswith(".png")
-    # il file è stato davvero salvato
-    assert (cartella_upload / Path(percorso).name).read_bytes() == PNG_FINTO
+    assert percorso.startswith("/api/immagini/") and percorso.endswith(".png")
+    # l'immagine è salvata nel database (non sul disco, che su Render si azzera) ed è servita dall'API
+    letta = client.get(percorso)
+    assert letta.status_code == 200
+    assert letta.content == PNG_FINTO
+    assert letta.headers["content-type"] == "image/png"
+    assert list(cartella_upload.iterdir()) == []
     # e compare nell'elenco
     assert any(m["id"] == mostra["id"] for m in client.get("/api/mostre").json())
 
@@ -71,13 +77,15 @@ def test_crea_mostra_con_piu_immagini(client, auth):
     assert len(r.json()["immagini"].split(",")) == 2
 
 
-def test_upload_nome_file_generato_dal_server(client, auth, cartella_upload):
-    # un nome "malevolo" non deve far scrivere il file fuori dalla cartella
+def test_upload_nome_file_generato_dal_server(client, auth):
+    # un nome "malevolo" non viene usato: il server genera un nome casuale
     r = client.post("/api/mostre", data=DATI_MOSTRA, files=[immagine("../../main.png")], headers=auth)
     assert r.status_code == 201
-    salvati = list(cartella_upload.iterdir())
-    assert len(salvati) == 1
-    assert ".." not in salvati[0].name and len(salvati[0].stem) == 32
+    db = SessionLocal()
+    salvate = db.query(models.Immagine).all()
+    db.close()
+    assert len(salvate) == 1
+    assert ".." not in salvate[0].nome and len(Path(salvate[0].nome).stem) == 32
 
 
 def test_crea_mostra_file_non_immagine(client, auth):
@@ -211,3 +219,38 @@ def test_elimina_mostra_cancella_le_prenotazioni(client, auth, utente, mostra_fu
 def test_modifica_elenco_immagini_non_valido(client, auth):
     r = client.put("/api/mostre/1", data={**DATI_MOSTRA, "immagini_esistenti": "non-json"}, headers=auth)
     assert r.status_code == 400
+
+
+# --- immagini salvate nel database ---
+def test_immagine_inesistente_o_nome_non_valido(client):
+    assert client.get("/api/immagini/" + "0" * 32 + ".png").status_code == 404
+    assert client.get("/api/immagini/..%2Fmain.py").status_code == 404
+    assert client.get("/api/immagini/abc.exe").status_code == 404
+
+
+def test_modifica_elimina_dal_database_le_immagini_tolte(client, auth):
+    creata = client.post("/api/mostre", data=DATI_MOSTRA, files=[immagine("a.png"), immagine("b.png")], headers=auth)
+    a, b = creata.json()["immagini"].split(",")
+    r = client.put(
+        f"/api/mostre/{creata.json()['id']}", data={**DATI_MOSTRA, "immagini_esistenti": json.dumps([a])}, headers=auth
+    )
+    assert r.status_code == 200
+    assert client.get(a).status_code == 200
+    assert client.get(b).status_code == 404  # l'immagine tolta non resta orfana nel database
+
+
+def test_eliminazione_mostra_elimina_le_sue_immagini(client, auth):
+    creata = client.post("/api/mostre", data=DATI_MOSTRA, files=[immagine()], headers=auth).json()
+    client.delete(f"/api/mostre/{creata['id']}", headers=auth)
+    assert client.get(creata["immagini"]).status_code == 404
+    db = SessionLocal()
+    assert db.query(models.Immagine).count() == 0
+    db.close()
+
+
+def test_immagini_non_salvate_se_un_file_non_e_valido(client, auth):
+    files = [immagine("a.png"), immagine("doc.txt", b"ciao", "text/plain")]
+    assert client.post("/api/mostre", data=DATI_MOSTRA, files=files, headers=auth).status_code == 400
+    db = SessionLocal()
+    assert db.query(models.Immagine).count() == 0
+    db.close()
