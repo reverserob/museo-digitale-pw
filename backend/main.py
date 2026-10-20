@@ -14,7 +14,7 @@ from slowapi.errors import RateLimitExceeded
 import models
 import settings
 from database import engine
-from routers import contatti, feedback, login, mostre, prenotazioni, statistiche, utenti
+from routers import contatti, feedback, immagini, login, mostre, prenotazioni, statistiche, utenti
 from services.error_service import errore_validazione
 from services.migrazioni_service import aggiorna_schema
 from services.rate_limit_service import limiter, troppe_richieste
@@ -67,6 +67,7 @@ app.add_exception_handler(RequestValidationError, errore_validazione)
 app.include_router(login.router)  # login dell'amministratore
 app.include_router(utenti.router)  # account dei visitatori
 app.include_router(mostre.router)  # catalogo delle mostre
+app.include_router(immagini.router)  # immagini delle mostre salvate nel database
 app.include_router(prenotazioni.router)  # prenotazioni
 app.include_router(feedback.router)  # opinioni dei visitatori
 app.include_router(statistiche.router)  # indicatori della dashboard

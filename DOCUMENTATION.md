@@ -110,7 +110,8 @@ Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una
 - **Sicurezza**: credenziali fuori dal codice, password dei visitatori salvate solo come hash, token firmati con ruolo (amministratore o visitatore), limite ai tentativi di accesso, validazione di tutti i dati in ingresso, controllo dei file caricati.
 - **Usabilità**: interfaccia responsive, messaggi di errore comprensibili, validazione dei form in tempo reale.
 - **Manutenibilità**: codice suddiviso per responsabilità, configurazione tramite variabili d'ambiente, test automatici e integrazione continua.
-- **Portabilità**: il database si può cambiare (SQLite → PostgreSQL) modificando solo la variabile `DATABASE_URL`; il back-end funziona con Python dalla 3.9 alla 3.15.
+- **Persistenza**: i dati (comprese le immagini caricate) devono restare dopo il riavvio o la sospensione del server: in produzione si usa PostgreSQL.
+- **Portabilità**: lo stesso codice funziona con SQLite (sviluppo e test) e PostgreSQL (produzione), cambiando solo la variabile `DATABASE_URL`; il back-end funziona con Python dalla 3.9 alla 3.15.
 - **Prestazioni**: email inviate in background dopo la risposta, pagine caricate su richiesta, pacchetto JavaScript principale sotto i 200 KB compresso.
 - **Privacy**: dati personali ridotti al minimo, QR code senza dati personali, modifica ed eliminazione dell'account da parte del visitatore (GDPR).
 
@@ -139,9 +140,12 @@ flowchart LR
     subgraph Render["Render (Web Service)"]
         U["Uvicorn<br/>server ASGI"] --> A["Applicazione FastAPI<br/>router + servizi"]
         A --> O["SQLAlchemy ORM"]
-        O --> D[("SQLite<br/>museo.db")]
-        A --> S["Cartella static/uploads<br/>immagini delle mostre"]
+        A --> S["Cartella static/uploads<br/>immagini delle mostre iniziali"]
     end
+    subgraph Neon["Neon (PostgreSQL gestito)"]
+        D[("PostgreSQL<br/>tabelle + immagini caricate")]
+    end
+    O -- "TLS, porta 5432" --> D
     subgraph Brevo["Brevo"]
         M["API email transazionali"]
     end
@@ -190,7 +194,7 @@ backend/
 │   ├── migrazioni_service.py → aggiunge al database esistente le colonne introdotte dopo la prima versione
 │   └── seed_service.py     → inserimento delle mostre iniziali lette da data/mostre.json
 ├── data/mostre.json        → dati delle mostre iniziali
-├── static/uploads/         → immagini delle mostre
+├── static/uploads/         → immagini delle mostre iniziali (quelle caricate dall'area riservata sono nel database)
 └── tests/                  → test automatici (pytest)
 ```
 
@@ -201,7 +205,7 @@ I vantaggi di questa organizzazione sono:
 - **Documentazione**: ogni router ha un proprio tag, quindi nella Swagger UI le rotte compaiono raggruppate in *Area riservata*, *Visitatori*, *Mostre*, *Prenotazioni* e *Feedback*.
 
 ### 5. Modello dei dati
-Il sistema si appoggia a un database relazionale SQLite, interfacciato tramite l'ORM SQLAlchemy per la gestione trasparente delle entità in oggetti Python. Le tabelle vengono create automaticamente all'avvio e, se il database è vuoto, vengono inserite le mostre dimostrative descritte nel file `data/mostre.json` (seeding): per aggiungere o modificare le mostre iniziali basta modificare il file JSON, senza toccare il codice. Il catalogo iniziale comprende sette mostre, ciascuna con una descrizione del percorso espositivo e almeno un'immagine: *Caravaggio e il suo tempo*, *Leonardo: Il Codice Atlantico*, *Monet: La Natura*, *Dalí e le forme*, *Van Gogh: la Notte stellata e il colore*, *Hokusai: la Grande onda* e *Munch: l'Urlo e l'anima moderna*. Le immagini delle mostre iniziali sono riproduzioni di opere di pubblico dominio (per Dalí un'immagine dimostrativa già presente nel progetto) e si trovano in `static/uploads/`.
+Il sistema si appoggia a un database relazionale, **PostgreSQL in produzione** e SQLite in sviluppo e nei test, interfacciato tramite l'ORM SQLAlchemy per la gestione trasparente delle entità in oggetti Python. Le tabelle vengono create automaticamente all'avvio e, se il database è vuoto, vengono inserite le mostre dimostrative descritte nel file `data/mostre.json` (seeding): per aggiungere o modificare le mostre iniziali basta modificare il file JSON, senza toccare il codice. Il catalogo iniziale comprende sette mostre, ciascuna con una descrizione del percorso espositivo e almeno un'immagine: *Caravaggio e il suo tempo*, *Leonardo: Il Codice Atlantico*, *Monet: La Natura*, *Dalí e le forme*, *Van Gogh: la Notte stellata e il colore*, *Hokusai: la Grande onda* e *Munch: l'Urlo e l'anima moderna*. Le immagini delle mostre iniziali sono riproduzioni di opere di pubblico dominio (per Dalí un'immagine dimostrativa già presente nel progetto) e si trovano in `static/uploads/`.
 
 Nello stesso file ogni mostra può avere un elenco di `feedback` (nome, voto, commento):
 le recensioni indicate vengono inserite insieme alla mostra e collegate a essa tramite la relazione SQLAlchemy, così l'applicazione parte già con dei dati dimostrativi anche per la sezione delle opinioni e per gli indicatori della dashboard. Nei test automatici questi feedback vengono rimossi prima di ogni test, così i conteggi partono sempre da zero.
@@ -214,6 +218,14 @@ erDiagram
     MOSTRE ||--o{ FEEDBACK : "riceve"
     UTENTI |o--o{ PRENOTAZIONI : "effettua"
     UTENTI |o--o{ FEEDBACK : "scrive"
+
+    IMMAGINI {
+        int id PK
+        string nome "unico, uuid + estensione"
+        string tipo "MIME, es. image/webp"
+        bytes dati "BYTEA in PostgreSQL"
+        datetime creata_il "UTC"
+    }
 
     UTENTI {
         int id PK
@@ -257,7 +269,8 @@ erDiagram
 ```
 
 #### 5.2. Descrizione delle entità
-- **mostre**: memorizza le esposizioni culturali (il catalogo). Le immagini sono salvate su disco e nel database se ne conservano i percorsi relativi (es. `/static/uploads/<file>.webp`).
+- **immagini**: contiene le immagini caricate dall'area riservata (nome generato dal server, tipo MIME e contenuto binario: `BYTEA` in PostgreSQL, `BLOB` in SQLite), servite da `GET /api/immagini/{nome}`.
+- **mostre**: memorizza le esposizioni culturali (il catalogo). Nella colonna `immagini` si conservano i percorsi delle immagini: `/api/immagini/<nome>` per quelle caricate (salvate nella tabella immagini) e `/static/uploads/<file>.webp`).
 - **prenotazioni**: memorizza le prenotazioni effettuate dai visitatori, con data e ora di creazione.
 - **feedback**: memorizza le recensioni dei visitatori, con voto da 1 a 5 e commento facoltativo.
 - **utenti**: memorizza gli account dei visitatori. La password non viene mai salvata: si conserva solo il suo hash PBKDF2-SHA256, calcolato con un sale casuale e 200.000 iterazioni. L'email è unica. Su questa tabella sono disponibili tutte le operazioni CRUD: creazione con la registrazione, lettura del profilo (e dell'elenco, per l'amministratore), modifica di nome, cognome e telefono, eliminazione dell'account.
@@ -269,6 +282,43 @@ erDiagram
 **Aggiornamento dei database esistenti**: `create_all` crea le tabelle nuove ma non aggiunge colonne a quelle già presenti. All'avvio `migrazioni_service.py` controlla lo schema e, se manca, aggiunge la colonna `utente_id` alle tabelle `prenotazioni` e `feedback` e le colonne `codice` e `ingresso_il` alla tabella `prenotazioni` con `ALTER TABLE`; alle prenotazioni già presenti assegna un codice e crea l'indice unico sulla colonna. Così un `museo.db` creato con una versione precedente continua a funzionare senza perdere dati.
 
 **Indicatori**: i dati delle tabelle mostre, prenotazioni e feedback alimentano la dashboard. Il servizio `statistiche_service.py` calcola i conteggi con query di aggregazione (`COUNT` e `AVG` raggruppati per mostra con `GROUP BY`), invece di caricare in memoria tutte le righe.
+
+#### 5.3. Database di produzione: PostgreSQL
+**Perché.** Sul piano gratuito di Render il disco del server è *effimero*: a ogni riavvio, nuovo deploy o sospensione per inattività il file SQLite e le immagini caricate venivano cancellati. Per un museo questo significa perdere prenotazioni e mostre. In produzione il database è quindi un **PostgreSQL gestito** su un servizio esterno, che conserva i dati indipendentemente dal ciclo di vita del server. È stato scelto **Neon** perché il piano gratuito non scade (1 GB di spazio e 100 ore di calcolo al mese per progetto, sospensione automatica dopo 5 minuti di inattività); il PostgreSQL gratuito di Render, invece, viene disattivato dopo 30 giorni e non ha backup ([Render](https://render.com/docs/free), [Neon](https://neon.com/faqs/managed-postgres-databases-free-tier), consultati a ottobre 2026). Il codice funziona con qualsiasi PostgreSQL: basta cambiare `DATABASE_URL`.
+
+**Che cosa è cambiato nel codice.** I modelli SQLAlchemy sono rimasti gli stessi:
+- `settings.normalizza_database_url` accetta le stringhe fornite dai servizi cloud (`postgres://...` o `postgresql://...`) e le adatta al driver **psycopg 3** (`postgresql+psycopg://...`);
+- `database.py` usa per PostgreSQL un pool di connessioni con `pool_pre_ping` e `pool_recycle`: Neon chiude le connessioni inattive quando sospende il calcolo, e senza questo controllo la prima richiesta dopo una pausa fallirebbe; con SQLite attiva il controllo delle chiavi esterne (`PRAGMA foreign_keys`), così i due database si comportano allo stesso modo;
+- le regole "una prenotazione e un feedback per visitatore su ogni mostra" sono garantite anche dal database con gli indici unici `uq_prenotazioni_utente_mostra` e `uq_feedback_utente_mostra`: con due richieste contemporanee la seconda riceve 409 invece di creare un duplicato;
+- `migrazioni_service.py` usa tipi validi in entrambi i database (`TIMESTAMP` invece di `DATETIME`) e crea gli indici sui database esistenti;
+- le **immagini caricate** sono salvate nella tabella `immagini` nella stessa transazione della mostra (se un file non è valido non resta nulla a metà) e vengono eliminate quando si toglie un'immagine o si elimina la mostra.
+
+**Configurazione.**
+1. Su [neon.com](https://neon.com) creare un progetto (regione europea, es. Frankfurt) e copiare la *connection string* (`postgresql://utente:password@host/neondb?sslmode=require`).
+2. Su Render, nel servizio del back-end → *Environment*, aggiungere `DATABASE_URL` con quella stringa e salvare: il servizio si riavvia, crea le tabelle e inserisce le mostre iniziali. La stringa contiene la password: non va mai scritta nel codice né in `.env.example`.
+3. In locale si può continuare con SQLite (nessuna configurazione) oppure usare la stessa variabile nel file `.env`.
+
+**Test eseguiti.**
+- L'intera suite del back-end gira anche su un **PostgreSQL 16 vero**: in locale con `TEST_DATABASE_URL=postgresql://... pytest` e nella CI con il job *Backend (PostgreSQL)*, che avvia un container `postgres:16`.
+- `tests/test_database.py` contiene test d'integrazione sul database: rifiuto delle prenotazioni e dei feedback duplicati, delle email e dei codici duplicati e dei riferimenti a mostre inesistenti; cancellazione a cascata e relazioni navigabili; CRUD su mostre e utenti; **8 prenotazioni simultanee** dello stesso visitatore, di cui il database ne accetta una sola (solo su PostgreSQL); persistenza di prenotazione e immagine dopo la chiusura di tutte le connessioni.
+- **Prova di persistenza con riavvio reale**: lo script `backend/verifica_persistenza.py` avvia il back-end, crea visitatore, mostra con immagine e prenotazione, termina il processo, lo riavvia e verifica che i dati ci siano ancora. Esito su PostgreSQL:
+
+```
+Database: postgresql://postgres:***@127.0.0.1:5433/museo
+1. Backend avviato (pid 11149)
+2. Creati: visitatore verifica-a5be30fc@esempio.it, mostra n. 8 con immagine /api/immagini/ddddfe4532ad44379e8f1b080e2d89c8.png, prenotazione MCD-EPPG-F8V6
+3. Backend fermato: processo terminato, connessioni chiuse
+4. Backend riavviato (nuovo pid 11156)
+5. prenotazione ancora presente: OK
+5. mostra ancora presente: OK
+5. immagine ancora presente (stessi byte): OK
+6. Dati di prova eliminati
+Verifica superata: i dati sono rimasti nel database dopo il riavvio.
+```
+
+Lo stesso script si può eseguire contro il database su Neon impostando `DATABASE_URL` (la password non viene stampata).
+
+**Limiti del piano gratuito.** 1 GB di spazio (le immagini occupano posto: il limite di 5 MB per file resta), 100 ore di calcolo al mese, nessuna garanzia di disponibilità; dopo 5 minuti senza richieste il calcolo si sospende e la prima query successiva richiede circa un secondo in più, che si somma all'avvio del back-end su Render dopo 15 minuti di inattività. Per un uso reale servirebbero un piano a pagamento con backup e un object storage per immagini numerose o pesanti.
 
 ### 6. Diagrammi UML
 
@@ -443,7 +493,7 @@ sequenceDiagram
     participant FE as Front-end React
     participant API as FastAPI (router prenotazioni)
     participant PY as Schema Pydantic
-    participant DB as SQLite (SQLAlchemy)
+    participant DB as PostgreSQL (SQLAlchemy)
     participant BG as BackgroundTasks
     participant EM as Brevo / SMTP
 
@@ -486,7 +536,7 @@ sequenceDiagram
     participant API as FastAPI
     participant RL as slowapi (limite tentativi)
     participant AU as auth.py
-    participant DB as SQLite
+    participant DB as PostgreSQL
 
     A->>FE: Inserisce email e password
     FE->>API: POST /api/login
@@ -525,7 +575,7 @@ sequenceDiagram
     actor P as Personale del museo
     participant FE as Front-end React
     participant API as FastAPI (router prenotazioni)
-    participant DB as SQLite
+    participant DB as PostgreSQL
 
     V->>P: Mostra il QR code (o comunica il codice MCD-XXXX-XXXX)
     P->>FE: Inquadra il QR: apre /admin/verifica?codice=...
@@ -583,6 +633,7 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 | Mostre | 🔒 DELETE /api/mostre/{mostra_id} | Eliminazione di un'esposizione, delle sue prenotazioni e dei suoi feedback. | 200, 401, 404 |
 | Prenotazioni | 👤 POST /api/prenota | Salva la prenotazione con i dati dell'account e un codice di riferimento, restituito nella risposta, e avvia in background l'invio dell'email di conferma con codice e QR code. Una sola prenotazione per visitatore su ogni mostra. | 201, 400, 401, 403, 404, 409, 422 |
 | Prenotazioni | 🔒 GET /api/prenotazioni | Elenco delle prenotazioni (con codice e ingresso), filtrabile per mostra (`?mostra_id=`). | 200, 401 |
+| Mostre | GET /api/immagini/{nome} | Immagine caricata dall'area riservata, letta dalla tabella immagini del database (sopravvive ai riavvii del server). Solo nomi generati dal server; cache lunga nel browser. | 200, 404 |
 | Prenotazioni | GET /api/prenotazioni/qr/{codice} | Immagine PNG del QR code di una prenotazione, usata nell'email e nell'area personale. Contiene solo l'indirizzo della pagina di verifica. | 200, 404 |
 | Prenotazioni | 🔒 GET /api/prenotazioni/verifica/{riferimento} | Verifica all'ingresso: dati della prenotazione e della mostra e stato (`valida`, `gia_entrato`, `non_iniziata`, `conclusa`). Il riferimento è il codice (anche in minuscolo o senza trattini) o il numero della prenotazione. | 200, 401, 404 |
 | Prenotazioni | 🔒 POST /api/prenotazioni/verifica/{riferimento}/ingresso | Registra l'ingresso del visitatore: una sola volta e solo mentre la mostra è aperta. | 200, 400, 401, 404, 409 |
@@ -698,11 +749,12 @@ I dati attraversano diversi livelli della gerarchia di memoria:
 | Livello | Cosa contiene nel progetto | Caratteristiche |
 |---|---|---|
 | Memoria RAM del server | Oggetti Python delle richieste in corso, configurazione letta all'avvio | Veloce ma volatile: si perde allo spegnimento |
-| Disco del server | File SQLite `museo.db` e immagini in `static/uploads/` | Persistente, più lento della RAM |
+| Disco del server (Render) | Codice e immagini delle mostre iniziali; in sviluppo il file SQLite | Sul piano gratuito è effimero: si azzera a ogni riavvio |
+| Database PostgreSQL (Neon) | Tabelle e immagini caricate | Persistente e indipendente dal server, raggiunto in rete |
 | Memoria del browser | `sessionStorage` con il token dell'amministratore | Locale al dispositivo, si svuota alla chiusura della scheda |
 | Cache del browser e CDN | File JavaScript, CSS e immagini già scaricati | Evita di trasferire di nuovo dati invariati |
 
-SQLite memorizza l'intero database in un **unico file** su disco. Ogni prenotazione viene salvata all'interno di una **transazione** (`commit`): o l'operazione viene scritta completamente o, in caso di errore, viene annullata (`rollback`), così il file non resta in uno stato incoerente. Gli **indici** sulle chiavi esterne (`mostra_id`) permettono di trovare le prenotazioni di una mostra senza leggere tutta la tabella.
+In sviluppo SQLite memorizza l'intero database in un **unico file** su disco; in produzione PostgreSQL è un processo separato che gestisce i dati in pagine su disco con un proprio buffer in RAM e un registro delle modifiche (WAL) per non perdere le transazioni confermate. Ogni prenotazione viene salvata all'interno di una **transazione** (`commit`): o l'operazione viene scritta completamente o, in caso di errore, viene annullata (`rollback`), così il file non resta in uno stato incoerente. Gli **indici** sulle chiavi esterne (`mostra_id`) permettono di trovare le prenotazioni di una mostra senza leggere tutta la tabella.
 
 #### 8.4. Rappresentazione e codifica dei dati
 Gli stessi dati cambiano rappresentazione mentre passano da un componente all'altro:
@@ -765,7 +817,7 @@ Il controllo delle credenziali avviene sul server e non nel browser. L'endpoint 
 **Codice di prenotazione e QR code.** Il numero progressivo della prenotazione è prevedibile, quindi per la verifica all'ingresso ogni prenotazione riceve anche un codice casuale nel formato `MCD-XXXX-XXXX`, generato con il modulo `secrets` (generatore crittograficamente sicuro). I caratteri sono scelti da un alfabeto di 31 simboli senza quelli che si confondono leggendo o dettando il codice (0/O, 1/I/L): con 8 caratteri le combinazioni sono circa 850 miliardi, quindi un codice non si può indovinare per tentativi. Il QR code, generato con la libreria `segno` (solo Python), non contiene dati personali ma l'indirizzo della pagina di verifica dell'area riservata (`/admin/verifica?codice=...`): inquadrandolo con la fotocamera del telefono il personale apre la pagina e, se non ha ancora fatto il login, dopo l'accesso torna automaticamente alla verifica (parametro `next`). I dati della prenotazione sono visibili solo con il token dell'amministratore. L'immagine del QR code è inserita nel corpo dell'email (servita dal backend) e anche in allegato PNG, così resta disponibile se il programma di posta blocca le immagini esterne. Ogni prenotazione vale per un solo ingresso: la registrazione salva data e ora in `ingresso_il`, un secondo tentativo restituisce 409 e una prenotazione già usata non si può più annullare.
 
 #### 9.6. Gestione sicura del caricamento file
-Il caricamento delle immagini è gestito da `services/immagini_service.py`. Le immagini vengono accettate solo se hanno un'estensione e un tipo MIME da immagine (jpg, png, webp, gif) e non superano la dimensione massima configurata. Il nome del file su disco viene generato dal server (UUID), evitando sia la sovrascrittura di file esistenti sia attacchi di tipo path traversal. In modifica il client invia l'elenco delle immagini attuali da mantenere: il server accetta solo percorsi già associati a quella mostra, così dal form non è possibile collegare file arbitrari. Nel database si salvano percorsi relativi: è il frontend ad anteporre l'indirizzo del backend, così l'applicazione funziona sia in locale sia in produzione. I dati inseriti dagli utenti vengono inoltre "escapati" prima di essere inseriti nel corpo HTML dell'email di conferma.
+Il caricamento delle immagini è gestito da `services/immagini_service.py`. Le immagini vengono accettate solo se hanno un'estensione e un tipo MIME da immagine (jpg, png, webp, gif) e non superano la dimensione massima configurata. Il nome dell'immagine viene generato dal server (UUID), evitando sia la sovrascrittura di file esistenti sia attacchi di tipo path traversal; il contenuto è salvato nella tabella `immagini` del database (non sul disco del server, che su Render è effimero) e l'endpoint pubblico accetta solo nomi nel formato generato dal server. In modifica il client invia l'elenco delle immagini attuali da mantenere: il server accetta solo percorsi già associati a quella mostra, così dal form non è possibile collegare file arbitrari. Nel database si salvano percorsi relativi: è il frontend ad anteporre l'indirizzo del backend, così l'applicazione funziona sia in locale sia in produzione. I dati inseriti dagli utenti vengono inoltre "escapati" prima di essere inseriti nel corpo HTML dell'email di conferma.
 
 #### 9.7. Limite ai tentativi di accesso
 Per impedire attacchi "a forza bruta" (provare molte password in sequenza), gli endpoint di login (amministratore e visitatori) e di registrazione sono protetti dalla libreria `slowapi`: ogni indirizzo IP può effettuare un numero limitato di tentativi (di default 5 al minuto, configurabile con la variabile `LOGIN_RATE_LIMIT`). Superato il limite il server risponde 429 Too Many Requests con un messaggio leggibile, che il frontend mostra nel form di accesso. Poiché in produzione il backend si trova dietro il proxy di Render, uvicorn viene avviato con l'opzione `--proxy-headers`, così da leggere l'indirizzo IP reale del visitatore.
@@ -851,7 +903,7 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (211 test) | Vitest + React Testing Library (163 test) |
+| Test automatici | pytest + TestClient di FastAPI (226 test, eseguiti su SQLite e su PostgreSQL) | Vitest + React Testing Library (163 test) |
 
 **Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra e solo dopo la prenotazione, email di registrazione e avviso di registrazione doppia, recupero della password (link valido, scaduto, già usato, token non valido), codice di prenotazione (formato, unicità, varianti di scrittura accettate), QR code (contenuto e immagine PNG), email con codice e allegato (immagine nel testo solo con un backend pubblico, solo allegato in locale), verifica e registrazione dell'ingresso (solo admin, una sola volta, mostre non iniziate o concluse), aggiornamento di un database della versione precedente con assegnazione dei codici mancanti. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 
@@ -920,6 +972,7 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 | TF45 | Eliminazione dell'account | Visitatore | Area personale → "Elimina account", inserire la password e confermare | Si torna alla home scollegati e arriva l'email "Conferma eliminazione account"; le prenotazioni non usate sono annullate e con la stessa email ci si può registrare di nuovo; con la password errata compare "Password errata." e non parte nessuna email | ✅ Superato |
 | TF46 | Elenco e ricerca degli utenti | Amministratore | Dashboard → "Gestione utenti", cercare un cognome | Tabella con email, telefono, data di registrazione, numero di prenotazioni e feedback, filtrata dalla ricerca | ✅ Superato |
 | TF47 | Modifica ed eliminazione di un utente | Amministratore | In "Gestione utenti" premere "Modifica", correggere e salvare; poi "Elimina" e confermare | Dati aggiornati nella tabella; l'account eliminato sparisce, il visitatore viene scollegato e riceve l'email di conferma | ✅ Superato |
+| TF48 | Persistenza dopo il riavvio | Amministratore | Con il back-end su PostgreSQL pubblicare una mostra con un'immagine, fermare e riavviare il back-end, riaprire la mostra | Mostra e immagine sono ancora visibili; lo script `verifica_persistenza.py` conferma anche la prenotazione | ✅ Superato |
 | TF13 | Accesso diretto a una pagina riservata | Visitatore | Aprire `/admin/nuova` senza login | Si viene reindirizzati alla pagina di accesso | ✅ Superato |
 | TF14 | Troppi tentativi di accesso | Chiunque | Sbagliare la password più di 5 volte in un minuto | Messaggio "Troppi tentativi di accesso. Riprova tra qualche minuto." | ✅ Superato |
 
@@ -1047,6 +1100,9 @@ Nella sezione delle opinioni l'amministratore legge ed elimina i feedback, ma no
 **TF46 – Gestione utenti dell'area riservata**
 ![Gestione utenti](docs/screenshots/41-gestione-utenti.webp)
 
+**TF48 – Mostra con immagine ancora visibile dopo il riavvio del back-end (PostgreSQL)**
+![Persistenza su PostgreSQL](docs/screenshots/42-persistenza-postgres.webp)
+
 ### 13. Istruzioni per l'esecuzione
 #### 13.1. Prerequisiti
 - Python 3.9 o successivo (il progetto è verificato fino alla 3.15)
@@ -1088,7 +1144,7 @@ L'applicazione è disponibile su `http://localhost:5173`. In locale, se `ADMIN_E
 | `FRONTEND_URL` | Facoltativa: indirizzo del sito usato nel link di reset (se la richiesta non arriva da un dominio di `CORS_ORIGINS`) e nel QR code delle prenotazioni (default il sito su Vercel) |
 | `BACKEND_URL` | Facoltativa: indirizzo pubblico del backend per l'immagine del QR code nel testo delle email; se vuota si usa l'indirizzo da cui arriva la richiesta |
 | `RESET_PASSWORD_MINUTI` | Facoltativa: durata del link per reimpostare la password (default 30) |
-| `DATABASE_URL` | Facoltativa, default `sqlite:///./museo.db` |
+| `DATABASE_URL` | Database: in produzione la connection string PostgreSQL (es. Neon); se manca si usa SQLite `sqlite:///./museo.db` |
 | `LOGIN_RATE_LIMIT` | Facoltativa, tentativi di login consentiti per IP (default `5/minute`) |
 | `VITE_API_URL` | (front-end) indirizzo del back-end, se diverso da quello predefinito |
 
@@ -1097,7 +1153,9 @@ L'applicazione è disponibile su `http://localhost:5173`. In locale, se `ADMIN_E
 # back-end
 cd backend
 pip install -r requirements-dev.txt
-pytest                # test automatici
+pytest                # test automatici (su SQLite)
+TEST_DATABASE_URL=postgresql://postgres@localhost:5432/museo_test pytest   # stessi test su PostgreSQL
+DATABASE_URL=postgresql://... python verifica_persistenza.py             # prova di persistenza con riavvio
 ruff check .          # linter
 ruff format --check . # formattazione
 
@@ -1138,12 +1196,14 @@ L'applicazione è pubblicata con due servizi separati, coerentemente con l'archi
 - **Back-end** su Render: `museo-digitale-pw.onrender.com`
 - **Documentazione** su GitHub Pages: [reverserob.github.io/museo-digitale-pw](https://reverserob.github.io/museo-digitale-pw/)
 
-Su Render le variabili d'ambiente (SECRET_KEY, credenziali dell'amministratore, BREVO_API_KEY, EMAIL_MITTENTE ed EMAIL_MITTENTE_NOME, CONTATTI_EMAIL, CORS_ORIGINS, FRONTEND_URL, facoltativamente BACKEND_URL, PYTHON_VERSION) sono impostate dal pannello Environment del servizio. Il backend viene avviato con il comando `uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'`, che permette al server di conoscere l'indirizzo IP reale dei visitatori (necessario per il limite ai tentativi di login). In `requirements.txt` le librerie Python sono indicate con intervalli di versioni compatibili (ad esempio `pydantic>=2.11,<3`) invece che con versioni esatte: pip sceglie la versione più recente adatta al Python installato, così il progetto funziona dalla 3.9 fino alle versioni più recenti (verificato nella CI con 3.9, 3.12 e 3.15). Il limite superiore esclude le future versioni principali, che potrebbero introdurre modifiche incompatibili.
+- **Database** PostgreSQL su Neon (§5.3)
+
+Su Render le variabili d'ambiente (DATABASE_URL, SECRET_KEY, credenziali dell'amministratore, BREVO_API_KEY, EMAIL_MITTENTE ed EMAIL_MITTENTE_NOME, CONTATTI_EMAIL, CORS_ORIGINS, FRONTEND_URL, facoltativamente BACKEND_URL, PYTHON_VERSION) sono impostate dal pannello Environment del servizio. Il backend viene avviato con il comando `uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'`, che permette al server di conoscere l'indirizzo IP reale dei visitatori (necessario per il limite ai tentativi di login). In `requirements.txt` le librerie Python sono indicate con intervalli di versioni compatibili (ad esempio `pydantic>=2.11,<3`) invece che con versioni esatte: pip sceglie la versione più recente adatta al Python installato, così il progetto funziona dalla 3.9 fino alle versioni più recenti (verificato nella CI con 3.9, 3.12 e 3.15). Il limite superiore esclude le future versioni principali, che potrebbero introdurre modifiche incompatibili.
 
 ### 15. Limiti e sviluppi futuri
 #### 15.1. Limiti della soluzione attuale
 La piattaforma è un prototipo funzionante; alcune semplificazioni sono accettabili in questa fase ma andrebbero superate in un uso reale:
-- **Persistenza su Render free**: sul piano gratuito il disco non è persistente; a ogni riavvio il database SQLite e le immagini caricate dall'area riservata vengono azzerati. Le mostre iniziali vengono ricreate automaticamente dal seeding.
+- **Piani gratuiti**: i dati sono persistenti su PostgreSQL (Neon), ma il piano gratuito ha 1 GB di spazio, 100 ore di calcolo al mese, nessun backup garantito e una piccola attesa dopo la sospensione per inattività (§5.3); le immagini nel database vanno bene per un prototipo, con molte immagini servirebbe un object storage.
 - **Un solo amministratore**: le credenziali sono configurate tramite variabili d'ambiente; non esistono più account né ruoli diversi (es. curatore e biglietteria).
 - **Nessuna gestione dei posti**: la prenotazione non prevede fasce orarie né un numero massimo di visitatori per giorno.
 - **Feedback legati alla prenotazione, non all'ingresso**: per recensire bisogna essersi prenotati alla mostra. L'ingresso viene ora registrato dal personale con il codice o il QR code, ma il feedback non richiede ancora un ingresso registrato (sarebbe un controllo in più su `ingresso_il`); la moderazione è manuale.
@@ -1163,9 +1223,9 @@ La dashboard attuale mostra indicatori di sintesi. Il passo successivo è l'anal
 - *Accessibilità*: descrizioni testuali delle opere generate automaticamente e poi riviste dal curatore, utili alle persone non vedenti.
 
 **Servizi cloud**
-- Sostituire SQLite con un database gestito (es. PostgreSQL, già supportato tramite la variabile `DATABASE_URL`) con backup automatici.
+- Passare a un piano PostgreSQL con backup automatici e ripristino a un istante (point-in-time recovery).
 - Spostare le immagini su uno storage di oggetti (es. Amazon S3 o Cloudinary) servito tramite CDN.
-- Passare a un piano con disco persistente e più istanze del back-end, possibile perché il server è senza stato.
+- Spostare le immagini su un object storage (es. Amazon S3 con CDN) e avviare più istanze del back-end, possibile perché il server è senza stato e i dati sono nel database.
 
 **Pagamenti online**
 Integrare un servizio di pagamento (es. Stripe o PayPal, oppure pagoPA per un ente pubblico) per acquistare il biglietto al momento della prenotazione, con emissione della ricevuta e biglietto con QR code. Richiederebbe una nuova tabella `pagamenti` collegata alle prenotazioni e la gestione delle notifiche di esito inviate dal fornitore.

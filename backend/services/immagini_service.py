@@ -1,4 +1,4 @@
-"""Gestione delle immagini delle mostre: controllo, salvataggio su disco e selezione di quelle da mantenere."""
+"""Gestione delle immagini delle mostre: controllo, salvataggio nel database e selezione di quelle da mantenere."""
 
 import json
 import uuid
@@ -6,8 +6,21 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import HTTPException, UploadFile, status
+from sqlalchemy.orm import Session
 
+import models
 import settings
+
+# indirizzo pubblico delle immagini salvate nel database (servite da routers/immagini.py)
+PREFISSO_URL = "/api/immagini/"
+# tipo MIME ricavato dall'estensione controllata dal server (non dal tipo dichiarato dal browser)
+TIPI_MIME = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
 
 
 def file_presenti(immagini: Optional[list[UploadFile]]) -> list[UploadFile]:
@@ -57,22 +70,24 @@ def immagini_da_tenere(attuali: str, richieste: Optional[str]) -> list[str]:
     return tenute
 
 
-async def salva_immagini(immagini: list[UploadFile]) -> list[str]:
-    """Controlla e salva le immagini caricate.
+async def salva_immagini(immagini: list[UploadFile], db: Session) -> list[str]:
+    """Controlla le immagini caricate e le aggiunge alla sessione del database.
 
-    I file vengono scritti su disco con un nome casuale solo dopo aver controllato tutti i file.
+    Le righe vengono solo aggiunte alla sessione: il commit lo fa il router insieme alla mostra,
+    quindi mostra e immagini vengono salvate (o annullate) nella stessa transazione.
 
     Args:
         immagini: File caricati dal form.
+        db: Sessione del database della richiesta.
 
     Returns:
-        Percorsi pubblici delle immagini salvate (`/static/uploads/...`).
+        Percorsi pubblici delle immagini (`/api/immagini/<nome>`).
 
     Raises:
         HTTPException: 400 se un file non è un'immagine supportata o supera `UPLOAD_MAX_MB`.
     """
     limite = settings.UPLOAD_MAX_MB * 1024 * 1024
-    da_scrivere = []
+    da_salvare = []
     for file in immagini:
         # controllo sia l'estensione del nome sia il tipo dichiarato dal browser
         estensione = Path(file.filename).suffix.lower()
@@ -88,11 +103,30 @@ async def salva_immagini(immagini: list[UploadFile]) -> list[str]:
                 detail=f"Il file '{file.filename}' supera il limite di {settings.UPLOAD_MAX_MB} MB.",
             )
         # nome casuale (uuid): evita collisioni e non usa il nome scelto dall'utente
-        da_scrivere.append((f"{uuid.uuid4().hex}{estensione}", contenuto))
+        da_salvare.append((f"{uuid.uuid4().hex}{estensione}", TIPI_MIME[estensione], contenuto))
 
-    # scrivo su disco solo dopo aver controllato TUTTI i file: se uno non è valido non resta nulla a metà
+    # aggiungo le righe solo dopo aver controllato TUTTI i file: se uno non è valido non resta nulla a metà
     percorsi = []
-    for nome, contenuto in da_scrivere:
-        (settings.UPLOAD_DIR / nome).write_bytes(contenuto)
-        percorsi.append(f"/static/uploads/{nome}")
+    for nome, tipo, contenuto in da_salvare:
+        db.add(models.Immagine(nome=nome, tipo=tipo, dati=contenuto))
+        percorsi.append(f"{PREFISSO_URL}{nome}")
     return percorsi
+
+
+def rimuovi_immagini(db: Session, percorsi: list[str]) -> int:
+    """Elimina dal database le immagini indicate che non servono più (senza fare il commit).
+
+    Sono considerate solo le immagini salvate nel database (`/api/immagini/...`): le immagini delle
+    mostre iniziali, in `static/uploads/`, fanno parte del progetto e restano.
+
+    Args:
+        db: Sessione del database.
+        percorsi: Percorsi pubblici delle immagini da eliminare.
+
+    Returns:
+        Numero di immagini eliminate.
+    """
+    nomi = [p[len(PREFISSO_URL) :] for p in percorsi if p.startswith(PREFISSO_URL)]
+    if not nomi:
+        return 0
+    return db.query(models.Immagine).filter(models.Immagine.nome.in_(nomi)).delete(synchronize_session=False)

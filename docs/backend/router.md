@@ -5,6 +5,8 @@ La tabella riassuntiva di tutti gli endpoint è nella pagina [API REST](../guida
 
 ::: routers.mostre
 
+::: routers.immagini
+
 ::: routers.prenotazioni
 
 ::: routers.feedback

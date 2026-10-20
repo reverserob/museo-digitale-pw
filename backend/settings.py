@@ -32,8 +32,28 @@ def _lista(valore: str):
 
 
 # --- Database ---
-# SQLite in un file locale; per passare a PostgreSQL basta cambiare questa stringa
-DATABASE_URL = _env("DATABASE_URL", "sqlite:///./museo.db")
+def normalizza_database_url(url: str) -> str:
+    """Adatta la stringa di connessione al driver psycopg 3 usato per PostgreSQL.
+
+    I servizi cloud (Neon, Render, Supabase) forniscono indirizzi come `postgres://...` o
+    `postgresql://...`; SQLAlchemy ha bisogno del nome del driver: `postgresql+psycopg://...`.
+    Le stringhe SQLite e quelle che indicano già un driver restano invariate.
+
+    Args:
+        url: Stringa di connessione letta dalla variabile `DATABASE_URL`.
+
+    Returns:
+        Stringa di connessione per SQLAlchemy.
+    """
+    for prefisso in ("postgres://", "postgresql://"):
+        if url.startswith(prefisso):
+            return "postgresql+psycopg://" + url[len(prefisso) :]
+    return url
+
+
+# In sviluppo SQLite in un file locale; in produzione PostgreSQL (es. Neon) indicato con DATABASE_URL.
+# Il codice non cambia: l'ORM SQLAlchemy genera l'SQL adatto a ciascun database.
+DATABASE_URL = normalizza_database_url(_env("DATABASE_URL", "sqlite:///./museo.db"))
 
 # --- CORS: indirizzi del front-end autorizzati a chiamare le API dal browser ---
 CORS_ORIGINS = _lista(

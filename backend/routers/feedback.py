@@ -5,6 +5,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 import models
@@ -77,6 +78,12 @@ def crea_feedback(
         db.commit()
         db.refresh(feedback)
         return feedback
+    except IntegrityError as e:
+        # due invii contemporanei: l'indice unico uq_feedback_utente_mostra accetta solo il primo
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Hai già lasciato un feedback su questa mostra."
+        ) from e
     except Exception as e:
         db.rollback()
         logger.error(f"Errore durante il salvataggio del feedback: {e}")

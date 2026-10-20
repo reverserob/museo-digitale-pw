@@ -12,7 +12,9 @@ import pytest
 # load_dotenv non sovrascrive le variabili già presenti, quindi i valori
 # del tuo .env / .env.local non vengono usati durante i test.
 CARTELLA_TEST = Path(tempfile.mkdtemp(prefix="museo_test_"))
-os.environ["DATABASE_URL"] = f"sqlite:///{CARTELLA_TEST / 'test.db'}"
+# Database dei test: SQLite in una cartella temporanea, oppure un PostgreSQL vero se è impostata
+# TEST_DATABASE_URL (es. postgresql://postgres@localhost:5432/museo_test), come nel job "Backend (PostgreSQL)" della CI.
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{CARTELLA_TEST / 'test.db'}"
 os.environ["ADMIN_EMAIL"] = "admin@test.it"
 os.environ["ADMIN_PASSWORD"] = "password-test"
 os.environ["SECRET_KEY"] = "chiave-segreta-di-test"
