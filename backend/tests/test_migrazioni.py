@@ -23,3 +23,33 @@ def test_aggiunge_utente_id_a_un_database_della_versione_precedente(tmp_path):
     # i dati già presenti restano
     with engine.connect() as conn:
         assert conn.execute(text("SELECT nome, utente_id FROM prenotazioni")).one() == ("Mario", None)
+
+
+def test_crea_gli_indici_unici_su_un_database_esistente(tmp_path):
+    # database con le tabelle complete ma senza gli indici unici introdotti con PostgreSQL
+    engine = create_engine(f"sqlite:///{tmp_path / 'senza_indici.db'}")
+    with engine.begin() as conn:
+        conn.execute(text("CREATE TABLE utenti (id INTEGER PRIMARY KEY)"))
+        conn.execute(
+            text(
+                "CREATE TABLE prenotazioni (id INTEGER PRIMARY KEY, mostra_id INTEGER, utente_id INTEGER, "
+                "codice VARCHAR(20), ingresso_il TIMESTAMP)"
+            )
+        )
+        conn.execute(text("CREATE TABLE feedback (id INTEGER PRIMARY KEY, mostra_id INTEGER, utente_id INTEGER)"))
+
+    aggiorna_schema(engine)
+
+    indici = {i["name"]: i for t in ("prenotazioni", "feedback") for i in inspect(engine).get_indexes(t)}
+    assert indici["uq_prenotazioni_utente_mostra"]["unique"]
+    assert indici["uq_feedback_utente_mostra"]["unique"]
+    # da qui in poi il database rifiuta una seconda prenotazione dello stesso visitatore sulla stessa mostra
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO prenotazioni (mostra_id, utente_id) VALUES (1, 1)"))
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("INSERT INTO prenotazioni (mostra_id, utente_id) VALUES (1, 1)"))
+        duplicata = True
+    except Exception:
+        duplicata = False
+    assert not duplicata

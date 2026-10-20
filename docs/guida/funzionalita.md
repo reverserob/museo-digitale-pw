@@ -62,6 +62,12 @@ Con **Gestione utenti** l'amministratore consulta gli account registrati (ricerc
 
 ![Gestione utenti](../screenshots/41-gestione-utenti.webp){ .screenshot loading=lazy }
 
+### Persistenza dei dati
+
+Account, prenotazioni, feedback, mostre e immagini caricate sono salvati in un database PostgreSQL gestito su Neon, esterno al server: restano anche quando il backend su Render si riavvia o va in pausa. Nei casi d'uso, registrazione, prenotazione, gestione delle mostre e gestione degli utenti includono il caso *Conservare dati e immagini in modo persistente*, svolto dall'attore esterno "Database PostgreSQL (Neon)".
+
+![Mostra con immagine ancora visibile dopo il riavvio del backend](../screenshots/42-persistenza-postgres.webp){ .screenshot loading=lazy }
+
 ### Verifica all'ingresso
 
 Dalla dashboard, con **Verifica ingresso**, il personale inserisce il codice comunicato dal visitatore (anche in minuscolo o senza trattini) oppure il numero della prenotazione. In alternativa basta inquadrare con la fotocamera del telefono il QR code del visitatore: si apre direttamente la pagina di verifica con il codice già inserito (se serve, prima viene chiesto il login). La pagina indica se la prenotazione è valida per oggi, già usata, per una mostra non ancora iniziata o conclusa, e con **Registra ingresso** segna l'entrata: ogni prenotazione vale per un solo ingresso.
