@@ -1,13 +1,30 @@
 /**
- * Area personale del visitatore (`/profilo`).
+ * Area personale del visitatore (`/profilo`): dati dell'account con modifica ed eliminazione, prenotazioni e QR code.
  *
  * @module pages/AreaPersonale
  */
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Container, Card, CardContent, Typography, Box, Button, Alert, CircularProgress, Divider } from '@mui/material';
+import {
+    Container,
+    Card,
+    CardContent,
+    Typography,
+    Box,
+    Button,
+    Alert,
+    CircularProgress,
+    Divider,
+    TextField,
+} from '@mui/material';
 import { messaggioErrore } from '../services/api';
-import { annullaPrenotazione, getMiePrenotazioni, logoutUtente } from '../services/utentiService';
+import {
+    aggiornaProfilo,
+    annullaPrenotazione,
+    eliminaAccount,
+    getMiePrenotazioni,
+    logoutUtente,
+} from '../services/utentiService';
 import { formatoData, traduciServer } from '../i18n/lingua';
 import useUtente from '../hooks/useUtente';
 import useLingua from '../hooks/useLingua';
@@ -19,9 +36,18 @@ const cardSx = {
     backgroundColor: 'rgba(10, 10, 10, 0.85)',
     p: { xs: 1, sm: 4 },
 };
+const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
+const campo = {
+    slotProps: { inputLabel: { shrink: true } },
+    size: 'small',
+    sx: { ...inputStyle, flex: 1, minWidth: 180 },
+};
+// stesse regole della registrazione (e del backend)
+const nomeValido = (v) => v.trim().length >= 3;
+const telefonoValido = (v) => /^\d{6,15}$/.test(v.trim());
 
 /**
- * Area personale: dati dell'account, elenco delle prenotazioni e annullamento.
+ * Area personale: dati dell'account (modifica ed eliminazione), elenco delle prenotazioni e annullamento.
  *
  * @returns {?JSX.Element} La pagina, oppure `null` dopo il logout.
  * @alias module:pages/AreaPersonale.AreaPersonale
@@ -38,6 +64,12 @@ export default function AreaPersonale() {
     const [inAnnullamento, setInAnnullamento] = useState(null);
     // id della prenotazione di cui è aperto il QR code (uno alla volta)
     const [qrAperto, setQrAperto] = useState(null);
+    // gestione dell'account: null, 'modifica' (form dei dati) oppure 'elimina' (conferma con password)
+    const [modo, setModo] = useState(null);
+    const [form, setForm] = useState({ nome: '', cognome: '', telefono: '' });
+    const [password, setPassword] = useState('');
+    const [inviando, setInviando] = useState(false);
+    const [esitoProfilo, setEsitoProfilo] = useState({ tipo: '', testo: '' });
 
     useEffect(() => {
         getMiePrenotazioni()
@@ -66,6 +98,43 @@ export default function AreaPersonale() {
             .finally(() => setInAnnullamento(null));
     };
 
+    const apri = (nuovoModo) => {
+        setEsitoProfilo({ tipo: '', testo: '' });
+        setPassword('');
+        if (nuovoModo === 'modifica')
+            setForm({ nome: utente.nome, cognome: utente.cognome, telefono: utente.telefono });
+        setModo(nuovoModo);
+    };
+
+    const formValido = nomeValido(form.nome) && nomeValido(form.cognome) && telefonoValido(form.telefono);
+
+    // PUT /api/utenti/me: la sessione viene aggiornata dal servizio, quindi il nome cambia subito anche nell'header
+    const salvaProfilo = (e) => {
+        e.preventDefault();
+        setInviando(true);
+        aggiornaProfilo({ nome: form.nome.trim(), cognome: form.cognome.trim(), telefono: form.telefono.trim() })
+            .then(() => {
+                setModo(null);
+                setEsitoProfilo({ tipo: 'success', testo: t('profilo.aggiornato') });
+            })
+            .catch((err) =>
+                setEsitoProfilo({ tipo: 'error', testo: messaggioErrore(err, t('profilo.erroreAggiorna')) })
+            )
+            .finally(() => setInviando(false));
+    };
+
+    // DELETE /api/utenti/me con la password come conferma; dopo l'eliminazione si torna alla home
+    const confermaElimina = (e) => {
+        e.preventDefault();
+        setInviando(true);
+        eliminaAccount(password)
+            .then(() => navigate('/'))
+            .catch((err) => {
+                setEsitoProfilo({ tipo: 'error', testo: messaggioErrore(err, t('profilo.erroreElimina')) });
+                setInviando(false);
+            });
+    };
+
     // dopo il logout il componente non mostra nulla mentre avviene il cambio di pagina
     if (!utente) return null;
 
@@ -92,6 +161,116 @@ export default function AreaPersonale() {
                     <Typography sx={{ color: '#aaaaaa', mt: 1 }}>
                         {utente.nome} {utente.cognome} · {utente.email} · {utente.telefono}
                     </Typography>
+
+                    {/* gestione dell'account: modifica dei dati ed eliminazione (diritto alla cancellazione) */}
+                    <Box component="section" aria-label={t('profilo.dati')} sx={{ mt: 2 }}>
+                        {modo === null && (
+                            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                                <Button
+                                    onClick={() => apri('modifica')}
+                                    variant="outlined"
+                                    size="small"
+                                    sx={{ borderRadius: 0 }}
+                                >
+                                    {t('profilo.modifica')}
+                                </Button>
+                                <Button
+                                    onClick={() => apri('elimina')}
+                                    color="error"
+                                    variant="outlined"
+                                    size="small"
+                                    sx={{ borderRadius: 0 }}
+                                >
+                                    {t('profilo.elimina')}
+                                </Button>
+                            </Box>
+                        )}
+                        {modo === 'modifica' && (
+                            <Box component="form" onSubmit={salvaProfilo} aria-label={t('profilo.modifica')}>
+                                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
+                                    <TextField
+                                        {...campo}
+                                        label={t('comune.nome')}
+                                        value={form.nome}
+                                        onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                                        error={!nomeValido(form.nome)}
+                                    />
+                                    <TextField
+                                        {...campo}
+                                        label={t('comune.cognome')}
+                                        value={form.cognome}
+                                        onChange={(e) => setForm({ ...form, cognome: e.target.value })}
+                                        error={!nomeValido(form.cognome)}
+                                    />
+                                    <TextField
+                                        {...campo}
+                                        label={t('comune.telefono')}
+                                        value={form.telefono}
+                                        onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                                        error={!telefonoValido(form.telefono)}
+                                        helperText={t('comune.soloCifre')}
+                                    />
+                                </Box>
+                                <Typography variant="body2" sx={{ color: '#888888', mt: 1 }}>
+                                    {t('profilo.emailFissa')}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        size="small"
+                                        disabled={!formValido || inviando}
+                                        sx={{ borderRadius: 0 }}
+                                    >
+                                        {t('profilo.salva')}
+                                    </Button>
+                                    <Button onClick={() => setModo(null)} size="small" sx={{ color: '#bbbbbb' }}>
+                                        {t('profilo.annullaModifica')}
+                                    </Button>
+                                </Box>
+                            </Box>
+                        )}
+                        {modo === 'elimina' && (
+                            <Box
+                                component="form"
+                                onSubmit={confermaElimina}
+                                aria-label={t('profilo.elimina')}
+                                sx={{ border: '1px solid rgba(244, 67, 54, 0.5)', p: 2, mt: 1 }}
+                            >
+                                <Typography variant="body2" sx={{ color: '#dddddd', mb: 2 }}>
+                                    {t('profilo.eliminaSpiega')}
+                                </Typography>
+                                <TextField
+                                    {...campo}
+                                    type="password"
+                                    label={t('comune.password')}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    autoComplete="current-password"
+                                />
+                                <Box sx={{ display: 'flex', gap: 1.5, mt: 2, flexWrap: 'wrap' }}>
+                                    <Button
+                                        type="submit"
+                                        color="error"
+                                        variant="contained"
+                                        size="small"
+                                        disabled={!password || inviando}
+                                        sx={{ borderRadius: 0 }}
+                                    >
+                                        {t('profilo.eliminaConferma')}
+                                    </Button>
+                                    <Button onClick={() => setModo(null)} size="small" sx={{ color: '#bbbbbb' }}>
+                                        {t('profilo.annullaModifica')}
+                                    </Button>
+                                </Box>
+                            </Box>
+                        )}
+                        {esitoProfilo.testo && (
+                            <Alert severity={esitoProfilo.tipo} sx={{ mt: 2 }}>
+                                {esitoProfilo.testo}
+                            </Alert>
+                        )}
+                    </Box>
 
                     {/* messaggio mostrato subito dopo la registrazione (stato passato dalla pagina Accedi) */}
                     {location.state?.registrato && (

@@ -5,7 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import AreaPersonale from '../pages/AreaPersonale';
 import { api, getSessioneUtente } from '../services/api';
-import { renderConRouter, collegaUtente, FUTURE } from './utils';
+import { renderConRouter, collegaUtente, erroreHttp, FUTURE, UTENTE } from './utils';
 
 vi.mock('../services/api', async (importOriginal) => ({
     ...(await importOriginal()),
@@ -154,5 +154,78 @@ describe('AreaPersonale: codice e QR code', () => {
 
         expect(await screen.findByText(/Ingresso effettuato il/)).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Annulla la prenotazione/ })).not.toBeInTheDocument();
+    });
+});
+
+describe("AreaPersonale: gestione dell'account", () => {
+    it('modifica nome, cognome e telefono e aggiorna la sessione', async () => {
+        collegaUtente();
+        api.get.mockResolvedValue({ data: [] });
+        api.put.mockResolvedValue({ data: { ...UTENTE, cognome: 'Bianchi', telefono: '3339876543' } });
+        const user = userEvent.setup();
+        apri();
+
+        await user.click(screen.getByRole('button', { name: 'Modifica dati' }));
+        const cognome = screen.getByLabelText('Cognome');
+        await user.clear(cognome);
+        await user.type(cognome, 'Bianchi');
+        const telefono = screen.getByLabelText('Telefono');
+        await user.clear(telefono);
+        await user.type(telefono, '3339876543');
+        await user.click(screen.getByRole('button', { name: 'Salva' }));
+
+        expect(api.put).toHaveBeenCalledWith('/api/utenti/me', {
+            nome: 'Mario',
+            cognome: 'Bianchi',
+            telefono: '3339876543',
+        });
+        expect(await screen.findByText('Dati aggiornati.')).toBeInTheDocument();
+        expect(getSessioneUtente().utente.cognome).toBe('Bianchi');
+        expect(screen.getByText(/Mario Bianchi · mario@test.it · 3339876543/)).toBeInTheDocument();
+    });
+
+    it('non salva dati non validi', async () => {
+        collegaUtente();
+        api.get.mockResolvedValue({ data: [] });
+        const user = userEvent.setup();
+        apri();
+
+        await user.click(screen.getByRole('button', { name: 'Modifica dati' }));
+        const telefono = screen.getByLabelText('Telefono');
+        await user.clear(telefono);
+        await user.type(telefono, '12ab');
+        expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
+    });
+
+    it("elimina l'account dopo la conferma con la password", async () => {
+        collegaUtente();
+        api.get.mockResolvedValue({ data: [] });
+        api.delete.mockResolvedValue({ data: { message: 'Account eliminato.' } });
+        const user = userEvent.setup();
+        apri();
+
+        await user.click(screen.getByRole('button', { name: 'Elimina account' }));
+        expect(screen.getByRole('button', { name: 'ELIMINA DEFINITIVAMENTE' })).toBeDisabled();
+        await user.type(screen.getByLabelText('Password'), 'Museo2026');
+        await user.click(screen.getByRole('button', { name: 'ELIMINA DEFINITIVAMENTE' }));
+
+        expect(api.delete).toHaveBeenCalledWith('/api/utenti/me', { data: { password: 'Museo2026' } });
+        expect(await screen.findByText('Pagina Home')).toBeInTheDocument();
+        expect(getSessioneUtente()).toBeNull();
+    });
+
+    it("con la password errata resta collegato e mostra l'errore", async () => {
+        collegaUtente();
+        api.get.mockResolvedValue({ data: [] });
+        api.delete.mockRejectedValue(erroreHttp(400, 'Password errata.'));
+        const user = userEvent.setup();
+        apri();
+
+        await user.click(screen.getByRole('button', { name: 'Elimina account' }));
+        await user.type(screen.getByLabelText('Password'), 'Sbagliata1');
+        await user.click(screen.getByRole('button', { name: 'ELIMINA DEFINITIVAMENTE' }));
+
+        expect(await screen.findByText('Password errata.')).toBeInTheDocument();
+        expect(getSessioneUtente()).not.toBeNull();
     });
 });

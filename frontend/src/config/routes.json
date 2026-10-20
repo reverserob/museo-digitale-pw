@@ -11,6 +11,7 @@
   { "path": "/admin", "component": "AdminDashboard" },
   { "path": "/admin/nuova", "component": "AdminForm", "protected": true },
   { "path": "/admin/verifica", "component": "AdminVerifica", "protected": true },
+  { "path": "/admin/utenti", "component": "AdminUtenti", "protected": true },
   { "path": "/admin/modifica/:id", "component": "AdminForm", "protected": true },
   { "path": "*", "component": "NotFound" }
 ]

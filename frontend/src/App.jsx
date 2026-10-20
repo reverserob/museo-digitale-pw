@@ -27,6 +27,7 @@ const FormPrenotazione = lazy(() => import('./pages/FormPrenotazione'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminForm = lazy(() => import('./pages/AdminForm'));
 const AdminVerifica = lazy(() => import('./pages/AdminVerifica'));
+const AdminUtenti = lazy(() => import('./pages/AdminUtenti'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Accedi = lazy(() => import('./pages/Accedi'));
 const AreaPersonale = lazy(() => import('./pages/AreaPersonale'));
@@ -43,6 +44,7 @@ const pages = {
     AdminDashboard,
     AdminForm,
     AdminVerifica,
+    AdminUtenti,
     NotFound,
     Accedi,
     AreaPersonale,

@@ -44,7 +44,7 @@ backend/
 ├── auth.py                 → hash delle password, token con ruolo, controlli di accesso (admin e visitatori)
 ├── routers/
 │   ├── login.py            → POST /api/login (amministratore)
-│   ├── utenti.py           → registrazione, login, profilo e prenotazioni dei visitatori (/api/utenti)
+│   ├── utenti.py           → CRUD degli utenti: registrazione, login, profilo, eliminazione dell'account e gestione dall'area riservata (/api/utenti)
 │   ├── mostre.py           → CRUD delle mostre (/api/mostre)
 │   ├── prenotazioni.py     → POST /api/prenota (una per mostra, con codice), GET /api/prenotazioni, QR code, verifica e ingresso
 │   ├── feedback.py         → POST, GET e DELETE /api/feedback
@@ -54,6 +54,7 @@ backend/
 │   ├── mostre_service.py   → ricerca di una mostra e controllo delle date (usato da più router)
 │   ├── email_service.py    → email di conferma (API Brevo o SMTP), con QR code in allegato
 │   ├── prenotazioni_service.py → codice di prenotazione, QR code (libreria segno) e stato dell'ingresso
+│   ├── utenti_service.py   → modifica del profilo ed eliminazione dell'account con anonimizzazione
 │   ├── immagini_service.py → validazione e salvataggio delle immagini caricate
 │   ├── statistiche_service.py → calcolo degli indicatori per la dashboard
 │   ├── rate_limit_service.py → limite ai tentativi di login (slowapi)

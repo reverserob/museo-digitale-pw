@@ -15,6 +15,7 @@ from auth import (
     crea_token_reset,
     hash_password,
     leggi_token_reset,
+    richiedi_admin,
     richiedi_utente,
     verifica_password,
 )
@@ -26,6 +27,7 @@ from services.email_service import (
     invia_email_reset_password,
 )
 from services.rate_limit_service import limiter
+from services.utenti_service import aggiorna_profilo, elimina_account, riepilogo
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -174,6 +176,41 @@ def profilo(utente: models.Utente = Depends(richiedi_utente)):
     return utente
 
 
+# PUT /api/utenti/me
+@router.put("/me", response_model=schemas.UtenteResponse)
+def modifica_profilo(
+    dati: schemas.ProfiloUpdateRequest,
+    utente: models.Utente = Depends(richiedi_utente),
+    db: Session = Depends(get_db),
+):
+    """`PUT /api/utenti/me` · Il visitatore collegato modifica nome, cognome e telefono (l'email resta invariata).
+
+    Raises:
+        HTTPException: 401 senza token valido; 422 se i dati non rispettano le regole della registrazione.
+    """
+    return aggiorna_profilo(db, utente, dati)
+
+
+# DELETE /api/utenti/me (diritto alla cancellazione: serve la password per conferma)
+@router.delete("/me")
+def elimina_mio_account(
+    dati: schemas.EliminaAccountRequest,
+    utente: models.Utente = Depends(richiedi_utente),
+    db: Session = Depends(get_db),
+):
+    """`DELETE /api/utenti/me` · Il visitatore elimina il proprio account dopo aver confermato la password.
+
+    Le prenotazioni non ancora usate vengono annullate; quelle già usate per l'ingresso restano anonime.
+
+    Raises:
+        HTTPException: 400 se la password non è corretta (non 401, che chiuderebbe la sessione nel front-end).
+    """
+    if not verifica_password(dati.password, utente.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password errata.")
+    esito = elimina_account(db, utente)
+    return {"message": "Account eliminato.", **esito}
+
+
 # GET /api/utenti/me/prenotazioni
 @router.get("/me/prenotazioni", response_model=list[schemas.MiaPrenotazioneResponse])
 def mie_prenotazioni(utente: models.Utente = Depends(richiedi_utente), db: Session = Depends(get_db)):
@@ -254,3 +291,63 @@ def annulla_prenotazione(
         data_fine=mostra.data_fine,
     )
     return {"message": "Prenotazione annullata. Ti abbiamo inviato un'email di conferma."}
+
+
+# --- Gestione degli account dall'area riservata (solo amministratore) ---
+# I percorsi usano {utente_id:int}: così "/api/utenti/me" non viene mai scambiato per un id.
+
+
+def _trova_utente(db: Session, utente_id: int) -> models.Utente:
+    """Account con l'id indicato, oppure errore 404."""
+    utente = db.get(models.Utente, utente_id)
+    if utente is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Utente non trovato.")
+    return utente
+
+
+# GET /api/utenti
+@router.get("", response_model=list[schemas.UtenteAdminResponse], tags=["Area riservata"])
+def elenco_utenti(_admin: str = Depends(richiedi_admin), db: Session = Depends(get_db)):
+    """`GET /api/utenti` · Elenco degli account registrati, dal più recente, con numero di prenotazioni e feedback."""
+    utenti = db.query(models.Utente).order_by(models.Utente.creato_il.desc()).all()
+    return [riepilogo(u) for u in utenti]
+
+
+# GET /api/utenti/{id}
+@router.get("/{utente_id:int}", response_model=schemas.UtenteAdminResponse, tags=["Area riservata"])
+def dettaglio_utente(utente_id: int, _admin: str = Depends(richiedi_admin), db: Session = Depends(get_db)):
+    """`GET /api/utenti/{utente_id}` · Dati di un singolo account.
+
+    Raises:
+        HTTPException: 404 se l'account non esiste.
+    """
+    return riepilogo(_trova_utente(db, utente_id))
+
+
+# PUT /api/utenti/{id}
+@router.put("/{utente_id:int}", response_model=schemas.UtenteAdminResponse, tags=["Area riservata"])
+def modifica_utente(
+    utente_id: int,
+    dati: schemas.ProfiloUpdateRequest,
+    _admin: str = Depends(richiedi_admin),
+    db: Session = Depends(get_db),
+):
+    """`PUT /api/utenti/{utente_id}` · L'amministratore corregge nome, cognome o telefono di un account.
+
+    Raises:
+        HTTPException: 404 se l'account non esiste; 422 per dati non validi.
+    """
+    utente = aggiorna_profilo(db, _trova_utente(db, utente_id), dati)
+    return riepilogo(utente)
+
+
+# DELETE /api/utenti/{id}
+@router.delete("/{utente_id:int}", tags=["Area riservata"])
+def elimina_utente(utente_id: int, _admin: str = Depends(richiedi_admin), db: Session = Depends(get_db)):
+    """`DELETE /api/utenti/{utente_id}` · L'amministratore elimina un account (stesse regole dell'eliminazione dal profilo).
+
+    Raises:
+        HTTPException: 404 se l'account non esiste.
+    """
+    esito = elimina_account(db, _trova_utente(db, utente_id))
+    return {"message": "Account eliminato.", **esito}

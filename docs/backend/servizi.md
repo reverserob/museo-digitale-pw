@@ -5,6 +5,10 @@ dai router delle mostre, delle prenotazioni e dei feedback senza che un router d
 
 ::: services.mostre_service
 
+::: services.prenotazioni_service
+
+::: services.utenti_service
+
 ::: services.immagini_service
 
 ::: services.email_service

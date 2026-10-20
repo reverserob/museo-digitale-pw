@@ -271,6 +271,15 @@ export default function AdminDashboard() {
                                 >
                                     Verifica ingresso
                                 </Button>
+                                <Button
+                                    component={Link}
+                                    to="/admin/utenti"
+                                    variant="outlined"
+                                    color="primary"
+                                    sx={{ borderRadius: 0, fontWeight: 'bold' }}
+                                >
+                                    Gestione utenti
+                                </Button>
                                 <Button onClick={handleLogout} variant="outlined" color="primary" size="small">
                                     Esci
                                 </Button>

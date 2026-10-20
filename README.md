@@ -54,6 +54,8 @@ Vai a: [Museo Civico Digitale](https://museo-digitale-pw-azure.vercel.app/)
   - un **QR code**, sempre in allegato PNG e, con il backend online, anche come immagine nel testo dell'email.
 - **Area personale**: elenco delle prenotazioni con il codice, pulsante **Mostra QR code** da presentare
   all'ingresso, annullamento con email di conferma (non possibile se l'ingresso è già stato registrato).
+  Da qui il visitatore **modifica i propri dati** (nome, cognome, telefono) ed **elimina l'account** confermando la
+  password: le prenotazioni non usate vengono annullate, quelle già usate restano in forma anonima.
 - **Feedback**: un voto da 1 a 5 con commento facoltativo per ogni mostra già iniziata a cui si è prenotati.
 - **Contatti**: modulo (per utenti registrati) che invia la domanda per email alla casella del museo.
 - **Lingua**: interfaccia in italiano o in inglese.
@@ -62,6 +64,8 @@ Vai a: [Museo Civico Digitale](https://museo-digitale-pw-azure.vercel.app/)
 - **Dashboard** con indicatori (prenotazioni, mostre in corso, voto medio, prenotazioni per mostra).
 - **Gestione delle mostre**: creazione, modifica ed eliminazione con caricamento delle immagini.
 - **Prenotazioni e moderazione dei feedback** per ogni mostra.
+- **Gestione utenti** (`/admin/utenti`): elenco degli account con ricerca, numero di prenotazioni e feedback,
+  modifica dei dati ed eliminazione. Insieme alla registrazione completa il **CRUD degli utenti**.
 - **Verifica all'ingresso** (`/admin/verifica`): il personale inserisce il codice comunicato dal visitatore (anche
   in minuscolo o senza trattini) o il numero della prenotazione, **oppure inquadra il QR code con la fotocamera
   del telefono**. La pagina indica se la prenotazione è *valida*, *già usata*, per una mostra *non ancora
@@ -278,7 +282,9 @@ Endpoint principali (🔒 = amministratore, 👤 = visitatore registrato):
 | 🔒 `POST` / `PUT` / `DELETE /api/mostre…` | Gestione delle mostre e delle immagini |
 | `POST /api/utenti/registrazione`, `POST /api/utenti/login` | Registrazione e login del visitatore |
 | `POST /api/utenti/password-dimenticata`, `POST /api/utenti/reimposta-password` | Recupero della password |
+| 👤 `GET` / `PUT` / `DELETE /api/utenti/me` | Profilo del visitatore: lettura, modifica, eliminazione dell'account (con password) |
 | 👤 `GET /api/utenti/me/prenotazioni`, 👤 `DELETE /api/utenti/me/prenotazioni/{id}` | Prenotazioni del visitatore e annullamento |
+| 🔒 `GET /api/utenti`, 🔒 `GET` / `PUT` / `DELETE /api/utenti/{id}` | Gestione degli account dall'area riservata |
 | 👤 `POST /api/prenota` | Prenotazione: restituisce il `codice` e invia l'email con il QR code |
 | `GET /api/prenotazioni/qr/{codice}` | Immagine PNG del QR code (contiene solo il link di verifica) |
 | 🔒 `GET /api/prenotazioni/verifica/{riferimento}` | Verifica per codice o numero: dati e stato della prenotazione |
@@ -293,7 +299,7 @@ L'elenco completo, con permessi e codici di risposta, è nella pagina
 
 ## Test e controlli di qualità
 
-### Backend (191 test pytest)
+### Backend (206 test pytest)
 ```bash
 cd backend
 source venv/bin/activate
@@ -303,7 +309,7 @@ ruff check .          # linter
 ruff format --check . # formattazione (ruff format . per correggere)
 ```
 
-### Frontend (150 test Vitest)
+### Frontend (163 test Vitest)
 ```bash
 cd frontend
 npm install

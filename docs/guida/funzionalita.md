@@ -30,6 +30,10 @@ Ogni prenotazione riceve un **codice di riferimento** (es. `MCD-68ZY-MT8U`) e un
 
 Elenca le prenotazioni del visitatore con il loro codice e permette di annullarle; l'annullamento invia un'email di conferma e consente di prenotare di nuovo. Con **Mostra QR code** il visitatore apre il QR code da mostrare all'ingresso. Una prenotazione già usata per entrare non si può più annullare.
 
+Con **Modifica dati** il visitatore corregge nome, cognome e telefono (l'email identifica l'account e non cambia); con **Elimina account**, confermando la password, cancella il proprio account: le prenotazioni non ancora usate vengono annullate, quelle già usate restano nello storico del museo in forma anonima.
+
+![Modifica dei dati del profilo](../screenshots/40-profilo-modifica.webp){ .screenshot loading=lazy }
+
 ![Area personale con QR code](../screenshots/36-area-personale-qr.webp){ .screenshot loading=lazy }
 
 ### Feedback
@@ -51,6 +55,12 @@ L'**Area Riservata** è accessibile con le credenziali dell'amministratore e sol
 ![Dashboard con indicatori](../screenshots/08-dashboard-indicatori.webp){ .screenshot loading=lazy }
 
 ![Modifica di una mostra](../screenshots/12-modifica-mostra.webp){ .screenshot loading=lazy }
+
+### Gestione utenti
+
+Con **Gestione utenti** l'amministratore consulta gli account registrati (ricerca per nome, cognome o email, numero di prenotazioni e di feedback), ne corregge i dati e può eliminarli con le stesse regole dell'eliminazione dal profilo. Insieme alla registrazione, queste funzioni completano il CRUD degli utenti.
+
+![Gestione utenti](../screenshots/41-gestione-utenti.webp){ .screenshot loading=lazy }
 
 ### Verifica all'ingresso
 
