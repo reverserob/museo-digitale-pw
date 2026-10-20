@@ -55,7 +55,8 @@ Vai a: [Museo Civico Digitale](https://museo-digitale-pw-azure.vercel.app/)
 - **Area personale**: elenco delle prenotazioni con il codice, pulsante **Mostra QR code** da presentare
   all'ingresso, annullamento con email di conferma (non possibile se l'ingresso è già stato registrato).
   Da qui il visitatore **modifica i propri dati** (nome, cognome, telefono) ed **elimina l'account** confermando la
-  password: le prenotazioni non usate vengono annullate, quelle già usate restano in forma anonima.
+  password: le prenotazioni non usate vengono annullate, quelle già usate restano in forma anonima, e arriva
+  un'email di conferma dell'eliminazione.
 - **Feedback**: un voto da 1 a 5 con commento facoltativo per ogni mostra già iniziata a cui si è prenotati.
 - **Contatti**: modulo (per utenti registrati) che invia la domanda per email alla casella del museo.
 - **Lingua**: interfaccia in italiano o in inglese.
@@ -299,7 +300,7 @@ L'elenco completo, con permessi e codici di risposta, è nella pagina
 
 ## Test e controlli di qualità
 
-### Backend (206 test pytest)
+### Backend (211 test pytest)
 ```bash
 cd backend
 source venv/bin/activate

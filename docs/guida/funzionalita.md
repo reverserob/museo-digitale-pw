@@ -30,7 +30,7 @@ Ogni prenotazione riceve un **codice di riferimento** (es. `MCD-68ZY-MT8U`) e un
 
 Elenca le prenotazioni del visitatore con il loro codice e permette di annullarle; l'annullamento invia un'email di conferma e consente di prenotare di nuovo. Con **Mostra QR code** il visitatore apre il QR code da mostrare all'ingresso. Una prenotazione già usata per entrare non si può più annullare.
 
-Con **Modifica dati** il visitatore corregge nome, cognome e telefono (l'email identifica l'account e non cambia); con **Elimina account**, confermando la password, cancella il proprio account: le prenotazioni non ancora usate vengono annullate, quelle già usate restano nello storico del museo in forma anonima.
+Con **Modifica dati** il visitatore corregge nome, cognome e telefono (l'email identifica l'account e non cambia); con **Elimina account**, confermando la password, cancella il proprio account: le prenotazioni non ancora usate vengono annullate, quelle già usate restano nello storico del museo in forma anonima. Al termine arriva un'email di conferma dell'eliminazione, inviata anche quando l'account viene eliminato dal personale.
 
 ![Modifica dei dati del profilo](../screenshots/40-profilo-modifica.webp){ .screenshot loading=lazy }
 

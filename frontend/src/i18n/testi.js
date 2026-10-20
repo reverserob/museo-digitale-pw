@@ -196,7 +196,7 @@ const it = {
     'profilo.emailFissa': "L'email identifica l'account e non si può modificare.",
     'profilo.elimina': 'Elimina account',
     'profilo.eliminaSpiega':
-        "L'account verrà eliminato definitivamente: le prenotazioni non ancora usate saranno annullate, quelle già usate resteranno nello storico del museo in forma anonima. Inserisci la password per confermare.",
+        "L'account verrà eliminato definitivamente: le prenotazioni non ancora usate saranno annullate, quelle già usate resteranno nello storico del museo in forma anonima e riceverai un'email di conferma. Inserisci la password per confermare.",
     'profilo.eliminaConferma': 'ELIMINA DEFINITIVAMENTE',
     'profilo.erroreElimina': "Impossibile eliminare l'account.",
 
@@ -420,7 +420,7 @@ const en = {
     'profilo.emailFissa': 'The email identifies the account and cannot be changed.',
     'profilo.elimina': 'Delete account',
     'profilo.eliminaSpiega':
-        'The account will be permanently deleted: unused bookings will be cancelled, while bookings already used stay in the museum records anonymously. Enter your password to confirm.',
+        'The account will be permanently deleted: unused bookings will be cancelled, while bookings already used stay in the museum records anonymously, and you will receive a confirmation email. Enter your password to confirm.',
     'profilo.eliminaConferma': 'DELETE PERMANENTLY',
     'profilo.erroreElimina': 'Unable to delete the account.',
 
@@ -478,6 +478,8 @@ export const TESTI = { it, en };
 export const MESSAGGI_SERVER_EN = {
     'Password errata.': 'Incorrect password.',
     'Account eliminato.': 'Account deleted.',
+    "Account eliminato. Ti abbiamo inviato un'email di conferma.":
+        'Account deleted. We have sent you a confirmation email.',
     'Email o password errate.': 'Incorrect email or password.',
     'Utente già registrato: esiste già un account con questa email. Accedi oppure reimposta la password.':
         'User already registered: an account with this email already exists. Sign in or reset your password.',

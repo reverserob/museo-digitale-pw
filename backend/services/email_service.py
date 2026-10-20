@@ -129,6 +129,38 @@ def crea_html_gia_registrato(nome: str) -> str:
     """)
 
 
+def crea_html_account_eliminato(nome: str, prenotazioni_annullate: int, da_amministratore: bool = False) -> str:
+    """Conferma dell'eliminazione dell'account (diritto alla cancellazione).
+
+    Args:
+        nome: Nome del visitatore.
+        prenotazioni_annullate: Prenotazioni non ancora usate annullate insieme all'account.
+        da_amministratore: `True` se l'account è stato eliminato dal personale del museo.
+
+    Returns:
+        Corpo HTML dell'email.
+    """
+    chi = "dal personale del museo" if da_amministratore else "su tua richiesta"
+    if prenotazioni_annullate == 1:
+        annullate = '<p style="color: #ddd;">È stata annullata anche <b>1 prenotazione</b> non ancora usata.</p>'
+    elif prenotazioni_annullate > 1:
+        annullate = (
+            f'<p style="color: #ddd;">Sono state annullate anche <b>{prenotazioni_annullate} prenotazioni</b> '
+            "non ancora usate.</p>"
+        )
+    else:
+        annullate = ""
+    return _layout(f"""
+            <p style="color: #fff;">Gentile <b>{html.escape(nome)}</b>,</p>
+            <p style="color: #ddd;">ti confermiamo che il tuo account del Museo Civico Digitale è stato
+            <b>eliminato</b> {chi}.</p>
+            {annullate}
+            <p style="color: #ddd;">I tuoi dati personali sono stati cancellati: le visite già effettuate restano
+            nello storico del museo solo in forma anonima. Puoi registrarti di nuovo in qualsiasi momento con
+            lo stesso indirizzo email.</p>
+    """)
+
+
 def crea_html_reset_password(nome: str, link: str, minuti: int) -> str:
     # quote=True escapa anche le virgolette, perché il link finisce dentro l'attributo href
     link_html = html.escape(link, quote=True)
@@ -365,6 +397,14 @@ def invia_email_registrazione(destinatario: str, nome: str):
 # Email di avviso per un tentativo di registrazione con un'email già usata
 def invia_email_gia_registrato(destinatario: str, nome: str):
     _invia(destinatario, nome, "Tentativo di registrazione con la tua email", crea_html_gia_registrato(nome))
+
+
+# Email di conferma dell'eliminazione dell'account
+def invia_email_account_eliminato(
+    destinatario: str, nome: str, prenotazioni_annullate: int, da_amministratore: bool = False
+):
+    oggetto = "Conferma eliminazione account"
+    _invia(destinatario, nome, oggetto, crea_html_account_eliminato(nome, prenotazioni_annullate, da_amministratore))
 
 
 # Email con il link per reimpostare la password

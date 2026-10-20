@@ -90,7 +90,9 @@ describe('AdminUtenti', () => {
         await user.click(await screen.findByRole('button', { name: 'Elimina Anna Neri' }));
 
         expect(api.delete).toHaveBeenCalledWith('/api/utenti/2');
-        expect(await screen.findByText('Account di Anna Neri eliminato.')).toBeInTheDocument();
+        expect(
+            await screen.findByText("Account di Anna Neri eliminato: inviata l'email di conferma.")
+        ).toBeInTheDocument();
         expect(screen.queryByText('anna@test.it')).not.toBeInTheDocument();
     });
 

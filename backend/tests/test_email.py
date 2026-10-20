@@ -149,3 +149,21 @@ def test_brevo_aggiunge_reply_to(monkeypatch, richieste_brevo):
     monkeypatch.setattr(settings, "BREVO_API_KEY", "chiave")
     email_service.invia_con_brevo("museo@test.it", "Museo", "Oggetto", "<p>x</p>", "mario@test.it")
     assert json.loads(richieste_brevo[0].data)["replyTo"] == {"email": "mario@test.it"}
+
+
+def test_html_account_eliminato():
+    corpo = email_service.crea_html_account_eliminato("Anna <b>", 2)
+    assert "eliminato" in corpo and "su tua richiesta" in corpo
+    assert "Anna &lt;b&gt;" in corpo
+    assert "2 prenotazioni" in corpo
+    assert "1 prenotazione" in email_service.crea_html_account_eliminato("Anna", 1)
+    nessuna = email_service.crea_html_account_eliminato("Anna", 0, da_amministratore=True)
+    assert "personale del museo" in nessuna and "annullat" not in nessuna
+
+
+def test_account_eliminato_inviato_con_brevo(monkeypatch, richieste_brevo):
+    monkeypatch.setattr(settings, "BREVO_API_KEY", "chiave")
+    email_service.invia_email_account_eliminato("anna@test.it", "Anna", 1)
+    corpo = json.loads(richieste_brevo[0].data)
+    assert corpo["subject"] == "Conferma eliminazione account"
+    assert corpo["to"][0]["email"] == "anna@test.it"

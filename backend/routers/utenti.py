@@ -21,6 +21,7 @@ from auth import (
 )
 from database import get_db
 from services.email_service import (
+    invia_email_account_eliminato,
     invia_email_annullamento,
     invia_email_gia_registrato,
     invia_email_registrazione,
@@ -195,20 +196,30 @@ def modifica_profilo(
 @router.delete("/me")
 def elimina_mio_account(
     dati: schemas.EliminaAccountRequest,
+    background_tasks: BackgroundTasks,
     utente: models.Utente = Depends(richiedi_utente),
     db: Session = Depends(get_db),
 ):
     """`DELETE /api/utenti/me` · Il visitatore elimina il proprio account dopo aver confermato la password.
 
     Le prenotazioni non ancora usate vengono annullate; quelle già usate per l'ingresso restano anonime.
+    Dopo la risposta parte l'email di conferma dell'eliminazione.
 
     Raises:
         HTTPException: 400 se la password non è corretta (non 401, che chiuderebbe la sessione nel front-end).
     """
     if not verifica_password(dati.password, utente.password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password errata.")
+    # email e nome vanno letti prima: dopo l'eliminazione l'account non esiste più
+    email, nome = utente.email, utente.nome
     esito = elimina_account(db, utente)
-    return {"message": "Account eliminato.", **esito}
+    background_tasks.add_task(
+        invia_email_account_eliminato,
+        destinatario=email,
+        nome=nome,
+        prenotazioni_annullate=esito["prenotazioni_annullate"],
+    )
+    return {"message": "Account eliminato. Ti abbiamo inviato un'email di conferma.", **esito}
 
 
 # GET /api/utenti/me/prenotazioni
@@ -343,11 +354,27 @@ def modifica_utente(
 
 # DELETE /api/utenti/{id}
 @router.delete("/{utente_id:int}", tags=["Area riservata"])
-def elimina_utente(utente_id: int, _admin: str = Depends(richiedi_admin), db: Session = Depends(get_db)):
+def elimina_utente(
+    utente_id: int,
+    background_tasks: BackgroundTasks,
+    _admin: str = Depends(richiedi_admin),
+    db: Session = Depends(get_db),
+):
     """`DELETE /api/utenti/{utente_id}` · L'amministratore elimina un account (stesse regole dell'eliminazione dal profilo).
+
+    Il titolare riceve l'email di conferma dell'eliminazione.
 
     Raises:
         HTTPException: 404 se l'account non esiste.
     """
-    esito = elimina_account(db, _trova_utente(db, utente_id))
+    utente = _trova_utente(db, utente_id)
+    email, nome = utente.email, utente.nome
+    esito = elimina_account(db, utente)
+    background_tasks.add_task(
+        invia_email_account_eliminato,
+        destinatario=email,
+        nome=nome,
+        prenotazioni_annullate=esito["prenotazioni_annullate"],
+        da_amministratore=True,
+    )
     return {"message": "Account eliminato.", **esito}

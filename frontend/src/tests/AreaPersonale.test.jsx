@@ -205,6 +205,7 @@ describe("AreaPersonale: gestione dell'account", () => {
         apri();
 
         await user.click(screen.getByRole('button', { name: 'Elimina account' }));
+        expect(screen.getByText(/riceverai un'email di conferma/)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'ELIMINA DEFINITIVAMENTE' })).toBeDisabled();
         await user.type(screen.getByLabelText('Password'), 'Museo2026');
         await user.click(screen.getByRole('button', { name: 'ELIMINA DEFINITIVAMENTE' }));
