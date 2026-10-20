@@ -89,6 +89,10 @@ describe('token giusto per ogni chiamata', () => {
         expect(richiestaDelVisitatore({ url: '/api/utenti/me/prenotazioni', method: 'get' })).toBe(true);
         expect(richiestaDelVisitatore({ url: '/api/feedback', method: 'get' })).toBe(false);
         expect(richiestaDelVisitatore({ url: '/api/prenotazioni', method: 'get' })).toBe(false);
+        // la gestione utenti dell'amministratore usa il token dell'admin, il profilo quello del visitatore
+        expect(richiestaDelVisitatore({ url: '/api/utenti', method: 'get' })).toBe(false);
+        expect(richiestaDelVisitatore({ url: '/api/utenti/3', method: 'delete' })).toBe(false);
+        expect(richiestaDelVisitatore({ url: '/api/utenti/me', method: 'delete' })).toBe(true);
         expect(richiestaDelVisitatore({ url: '/api/feedback/3', method: 'delete' })).toBe(false);
         expect(richiestaDelVisitatore({ url: '/api/utenti/login', method: 'post' })).toBe(false);
     });

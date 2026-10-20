@@ -24,7 +24,7 @@ describe('configurazione', () => {
     it("le pagine dell'admin e quelle dei visitatori sono protette, quelle pubbliche no", () => {
         const admin = routes.filter((r) => r.protected === true).map((r) => r.path);
         const visitatori = routes.filter((r) => r.protected === 'utente').map((r) => r.path);
-        expect(admin).toEqual(['/admin/nuova', '/admin/verifica', '/admin/modifica/:id']);
+        expect(admin).toEqual(['/admin/nuova', '/admin/verifica', '/admin/utenti', '/admin/modifica/:id']);
         expect(visitatori).toEqual(['/prenota/:id', '/profilo']);
         expect(routes.map((r) => r.path)).toEqual(
             expect.arrayContaining(['/password-dimenticata', '/reimposta-password'])

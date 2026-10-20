@@ -13,6 +13,11 @@ import {
     getUtente,
     getMiePrenotazioni,
     annullaPrenotazione,
+    aggiornaProfilo,
+    eliminaAccount,
+    getUtenti,
+    aggiornaUtente,
+    eliminaUtente,
     passwordDimenticata,
     reimpostaPassword,
 } from '../services/utentiService';
@@ -185,6 +190,47 @@ describe('authService con un visitatore collegato', () => {
             risponde('delete', { message: 'Prenotazione annullata.' });
             expect(await annullaPrenotazione(5)).toBe('Prenotazione annullata.');
             expect(api.delete).toHaveBeenCalledWith('/api/utenti/me/prenotazioni/5');
+        });
+    });
+
+    describe('CRUD degli utenti', () => {
+        it('aggiornaProfilo chiama PUT /api/utenti/me e aggiorna la sessione', async () => {
+            collegaUtente();
+            risponde('put', {
+                id: 7,
+                nome: 'Mario',
+                cognome: 'Bianchi',
+                email: 'mario@test.it',
+                telefono: '3339876543',
+            });
+            const dati = { nome: 'Mario', cognome: 'Bianchi', telefono: '3339876543' };
+            expect((await aggiornaProfilo(dati)).cognome).toBe('Bianchi');
+            expect(api.put).toHaveBeenCalledWith('/api/utenti/me', dati);
+            expect(getUtente().cognome).toBe('Bianchi');
+        });
+
+        it('eliminaAccount invia la password e chiude la sessione', async () => {
+            collegaUtente();
+            risponde('delete', { message: 'Account eliminato.' });
+            expect(await eliminaAccount('Museo2026')).toBe('Account eliminato.');
+            expect(api.delete).toHaveBeenCalledWith('/api/utenti/me', { data: { password: 'Museo2026' } });
+            expect(getUtente()).toBeNull();
+        });
+
+        it("le funzioni dell'area riservata usano /api/utenti", async () => {
+            risponde('get', []);
+            await getUtenti();
+            expect(api.get).toHaveBeenCalledWith('/api/utenti');
+            risponde('put', { id: 3 });
+            await aggiornaUtente(3, { nome: 'Anna', cognome: 'Neri', telefono: '3471234567' });
+            expect(api.put).toHaveBeenCalledWith('/api/utenti/3', {
+                nome: 'Anna',
+                cognome: 'Neri',
+                telefono: '3471234567',
+            });
+            risponde('delete', { message: 'Account eliminato.' });
+            expect(await eliminaUtente(3)).toBe('Account eliminato.');
+            expect(api.delete).toHaveBeenCalledWith('/api/utenti/3');
         });
     });
 });

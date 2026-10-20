@@ -88,3 +88,54 @@ export const reimpostaPassword = (token, password) =>
  */
 export const annullaPrenotazione = (id) =>
     api.delete(`/api/utenti/me/prenotazioni/${id}`).then((res) => res.data.message);
+
+/**
+ * Modifica nome, cognome e telefono del visitatore collegato (`PUT /api/utenti/me`).
+ * Aggiorna anche il profilo salvato nella sessione, così header e pagine mostrano subito i nuovi dati.
+ *
+ * @param {{nome: string, cognome: string, telefono: string}} dati Nuovi dati del profilo.
+ * @returns {Promise<module:tipi~Utente>} Il profilo aggiornato.
+ */
+export const aggiornaProfilo = (dati) =>
+    api.put('/api/utenti/me', dati).then((res) => {
+        const sessione = getSessioneUtente();
+        if (sessione) setSessioneUtente({ ...sessione, utente: res.data });
+        return res.data;
+    });
+
+/**
+ * Elimina l'account del visitatore collegato (`DELETE /api/utenti/me`) e chiude la sessione.
+ * Le prenotazioni non ancora usate vengono annullate; quelle già usate restano anonime.
+ *
+ * @param {string} password Password dell'account, richiesta come conferma.
+ * @returns {Promise<string>} Messaggio di conferma (errore 400 se la password è errata).
+ */
+export const eliminaAccount = (password) =>
+    api.delete('/api/utenti/me', { data: { password } }).then((res) => {
+        logoutUtente();
+        return res.data.message;
+    });
+
+/**
+ * Elenco degli account registrati, solo amministratore (`GET /api/utenti`).
+ *
+ * @returns {Promise<module:tipi~UtenteAdmin[]>} Gli account, dal più recente.
+ */
+export const getUtenti = () => api.get('/api/utenti').then((res) => res.data);
+
+/**
+ * L'amministratore modifica nome, cognome e telefono di un account (`PUT /api/utenti/{id}`).
+ *
+ * @param {number} id Identificativo dell'account.
+ * @param {{nome: string, cognome: string, telefono: string}} dati Nuovi dati.
+ * @returns {Promise<module:tipi~UtenteAdmin>} L'account aggiornato.
+ */
+export const aggiornaUtente = (id, dati) => api.put(`/api/utenti/${id}`, dati).then((res) => res.data);
+
+/**
+ * L'amministratore elimina un account (`DELETE /api/utenti/{id}`).
+ *
+ * @param {number} id Identificativo dell'account.
+ * @returns {Promise<string>} Messaggio di conferma.
+ */
+export const eliminaUtente = (id) => api.delete(`/api/utenti/${id}`).then((res) => res.data.message);

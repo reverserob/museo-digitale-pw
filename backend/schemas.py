@@ -128,6 +128,41 @@ class UtenteResponse(BaseModel):
     telefono: str
 
 
+class ProfiloUpdateRequest(BaseModel):
+    """Dati del profilo modificabili dal visitatore o dall'amministratore.
+
+    L'email non è modificabile: identifica l'account ed è la chiave usata per il login.
+    """
+
+    nome: str
+    cognome: str
+    telefono: str
+
+    @field_validator("nome", "cognome")
+    @classmethod
+    def valida_nomi(cls, v: str) -> str:
+        return _valida_nome(v)
+
+    @field_validator("telefono")
+    @classmethod
+    def valida_telefono(cls, v: str) -> str:
+        return _valida_telefono(v)
+
+
+class EliminaAccountRequest(BaseModel):
+    """Conferma dell'eliminazione dell'account: il visitatore deve inserire la propria password."""
+
+    password: str
+
+
+class UtenteAdminResponse(UtenteResponse):
+    """Riepilogo di un account per l'area riservata: profilo, data di registrazione e attività."""
+
+    creato_il: datetime
+    prenotazioni: int  # numero di prenotazioni dell'account
+    feedback: int  # numero di feedback lasciati
+
+
 class SessioneUtenteResponse(BaseModel):
     """Risposta di login e registrazione: token di accesso e profilo del visitatore."""
 

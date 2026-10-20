@@ -16,10 +16,16 @@ Una copia della Swagger UI è pubblicata anche in questo sito: [Swagger UI](swag
 | Visitatori | POST /api/utenti/password-dimenticata | Se l'email è registrata invia un link per reimpostare la password (valido 30 minuti, usabile una volta). La risposta è sempre la stessa, così non si rivela quali email sono registrate. | 200, 429 |
 | Visitatori | POST /api/utenti/reimposta-password | Riceve il token del link e la nuova password (stessa regola della registrazione) e aggiorna l'hash. | 200, 400, 422, 429 |
 | Visitatori | 👤 GET /api/utenti/me | Profilo del visitatore collegato. | 200, 401, 403 |
+| Visitatori | 👤 PUT /api/utenti/me | Modifica nome, cognome e telefono del visitatore collegato (l'email non cambia). | 200, 401, 403, 422 |
+| Visitatori | 👤 DELETE /api/utenti/me | Elimina l'account dopo la conferma della password: annulla le prenotazioni non usate e rende anonime quelle già usate e i feedback. Password errata: 400. | 200, 400, 401, 403 |
 | Visitatori | 👤 GET /api/utenti/me/prenotazioni | Prenotazioni del visitatore collegato, con titolo e periodo della mostra. | 200, 401, 403 |
 | Contatti | 👤 POST /api/contatti | Riceve titolo, descrizione, nome, cognome, email e telefono del visitatore registrato e li invia per email alla casella del museo (con l'email del visitatore come indirizzo di risposta). Senza servizio email configurato (sviluppo locale) la richiesta viene scritta nel log. | 200, 401, 403, 422, 429, 503 |
 | Visitatori | 👤 DELETE /api/utenti/me/prenotazioni/{prenotazione_id} | Annulla una prenotazione del visitatore collegato e invia in background l'email di conferma dell'annullamento. La prenotazione di un altro visitatore risulta "non trovata"; una prenotazione già usata per l'ingresso non si può annullare (409). | 200, 401, 403, 404, 409 |
 | Visitatori | 👤 GET /api/utenti/me/feedback | Feedback già lasciati dal visitatore collegato (il frontend nasconde il form sulle mostre già recensite). | 200, 401, 403 |
+| Area riservata | 🔒 GET /api/utenti | Elenco degli account con numero di prenotazioni e feedback. | 200, 401 |
+| Area riservata | 🔒 GET /api/utenti/{utente_id} | Dati di un account. | 200, 401, 404 |
+| Area riservata | 🔒 PUT /api/utenti/{utente_id} | Modifica nome, cognome e telefono di un account. | 200, 401, 404, 422 |
+| Area riservata | 🔒 DELETE /api/utenti/{utente_id} | Elimina un account (stesse regole dell'eliminazione dal profilo). | 200, 401, 404 |
 | Area riservata | 🔒 GET /api/statistiche | Indicatori per la dashboard: conteggi di mostre, prenotazioni e feedback, voto medio, dettaglio per mostra. | 200, 401 |
 | Mostre | GET /api/mostre | Restituisce la lista di tutte le esposizioni, ordinate per data di inizio. | 200 |
 | Mostre | GET /api/mostre/{mostra_id} | Recupera i dettagli di una singola mostra. | 200, 404 |

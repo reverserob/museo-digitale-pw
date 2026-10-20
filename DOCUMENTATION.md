@@ -121,6 +121,7 @@ Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una
 - **RF4 – Feedback**: il visitatore registrato lascia un voto da 1 a 5 e un commento facoltativo su una mostra già iniziata (uno per mostra); i feedback sono visibili a tutti, anche senza account, con nome e iniziale del cognome.
 - **RF5 – Accesso riservato**: l'amministratore accede con email e password.
 - **RF10 – Account dei visitatori**: chiunque può consultare il catalogo, ma per prenotare e lasciare feedback deve registrarsi (nome, cognome, email, telefono, password) o accedere. Ogni email può essere registrata una sola volta (al secondo tentativo compare l'errore "Utente già registrato"); dopo la registrazione il visitatore riceve un'email di conferma. Nell'area personale il visitatore vede le proprie prenotazioni; può uscire (logout) dall'intestazione del sito e, se dimentica la password, reimpostarla con un link temporaneo ricevuto per email. Può lasciare un feedback solo sulle mostre a cui si è prenotato. Finché un visitatore è collegato, l'area riservata non è accessibile: prima deve uscire.
+- **RF16 – Gestione degli account (CRUD utenti)**: il visitatore modifica nome, cognome e telefono dalla propria area personale (l'email identifica l'account e non cambia) e può eliminare il proprio account confermando la password (diritto alla cancellazione): le prenotazioni non ancora usate vengono annullate, quelle già usate per l'ingresso restano nello storico in forma anonima e i feedback restano visibili con il nome "Visitatore". L'amministratore, dalla pagina **Gestione utenti**, consulta l'elenco degli account con ricerca, numero di prenotazioni e feedback, ne corregge i dati e può eliminarli con le stesse regole. La creazione dell'account avviene con la registrazione (RF10).
 - **RF6 – Gestione catalogo**: l'amministratore pubblica, modifica ed elimina le mostre e ne carica le immagini.
 - **RF7 – Consultazione prenotazioni**: l'amministratore vede le prenotazioni ricevute, suddivise per mostra, con il codice di ciascuna.
 - **RF15 – Verifica all'ingresso**: il personale verifica chi si presenta inserendo il codice di prenotazione (o il numero) oppure inquadrando con il telefono il QR code, che apre la pagina di verifica dell'area riservata; la pagina indica se la prenotazione è valida per quel giorno e permette di registrare l'ingresso (una sola volta per prenotazione).
@@ -193,7 +194,7 @@ backend/
 ├── auth.py                 → hash delle password, token con ruolo, controlli di accesso (admin e visitatori)
 ├── routers/
 │   ├── login.py            → POST /api/login (amministratore)
-│   ├── utenti.py           → registrazione, login, profilo e prenotazioni dei visitatori (/api/utenti)
+│   ├── utenti.py           → CRUD degli utenti: registrazione, login, profilo (modifica ed eliminazione), prenotazioni personali e gestione account dell'amministratore (/api/utenti)
 │   ├── mostre.py           → CRUD delle mostre (/api/mostre)
 │   ├── prenotazioni.py     → POST /api/prenota (una per mostra, con codice), GET /api/prenotazioni, QR code, verifica e ingresso
 │   ├── feedback.py         → POST, GET e DELETE /api/feedback
@@ -203,6 +204,7 @@ backend/
 │   ├── mostre_service.py   → ricerca di una mostra e controllo delle date (usato da più router)
 │   ├── email_service.py    → email di conferma (API Brevo o SMTP), con QR code in allegato
 │   ├── prenotazioni_service.py → codice di prenotazione, QR code (libreria segno) e stato dell'ingresso
+│   ├── utenti_service.py   → modifica del profilo, riepilogo per l'area riservata ed eliminazione dell'account con anonimizzazione
 │   ├── immagini_service.py → validazione e salvataggio delle immagini caricate
 │   ├── statistiche_service.py → calcolo degli indicatori per la dashboard
 │   ├── rate_limit_service.py → limite ai tentativi di login (slowapi)
@@ -280,9 +282,9 @@ erDiagram
 - **mostre**: memorizza le esposizioni culturali (il catalogo). Le immagini sono salvate su disco e nel database se ne conservano i percorsi relativi (es. `/static/uploads/<file>.webp`).
 - **prenotazioni**: memorizza le prenotazioni effettuate dai visitatori, con data e ora di creazione.
 - **feedback**: memorizza le recensioni dei visitatori, con voto da 1 a 5 e commento facoltativo.
-- **utenti**: memorizza gli account dei visitatori. La password non viene mai salvata: si conserva solo il suo hash PBKDF2-SHA256, calcolato con un sale casuale e 200.000 iterazioni. L'email è unica.
+- **utenti**: memorizza gli account dei visitatori. La password non viene mai salvata: si conserva solo il suo hash PBKDF2-SHA256, calcolato con un sale casuale e 200.000 iterazioni. L'email è unica. Su questa tabella sono disponibili tutte le operazioni CRUD: creazione con la registrazione, lettura del profilo (e dell'elenco, per l'amministratore), modifica di nome, cognome e telefono, eliminazione dell'account.
 
-**Relazioni**: una mostra ha zero o più prenotazioni e zero o più feedback (relazioni 1:N); ogni prenotazione e ogni feedback appartengono a una sola mostra. Un utente può avere più prenotazioni e più feedback (al massimo uno per mostra). Nella prenotazione nome, cognome ed email vengono copiati dall'account al momento della prenotazione, così lo storico resta leggibile anche se l'account cambia; `utente_id` è facoltativo perché i feedback dimostrativi del seeding non hanno un autore. Eliminando una mostra vengono eliminati anche le prenotazioni e i feedback collegati (cascade), così nel database non restano righe "orfane".
+**Relazioni**: una mostra ha zero o più prenotazioni e zero o più feedback (relazioni 1:N); ogni prenotazione e ogni feedback appartengono a una sola mostra. Un utente può avere più prenotazioni e più feedback (al massimo uno per mostra). Nella prenotazione nome, cognome ed email vengono copiati dall'account al momento della prenotazione, così lo storico resta leggibile anche se l'account cambia; `utente_id` è facoltativo perché i feedback dimostrativi del seeding non hanno un autore. Eliminando una mostra vengono eliminati anche le prenotazioni e i feedback collegati (cascade), così nel database non restano righe "orfane". Eliminando un account, invece, le prenotazioni non ancora usate vengono cancellate, quelle già usate per l'ingresso restano ma senza nome, email e telefono, e i feedback restano con il nome generico "Visitatore" (`utenti_service.elimina_account`, in un'unica transazione).
 
 **Vincoli applicativi**: i dati inseriti dagli utenti vengono validati a livello di schema (Pydantic con espressioni regolari e validatori personalizzati) prima di essere salvati. Non è possibile prenotare una mostra già conclusa, né lasciare un feedback su una mostra non ancora iniziata.
 
@@ -309,11 +311,13 @@ flowchart LR
         UC5(("Lasciare un feedback"))
         UC11(("Registrarsi o accedere"))
         UC12(("Vedere le mie prenotazioni"))
+        UC13(("Modificare o eliminare<br/>il mio account"))
         UC6(("Accedere all'area riservata"))
         UC7(("Gestire le mostre<br/>crea, modifica, elimina"))
         UC8(("Consultare le prenotazioni"))
         UC9(("Moderare i feedback"))
         UC10(("Consultare la dashboard"))
+        UC14(("Gestire gli utenti<br/>elenco, modifica, elimina"))
     end
 
     V --- UC1
@@ -322,9 +326,11 @@ flowchart LR
     V --- UC5
     V --- UC11
     V --- UC12
+    V --- UC13
     UC3 -. "richiede" .-> UC11
     UC5 -. "richiede" .-> UC11
     UC12 -. "richiede" .-> UC11
+    UC13 -. "richiede" .-> UC11
     UC3 -. "include" .-> UC4
     UC4 --- EM
     AM --- UC6
@@ -332,10 +338,12 @@ flowchart LR
     AM --- UC8
     AM --- UC9
     AM --- UC10
+    AM --- UC14
     UC7 -. "richiede" .-> UC6
     UC8 -. "richiede" .-> UC6
     UC9 -. "richiede" .-> UC6
     UC10 -. "richiede" .-> UC6
+    UC14 -. "richiede" .-> UC6
 ```
 
 #### 6.2. Diagramma delle classi
@@ -575,10 +583,16 @@ FastAPI genera in modo automatico e nativo la documentazione interattiva delle A
 | Visitatori | POST /api/utenti/password-dimenticata | Se l'email è registrata invia un link per reimpostare la password (valido 30 minuti, usabile una volta). La risposta è sempre la stessa, così non si rivela quali email sono registrate. | 200, 429 |
 | Visitatori | POST /api/utenti/reimposta-password | Riceve il token del link e la nuova password (stessa regola della registrazione) e aggiorna l'hash. | 200, 400, 422, 429 |
 | Visitatori | 👤 GET /api/utenti/me | Profilo del visitatore collegato. | 200, 401, 403 |
+| Visitatori | 👤 PUT /api/utenti/me | Modifica nome, cognome e telefono del visitatore collegato (stesse regole della registrazione; l'email non cambia). | 200, 401, 403, 422 |
+| Visitatori | 👤 DELETE /api/utenti/me | Elimina l'account del visitatore collegato dopo la conferma della password (corpo `{"password": "..."}`): annulla le prenotazioni non ancora usate, rende anonime quelle già usate e i feedback. Con la password errata risponde 400 (non 401, che chiuderebbe la sessione nel front-end). | 200, 400, 401, 403 |
 | Visitatori | 👤 GET /api/utenti/me/prenotazioni | Prenotazioni del visitatore collegato, con titolo e periodo della mostra. | 200, 401, 403 |
 | Contatti | 👤 POST /api/contatti | Riceve titolo, descrizione, nome, cognome, email e telefono del visitatore registrato e li invia per email alla casella del museo (con l'email del visitatore come indirizzo di risposta). Senza servizio email configurato (sviluppo locale) la richiesta viene scritta nel log. | 200, 401, 403, 422, 429, 503 |
 | Visitatori | 👤 DELETE /api/utenti/me/prenotazioni/{prenotazione_id} | Annulla una prenotazione del visitatore collegato e invia in background l'email di conferma dell'annullamento. La prenotazione di un altro visitatore risulta "non trovata"; una prenotazione già usata per l'ingresso non si può annullare (409). | 200, 401, 403, 404, 409 |
 | Visitatori | 👤 GET /api/utenti/me/feedback | Feedback già lasciati dal visitatore collegato (il frontend nasconde il form sulle mostre già recensite). | 200, 401, 403 |
+| Area riservata | 🔒 GET /api/utenti | Elenco degli account registrati, dal più recente, con numero di prenotazioni e di feedback (senza hash della password). | 200, 401 |
+| Area riservata | 🔒 GET /api/utenti/{utente_id} | Dati di un singolo account. | 200, 401, 404 |
+| Area riservata | 🔒 PUT /api/utenti/{utente_id} | L'amministratore corregge nome, cognome o telefono di un account. | 200, 401, 404, 422 |
+| Area riservata | 🔒 DELETE /api/utenti/{utente_id} | L'amministratore elimina un account, con le stesse regole dell'eliminazione dal profilo. | 200, 401, 404 |
 | Area riservata | 🔒 GET /api/statistiche | Indicatori per la dashboard: conteggi di mostre, prenotazioni e feedback, voto medio, dettaglio per mostra. | 200, 401 |
 | Mostre | GET /api/mostre | Restituisce la lista di tutte le esposizioni, ordinate per data di inizio. | 200 |
 | Mostre | GET /api/mostre/{mostra_id} | Recupera i dettagli di una singola mostra. | 200, 404 |
@@ -760,6 +774,8 @@ Il controllo delle credenziali avviene sul server e non nel browser. L'endpoint 
 
 **Registrazione unica, email e logout.** L'email è un campo univoco: un secondo tentativo con lo stesso indirizzo (anche scritto con maiuscole o spazi diversi) restituisce 409 "Utente già registrato" e al titolare dell'account arriva un'email che lo avvisa del tentativo. Una registrazione riuscita genera invece l'email di benvenuto. Le email partono in background (`BackgroundTasks`), dopo la risposta, così l'utente non aspetta il servizio di posta. Il visitatore esce con il pulsante **Esci** nell'intestazione o nell'area personale: la sessione salvata nel browser viene cancellata.
 
+**Modifica ed eliminazione dell'account.** Con `PUT /api/utenti/me` il visitatore aggiorna nome, cognome e telefono: lo schema `ProfiloUpdateRequest` applica le stesse regole della registrazione e ignora eventuali altri campi, quindi email e password non si possono cambiare per questa via. Le prenotazioni già fatte conservano i dati copiati al momento della prenotazione. Con `DELETE /api/utenti/me` il visitatore elimina l'account (diritto alla cancellazione, art. 17 GDPR): serve la password come conferma, perché un token rubato non basti a cancellare l'account; con password errata la risposta è 400 e non 401, così il front-end non chiude la sessione. Dopo l'eliminazione il token non è più valido (l'account non esiste) e l'email torna libera per una nuova registrazione. L'amministratore ha le stesse operazioni sugli account degli altri (`GET`, `PUT` e `DELETE /api/utenti/{id}`, protette da `richiedi_admin`); i percorsi usano il convertitore `{utente_id:int}`, così `/api/utenti/me` non viene mai scambiato per un identificativo.
+
 **Separazione tra visitatore e area riservata.** Nel browser la sessione del visitatore e quella dell'amministratore non possono convivere: il login di un visitatore cancella l'eventuale token admin, e finché un visitatore è collegato la pagina /admin mostra solo l'avviso "Sei collegato come visitatore… devi prima uscire" con il pulsante per farlo. Anche lato server i ruoli restano separati (`richiedi_admin` accetta solo token con ruolo `admin`).
 
 **Recupero della password.** Con `POST /api/utenti/password-dimenticata` il server crea un token firmato con ruolo `reset`, scadenza di 30 minuti (`RESET_PASSWORD_MINUTI`) e un'"impronta" dell'hash della password attuale: appena la password cambia l'impronta non corrisponde più, quindi il link funziona una sola volta. Il link punta al sito da cui è partita la richiesta (se è tra i `CORS_ORIGINS`) oppure a `FRONTEND_URL`. Un token di reset non vale come accesso e un token di accesso non vale come reset. Se il servizio email non è configurato (sviluppo locale) il link viene scritto nel log del backend, così la funzione si può provare comunque.
@@ -783,7 +799,7 @@ Il front-end è stato sviluppato come una Single Page Application (SPA) modulare
 frontend/src/
 ├── App.jsx        → tema, router e rotte
 ├── config/        → routes.json (elenco delle rotte) e background.json (immagine di sfondo)
-├── pages/         → una pagina per rotta: Home (presentazione), Esposizioni (catalogo), GalleriaMostra, FormPrenotazione, Accedi, AreaPersonale, PasswordDimenticata, ReimpostaPassword, AdminDashboard, AdminForm, AdminVerifica (verifica all'ingresso), NotFound
+├── pages/         → una pagina per rotta: Home (presentazione), Esposizioni (catalogo), GalleriaMostra, FormPrenotazione, Accedi, AreaPersonale (con modifica ed eliminazione dell'account), PasswordDimenticata, ReimpostaPassword, AdminDashboard, AdminForm, AdminUtenti (gestione utenti), AdminVerifica (verifica all'ingresso), NotFound
 ├── components/    → componenti riutilizzabili: AppHeader (con icona del museo e menu della lingua), AppFooter, IconaMuseo, QrPrenotazione (codice e QR code), ProtectedRoute, ErrorBoundary, SezioneFeedback, IndicatoriDashboard
 ├── hooks/         → useUtente, useAdmin (chi è collegato) e useLingua (lingua e funzione t())
 ├── i18n/          → testi.js (testi italiani e inglesi, traduzioni dei messaggi del server) e lingua.js (lingua scelta e traduzione)
@@ -853,7 +869,7 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (191 test) | Vitest + React Testing Library (150 test) |
+| Test automatici | pytest + TestClient di FastAPI (206 test) | Vitest + React Testing Library (163 test) |
 
 **Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra e solo dopo la prenotazione, email di registrazione e avviso di registrazione doppia, recupero della password (link valido, scaduto, già usato, token non valido), codice di prenotazione (formato, unicità, varianti di scrittura accettate), QR code (contenuto e immagine PNG), email con codice e allegato (immagine nel testo solo con un backend pubblico, solo allegato in locale), verifica e registrazione dell'ingresso (solo admin, una sola volta, mostre non iniziate o concluse), aggiornamento di un database della versione precedente con assegnazione dei codici mancanti. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 
@@ -918,6 +934,10 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 | TF41 | Verifica dal QR code | Amministratore | Inquadrare il QR code (indirizzo /admin/verifica?codice=...) senza essere collegato, poi accedere | Dopo il login si torna alla verifica: dati del visitatore, mostra e "Prenotazione valida" | ✅ Superato |
 | TF42 | Verifica dal codice | Amministratore | Dashboard → "Verifica ingresso", digitare il codice in minuscolo e senza trattini | Viene trovata la stessa prenotazione; un codice inesistente mostra "Nessuna prenotazione trovata con questo codice." | ✅ Superato |
 | TF43 | Registrazione dell'ingresso | Amministratore | Su una prenotazione valida premere "Registra ingresso" | Compare "Ingresso registrato per …"; un secondo ingresso è rifiutato e il visitatore non può più annullare la prenotazione | ✅ Superato |
+| TF44 | Modifica del profilo | Visitatore | Area personale → "Modifica dati", cambiare cognome e telefono e salvare | Compare "Dati aggiornati."; i nuovi dati sono visibili subito, l'email resta invariata; con un telefono non valido "Salva" resta disattivato | ✅ Superato |
+| TF45 | Eliminazione dell'account | Visitatore | Area personale → "Elimina account", inserire la password e confermare | Si torna alla home scollegati; le prenotazioni non usate sono annullate e con la stessa email ci si può registrare di nuovo; con la password errata compare "Password errata." | ✅ Superato |
+| TF46 | Elenco e ricerca degli utenti | Amministratore | Dashboard → "Gestione utenti", cercare un cognome | Tabella con email, telefono, data di registrazione, numero di prenotazioni e feedback, filtrata dalla ricerca | ✅ Superato |
+| TF47 | Modifica ed eliminazione di un utente | Amministratore | In "Gestione utenti" premere "Modifica", correggere e salvare; poi "Elimina" e confermare | Dati aggiornati nella tabella; l'account eliminato sparisce e il visitatore viene scollegato | ✅ Superato |
 | TF13 | Accesso diretto a una pagina riservata | Visitatore | Aprire `/admin/nuova` senza login | Si viene reindirizzati alla pagina di accesso | ✅ Superato |
 | TF14 | Troppi tentativi di accesso | Chiunque | Sbagliare la password più di 5 volte in un minuto | Messaggio "Troppi tentativi di accesso. Riprova tra qualche minuto." | ✅ Superato |
 
@@ -1039,6 +1059,12 @@ Nella sezione delle opinioni l'amministratore legge ed elimina i feedback, ma no
 **TF43 – Ingresso registrato**
 ![Ingresso registrato](docs/screenshots/38-ingresso-registrato.webp)
 
+**TF44 – Modifica dei dati dall'area personale**
+![Modifica del profilo](docs/screenshots/40-profilo-modifica.webp)
+
+**TF46 – Gestione utenti dell'area riservata**
+![Gestione utenti](docs/screenshots/41-gestione-utenti.webp)
+
 ### 13. Istruzioni per l'esecuzione
 #### 13.1. Prerequisiti
 - Python 3.9 o successivo (il progetto è verificato fino alla 3.15)
@@ -1141,7 +1167,7 @@ La piattaforma è un prototipo funzionante; alcune semplificazioni sono accettab
 - **Feedback legati alla prenotazione, non all'ingresso**: per recensire bisogna essersi prenotati alla mostra. L'ingresso viene ora registrato dal personale con il codice o il QR code, ma il feedback non richiede ancora un ingresso registrato (sarebbe un controllo in più su `ingresso_il`); la moderazione è manuale.
 - **Verifica all'ingresso solo con l'account amministratore**: il personale che controlla i QR code usa le stesse credenziali dell'amministratore; servirebbe un ruolo dedicato (es. "biglietteria") che possa solo verificare e registrare gli ingressi.
 - **Traduzione parziale**: l'interfaccia pubblica e l'area visitatori sono in italiano e in inglese, ma titoli e descrizioni delle mostre, email e area riservata restano in italiano. Per tradurre anche le mostre servirebbero campi in più nel database (es. `titolo_en`, `descrizione_en`).
-- **Account semplici**: l'email del visitatore non viene verificata con un link di conferma (riceve solo un'email di benvenuto) e il profilo non si può ancora modificare dall'area personale.
+- **Account semplici**: l'email del visitatore non viene verificata con un link di conferma (riceve solo un'email di benvenuto) e non si può cambiare dal profilo, perché identifica l'account; anche il cambio della password da collegato passa dal link di reimpostazione.
 - **Avvio lento del back-end**: sul piano gratuito il servizio va in pausa dopo un periodo di inattività e la prima richiesta può richiedere alcune decine di secondi.
 
 #### 15.2. Sviluppi futuri
@@ -1167,7 +1193,7 @@ Integrare un servizio di pagamento (es. Stripe o PayPal, oppure pagoPA per un en
 - Account anche per il personale del museo, nella stessa tabella `utenti`, con ruoli distinti (amministratore, curatore, biglietteria) al posto dell'unico amministratore configurato nelle variabili d'ambiente.
 - Autenticazione a due fattori (2FA) per l'area riservata.
 - Protezione dei form pubblici dallo spam con CAPTCHA e limiti di frequenza anche su prenotazioni e feedback.
-- Conformità al GDPR: informativa privacy e consenso al trattamento nel form, cancellazione automatica delle prenotazioni dopo un periodo definito, possibilità per il visitatore di chiedere la rimozione dei propri dati.
+- Conformità al GDPR: informativa privacy e consenso al trattamento nel form, cancellazione automatica delle prenotazioni dopo un periodo definito (l'eliminazione dell'account su richiesta del visitatore è già disponibile).
 - Registro delle operazioni amministrative (audit log) e monitoraggio degli errori in produzione.
 
 ### 16. Dichiarazione sull'uso di strumenti di intelligenza artificiale

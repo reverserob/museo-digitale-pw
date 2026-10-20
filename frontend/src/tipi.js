@@ -32,6 +32,20 @@
  */
 
 /**
+ * Account visto dall'amministratore nella gestione utenti (`GET /api/utenti`).
+ *
+ * @typedef {object} UtenteAdmin
+ * @property {number} id Identificativo dell'account.
+ * @property {string} nome Nome.
+ * @property {string} cognome Cognome.
+ * @property {string} email Email (in minuscolo, unica).
+ * @property {string} telefono Telefono (da 6 a 15 cifre).
+ * @property {string} creato_il Data e ora della registrazione (UTC).
+ * @property {number} prenotazioni Numero di prenotazioni dell'account.
+ * @property {number} feedback Numero di feedback lasciati.
+ */
+
+/**
  * Sessione del visitatore salvata nel browser dopo login o registrazione.
  *
  * @typedef {object} SessioneUtente
