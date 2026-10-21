@@ -53,3 +53,21 @@ def test_crea_gli_indici_unici_su_un_database_esistente(tmp_path):
     except Exception:
         duplicata = False
     assert not duplicata
+
+
+def test_collega_le_immagini_caricate_prima_della_colonna_mostra_id(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'immagini_vecchie.db'}")
+    with engine.begin() as conn:
+        conn.execute(text("CREATE TABLE mostre (id INTEGER PRIMARY KEY, immagini VARCHAR)"))
+        conn.execute(
+            text("CREATE TABLE immagini (id INTEGER PRIMARY KEY, nome VARCHAR(64), tipo VARCHAR(50), dati BLOB)")
+        )
+        conn.execute(
+            text("INSERT INTO mostre (id, immagini) VALUES (7, '/static/uploads/x.webp,/api/immagini/abc.png')")
+        )
+        conn.execute(text("INSERT INTO immagini (nome, tipo, dati) VALUES ('abc.png', 'image/png', x'00')"))
+
+    aggiorna_schema(engine)
+
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT mostra_id FROM immagini WHERE nome = 'abc.png'")).scalar() == 7

@@ -110,7 +110,7 @@ Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una
 - **Sicurezza**: credenziali fuori dal codice, password dei visitatori salvate solo come hash, token firmati con ruolo (amministratore o visitatore), limite ai tentativi di accesso, validazione di tutti i dati in ingresso, controllo dei file caricati.
 - **Usabilità**: interfaccia responsive, messaggi di errore comprensibili, validazione dei form in tempo reale.
 - **Manutenibilità**: codice suddiviso per responsabilità, configurazione tramite variabili d'ambiente, test automatici e integrazione continua.
-- **Persistenza**: i dati (comprese le immagini caricate) devono restare dopo il riavvio o la sospensione del server: in produzione si usa PostgreSQL (caso d'uso *Conservare dati e immagini in modo persistente*, §6.1).
+- **Persistenza**: i dati (comprese le immagini caricate) devono restare dopo il riavvio o la sospensione del server: in produzione si usa PostgreSQL (§5.3).
 - **Portabilità**: lo stesso codice funziona con SQLite (sviluppo e test) e PostgreSQL (produzione), cambiando solo la variabile `DATABASE_URL`; il back-end funziona con Python dalla 3.9 alla 3.15.
 - **Prestazioni**: email inviate in background dopo la risposta, pagine caricate su richiesta, pacchetto JavaScript principale sotto i 200 KB compresso.
 - **Privacy**: dati personali ridotti al minimo, QR code senza dati personali, modifica ed eliminazione dell'account da parte del visitatore (GDPR).
@@ -216,11 +216,13 @@ le recensioni indicate vengono inserite insieme alla mostra e collegate a essa t
 erDiagram
     MOSTRE ||--o{ PRENOTAZIONI : "riceve"
     MOSTRE ||--o{ FEEDBACK : "riceve"
+    MOSTRE ||--o{ IMMAGINI : "contiene"
     UTENTI |o--o{ PRENOTAZIONI : "effettua"
     UTENTI |o--o{ FEEDBACK : "scrive"
 
     IMMAGINI {
         int id PK
+        int mostra_id FK "ON DELETE CASCADE"
         string nome "unico, uuid + estensione"
         string tipo "MIME, es. image/webp"
         bytes dati "BYTEA in PostgreSQL"
@@ -241,7 +243,7 @@ erDiagram
         int id PK
         string titolo "obbligatorio, 3-200 caratteri"
         text descrizione "obbligatoria"
-        string immagini "percorsi separati da virgola"
+        string immagini "percorsi in ordine di visualizzazione"
         date data_inizio
         date data_fine "non precede data_inizio"
     }
@@ -269,8 +271,8 @@ erDiagram
 ```
 
 #### 5.2. Descrizione delle entità
-- **immagini**: contiene le immagini caricate dall'area riservata (nome generato dal server, tipo MIME e contenuto binario: `BYTEA` in PostgreSQL, `BLOB` in SQLite), servite da `GET /api/immagini/{nome}`.
-- **mostre**: memorizza le esposizioni culturali (il catalogo). Nella colonna `immagini` si conservano i percorsi delle immagini: `/api/immagini/<nome>` per quelle caricate (salvate nella tabella immagini) e `/static/uploads/<file>.webp`).
+- **immagini**: contiene le immagini caricate dall'area riservata (nome generato dal server, tipo MIME e contenuto binario: `BYTEA` in PostgreSQL, `BLOB` in SQLite), servite da `GET /api/immagini/{nome}`. È legata alla mostra con la chiave esterna `mostra_id` (relazione 1-a-N, `ON DELETE CASCADE`): eliminando una mostra il database elimina anche le sue immagini.
+- **mostre**: memorizza le esposizioni culturali (il catalogo). La colonna `immagini` conserva l'**ordine di visualizzazione** (la prima è l'immagine principale) e i percorsi pubblici: `/api/immagini/<nome>` per quelle caricate (salvate nella tabella immagini) e `/static/uploads/<file>.webp`).
 - **prenotazioni**: memorizza le prenotazioni effettuate dai visitatori, con data e ora di creazione.
 - **feedback**: memorizza le recensioni dei visitatori, con voto da 1 a 5 e commento facoltativo.
 - **utenti**: memorizza gli account dei visitatori. La password non viene mai salvata: si conserva solo il suo hash PBKDF2-SHA256, calcolato con un sale casuale e 200.000 iterazioni. L'email è unica. Su questa tabella sono disponibili tutte le operazioni CRUD: creazione con la registrazione, lettura del profilo (e dell'elenco, per l'amministratore), modifica di nome, cognome e telefono, eliminazione dell'account.
@@ -292,6 +294,12 @@ erDiagram
 - le regole "una prenotazione e un feedback per visitatore su ogni mostra" sono garantite anche dal database con gli indici unici `uq_prenotazioni_utente_mostra` e `uq_feedback_utente_mostra`: con due richieste contemporanee la seconda riceve 409 invece di creare un duplicato;
 - `migrazioni_service.py` usa tipi validi in entrambi i database (`TIMESTAMP` invece di `DATETIME`) e crea gli indici sui database esistenti;
 - le **immagini caricate** sono salvate nella tabella `immagini` nella stessa transazione della mostra (se un file non è valido non resta nulla a metà) e vengono eliminate quando si toglie un'immagine o si elimina la mostra.
+
+**Due provenienze delle immagini, nessuna logica doppia.** Le immagini hanno due origini, con ruoli diversi:
+- le **immagini delle mostre iniziali** (Caravaggio, Leonardo, Van Gogh, ecc.) sono file `.webp` in `backend/static/uploads/`: fanno parte del **codice sorgente** come il catalogo `data/mostre.json`, sono versionate su Git e vengono pubblicate a ogni deploy, quindi non si perdono quando il server si riavvia; FastAPI le serve come file statici (`/static/...`);
+- le **immagini caricate dall'area riservata** sono contenuti creati dagli utenti: vengono salvate nella tabella `immagini` di PostgreSQL e servite da `GET /api/immagini/{nome}`.
+
+Nel database la colonna `mostre.immagini` contiene per ogni mostra gli indirizzi completi, quindi il front-end non deve sapere dove si trova un'immagine: usa l'indirizzo così com'è (funzione `imageUrl`) e risponde il componente giusto del back-end. Non esiste un codice che "decide se leggere dal disco o dal database". È la stessa separazione delle applicazioni web reali tra *asset* distribuiti con il codice e *contenuti generati dagli utenti*.
 
 **Configurazione.**
 1. Su [neon.com](https://neon.com) creare un progetto (regione europea, es. Frankfurt) e copiare la *connection string* (`postgresql://utente:password@host/neondb?sslmode=require`).
@@ -323,7 +331,7 @@ Lo stesso script si può eseguire contro il database su Neon impostando `DATABAS
 ### 6. Diagrammi UML
 
 #### 6.1. Diagramma dei casi d'uso
-Gli attori sono il **visitatore** (che consulta il catalogo senza account e si registra per prenotare e lasciare feedback), l'**amministratore** (personale del museo) e due sistemi esterni: il **servizio email** e il **database PostgreSQL gestito su Neon**. Il caso d'uso *Conservare dati e immagini in modo persistente* è incluso da tutti i casi d'uso che scrivono dati (registrazione, prenotazione, gestione delle mostre con le immagini e degli utenti): l'attore Neon rappresenta il servizio esterno che garantisce che questi dati restino anche quando il server su Render si riavvia (§5.3).
+Gli attori sono il **visitatore** (che consulta il catalogo senza account e si registra per prenotare e lasciare feedback), l'**amministratore** (personale del museo) e due sistemi esterni: il **servizio email** e il **database PostgreSQL gestito su Neon**. In UML il database è infrastruttura e non un obiettivo dell'utente, quindi non ha un caso d'uso dedicato: è rappresentato come sistema esterno collegato alla piattaforma, con cui comunicano tutti i casi d'uso che leggono o salvano dati (§5.3).
 
 ```mermaid
 flowchart LR
@@ -348,7 +356,6 @@ flowchart LR
         UC10(("Consultare la dashboard"))
         UC14(("Gestire gli utenti<br/>elenco, modifica, elimina"))
         UC15(("Ricevere la conferma<br/>di eliminazione account"))
-        UC16(("Conservare dati e immagini<br/>in modo persistente"))
     end
 
     V --- UC1
@@ -367,11 +374,7 @@ flowchart LR
     UC13 -. "include" .-> UC15
     UC14 -. "include" .-> UC15
     UC15 --- EM
-    UC3 -. "include" .-> UC16
-    UC11 -. "include" .-> UC16
-    UC7 -. "include" .-> UC16
-    UC14 -. "include" .-> UC16
-    UC16 --- DB
+    SYS -. "legge e salva i dati" .- DB
     AM --- UC6
     AM --- UC7
     AM --- UC8
@@ -804,7 +807,7 @@ In produzione, invece, il piano gratuito di Render blocca le connessioni in usci
 Non si usano immagini incorporate come `data:` URI perché Gmail e Outlook le bloccano. Ogni esito dell'invio viene scritto nel log del server (`Email '...' inviata a ... tramite Brevo` oppure `Errore invio email a ...: <motivo>`), così un problema di configurazione si individua subito senza bloccare la prenotazione.
 
 #### 9.4. Sicurezza e variabili sensibili
-Le credenziali del servizio email, quelle dell'amministratore e la chiave di firma dei token non sono scritte nel codice: vengono lette da variabili d'ambiente tramite il modulo `settings.py`. In locale i valori si trovano nei file `.env` o `.env.local`, esclusi dal versionamento tramite `.gitignore`; in produzione si impostano dal pannello Environment di Render. Il file `.env.example` documenta le variabili necessarie senza contenere valori reali.
+Le credenziali del servizio email, quelle dell'amministratore e la chiave di firma dei token non sono scritte nel codice: vengono lette da variabili d'ambiente tramite il modulo `settings.py`. In locale i valori si trovano nei file `.env` o `.env.local`, esclusi dal versionamento tramite `.gitignore`; in produzione si impostano dal pannello Environment di Render. Il repository contiene solo i file `.env.example` (back-end e front-end), che guidano la configurazione locale elencando le variabili senza esporre alcun segreto: chiavi, password e stringa di connessione al database restano nel `.env` locale, escluso da Git, e nel pannello Environment di Render.
 
 Una variabile assente o lasciata vuota assume un valore di default pensato solo per lo sviluppo locale; all'avvio il server segnala nei log se sono in uso la chiave o la password dimostrative, in modo che vengano sostituite prima della messa online.
 
@@ -910,7 +913,7 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (227 test, eseguiti su SQLite e su PostgreSQL) | Vitest + React Testing Library (163 test) |
+| Test automatici | pytest + TestClient di FastAPI (229 test, eseguiti su SQLite e su PostgreSQL) | Vitest + React Testing Library (163 test) |
 
 **Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra e solo dopo la prenotazione, email di registrazione e avviso di registrazione doppia, recupero della password (link valido, scaduto, già usato, token non valido), codice di prenotazione (formato, unicità, varianti di scrittura accettate), QR code (contenuto e immagine PNG), email con codice e allegato (immagine nel testo solo con un backend pubblico, solo allegato in locale), verifica e registrazione dell'ingresso (solo admin, una sola volta, mostre non iniziate o concluse), aggiornamento di un database della versione precedente con assegnazione dei codici mancanti. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 

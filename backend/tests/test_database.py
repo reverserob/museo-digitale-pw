@@ -230,3 +230,27 @@ def test_dati_e_immagini_restano_dopo_il_riavvio_della_connessione(client, auth,
     nuovo_motore.dispose()
     # e l'API continua a servire l'immagine
     assert client.get(percorso).content == PNG_FINTO
+
+
+# --- relazione 1-a-N tra mostre e immagini caricate ---
+def test_immagini_collegate_alla_mostra_e_cancellate_a_cascata(client, auth):
+    file = [("immagini", ("a.png", PNG_FINTO, "image/png")), ("immagini", ("b.png", PNG_FINTO, "image/png"))]
+    dati = {
+        "titolo": "Mostra con immagini",
+        "descrizione": "Descrizione lunga abbastanza",
+        "data_inizio": "2030-01-01",
+        "data_fine": "2030-02-01",
+    }
+    mostra = client.post("/api/mostre", data=dati, files=file, headers=auth).json()
+    db = SessionLocal()
+    immagini = db.query(models.Immagine).all()
+    assert len(immagini) == 2
+    assert {i.mostra_id for i in immagini} == {mostra["id"]}
+    assert len(db.get(models.Mostra, mostra["id"]).file_immagini) == 2
+    db.close()
+    # ON DELETE CASCADE nel database: basta eliminare la riga della mostra, anche senza passare dall'ORM
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM mostre WHERE id = :i"), {"i": mostra["id"]})
+    db = SessionLocal()
+    assert db.query(models.Immagine).count() == 0
+    db.close()

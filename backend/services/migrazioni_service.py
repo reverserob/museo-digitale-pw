@@ -18,6 +18,7 @@ COLONNE_AGGIUNTE = {
         "ingresso_il": "TIMESTAMP",
     },
     "feedback": {"utente_id": "INTEGER REFERENCES utenti(id)"},
+    "immagini": {"mostra_id": "INTEGER REFERENCES mostre(id) ON DELETE CASCADE"},
 }
 
 
@@ -37,6 +38,26 @@ def aggiorna_schema(engine):
                     logger.info(f"Aggiunta la colonna {tabella}.{nome} al database esistente")
     _assegna_codici_mancanti(engine)
     _crea_indici_unici(engine)
+    _collega_immagini_alle_mostre(engine)
+
+
+def _collega_immagini_alle_mostre(engine):
+    """Collega alle mostre le immagini caricate prima dell'introduzione della colonna `mostra_id`.
+
+    Il collegamento si ricava dai percorsi `/api/immagini/<nome>` salvati nella colonna `immagini` delle mostre.
+    """
+    tabelle = set(inspect(engine).get_table_names())
+    if not {"mostre", "immagini"} <= tabelle:
+        return
+    with engine.begin() as conn:
+        mostre = conn.execute(text("SELECT id, immagini FROM mostre")).fetchall()
+        for mostra_id, percorsi in mostre:
+            for percorso in (percorsi or "").split(","):
+                if percorso.startswith("/api/immagini/"):
+                    conn.execute(
+                        text("UPDATE immagini SET mostra_id = :m WHERE nome = :n AND mostra_id IS NULL"),
+                        {"m": mostra_id, "n": percorso[len("/api/immagini/") :]},
+                    )
 
 
 # Una prenotazione e un feedback per visitatore su ogni mostra: oltre al controllo nelle API,

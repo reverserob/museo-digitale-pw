@@ -64,7 +64,7 @@ Con **Gestione utenti** l'amministratore consulta gli account registrati (ricerc
 
 ### Persistenza dei dati
 
-Account, prenotazioni, feedback, mostre e immagini caricate sono salvati in un database PostgreSQL gestito su Neon, esterno al server: restano anche quando il backend su Render si riavvia o va in pausa. Nei casi d'uso, registrazione, prenotazione, gestione delle mostre e gestione degli utenti includono il caso *Conservare dati e immagini in modo persistente*, svolto dall'attore esterno "Database PostgreSQL (Neon)".
+Account, prenotazioni, feedback, mostre e immagini caricate sono salvati in un database PostgreSQL gestito su Neon, esterno al server: restano anche quando il backend su Render si riavvia o va in pausa. Le immagini delle mostre iniziali sono file del progetto (`backend/static/uploads/`), pubblicati con il codice; quelle caricate dall'area riservata sono salvate nel database e collegate alla loro mostra.
 
 ![Mostra con immagine ancora visibile dopo il riavvio del backend](../screenshots/42-persistenza-postgres.webp){ .screenshot loading=lazy }
 

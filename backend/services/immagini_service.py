@@ -70,8 +70,8 @@ def immagini_da_tenere(attuali: str, richieste: Optional[str]) -> list[str]:
     return tenute
 
 
-async def salva_immagini(immagini: list[UploadFile], db: Session) -> list[str]:
-    """Controlla le immagini caricate e le aggiunge alla sessione del database.
+async def salva_immagini(immagini: list[UploadFile], db: Session, mostra: models.Mostra) -> list[str]:
+    """Controlla le immagini caricate e le aggiunge alla sessione del database, collegate alla mostra.
 
     Le righe vengono solo aggiunte alla sessione: il commit lo fa il router insieme alla mostra,
     quindi mostra e immagini vengono salvate (o annullate) nella stessa transazione.
@@ -79,6 +79,7 @@ async def salva_immagini(immagini: list[UploadFile], db: Session) -> list[str]:
     Args:
         immagini: File caricati dal form.
         db: Sessione del database della richiesta.
+        mostra: Mostra a cui appartengono le immagini (anche nuova, non ancora salvata).
 
     Returns:
         Percorsi pubblici delle immagini (`/api/immagini/<nome>`).
@@ -108,7 +109,7 @@ async def salva_immagini(immagini: list[UploadFile], db: Session) -> list[str]:
     # aggiungo le righe solo dopo aver controllato TUTTI i file: se uno non è valido non resta nulla a metà
     percorsi = []
     for nome, tipo, contenuto in da_salvare:
-        db.add(models.Immagine(nome=nome, tipo=tipo, dati=contenuto))
+        db.add(models.Immagine(mostra=mostra, nome=nome, tipo=tipo, dati=contenuto))
         percorsi.append(f"{PREFISSO_URL}{nome}")
     return percorsi
 
@@ -116,8 +117,10 @@ async def salva_immagini(immagini: list[UploadFile], db: Session) -> list[str]:
 def rimuovi_immagini(db: Session, percorsi: list[str]) -> int:
     """Elimina dal database le immagini indicate che non servono più (senza fare il commit).
 
+    Serve quando dalla modifica di una mostra si tolgono alcune immagini; quando si elimina la mostra
+    le sue immagini vengono eliminate dalla chiave esterna con ON DELETE CASCADE.
     Sono considerate solo le immagini salvate nel database (`/api/immagini/...`): le immagini delle
-    mostre iniziali, in `static/uploads/`, fanno parte del progetto e restano.
+    mostre iniziali, in `static/uploads/`, fanno parte del codice del progetto e restano.
 
     Args:
         db: Sessione del database.

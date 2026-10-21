@@ -65,16 +65,15 @@ async def crea_mostra(
     file_validi = file_presenti(immagini)
     if not file_validi:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Carica almeno un'immagine.")
-    # controlla i file e li aggiunge alla sessione: vengono salvati nel database insieme alla mostra
-    percorsi = await salva_immagini(file_validi, db)
+    nuova_mostra = models.Mostra(
+        titolo=titolo.strip(), descrizione=descrizione.strip(), data_inizio=inizio, data_fine=fine
+    )
+    # controlla i file e li aggiunge alla sessione collegati alla mostra (relazione 1-a-N):
+    # mostra e immagini vengono salvate nel database nella stessa transazione
+    percorsi = await salva_immagini(file_validi, db, nuova_mostra)
     try:
-        nuova_mostra = models.Mostra(
-            titolo=titolo.strip(),
-            descrizione=descrizione.strip(),
-            data_inizio=inizio,
-            data_fine=fine,
-            immagini=",".join(percorsi),  # nel database salvo solo i percorsi, separati da virgola
-        )
+        # percorsi pubblici nell'ordine scelto, separati da virgola
+        nuova_mostra.immagini = ",".join(percorsi)
         db.add(nuova_mostra)
         db.commit()
         db.refresh(nuova_mostra)  # ricarica l'oggetto per avere l'id assegnato dal database
@@ -115,7 +114,7 @@ async def aggiorna_mostra(
     # una mostra senza immagini non è ammessa
     if not da_tenere and not file_validi:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra deve avere almeno un'immagine.")
-    nuovi_percorsi = await salva_immagini(file_validi, db) if file_validi else []
+    nuovi_percorsi = await salva_immagini(file_validi, db, mostra) if file_validi else []
     # immagini tolte dalla mostra: vengono eliminate dal database nella stessa transazione
     tolte = [p for p in (mostra.immagini or "").split(",") if p.strip() and p not in da_tenere]
     try:
@@ -151,8 +150,7 @@ def elimina_mostra(
     """
     mostra = trova_mostra(db, mostra_id)
     try:
-        rimuovi_immagini(db, (mostra.immagini or "").split(","))  # immagini caricate per questa mostra
-        db.delete(mostra)  # elimina anche prenotazioni e feedback collegati (cascade)
+        db.delete(mostra)  # elimina anche prenotazioni, feedback e immagini caricate collegati (cascade)
         db.commit()
         return {"message": "Mostra eliminata con successo"}
     except Exception as e:
