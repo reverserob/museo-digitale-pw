@@ -785,7 +785,7 @@ Gli stessi dati cambiano rappresentazione mentre passano da un componente all'al
 #### 8.5. Compressione dei dati
 Ridurre i byte da trasferire rende il sito più veloce, soprattutto su rete mobile:
 - Le **immagini** sono in formato **WebP**, che usa una compressione più efficiente di JPEG e PNG: l'immagine di sfondo del sito è passata da circa 478 KB in JPEG a circa 123 KB in WebP, con qualità visiva equivalente. Anche le immagini delle mostre e gli screenshot di questa relazione sono in WebP.
-- I file **JavaScript** vengono minificati da Vite (spazi e nomi lunghi eliminati) e trasferiti compressi con **gzip**: il pacchetto principale passa da circa 486 KB a circa 159 KB.
+- I file **JavaScript** vengono minificati da Vite (spazi e nomi lunghi eliminati) e trasferiti compressi con **gzip**: il pacchetto principale passa da 493,15 KB a 160,58 KB (output di `npm run build`), sotto il limite di 200 KB fissato tra gli obiettivi.
 
 #### 8.6. Suddivisione del codice e caricamento su richiesta
 Il front-end usa `React.lazy` e `Suspense`: Vite divide l'applicazione in più file (*code splitting*) e il browser scarica il codice di una pagina solo quando l'utente la apre. Chi visita solo il catalogo non scarica mai il codice dell'area riservata (`AdminDashboard`, `AdminForm`). È lo stesso principio della **memoria virtuale** e della paginazione su richiesta: si carica in memoria solo ciò che serve, nel momento in cui serve.
