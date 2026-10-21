@@ -43,3 +43,9 @@ backend/static/uploads/*
 site/
 docs/frontend-api/
 docs/swagger/openapi.json
+
+# report di copertura dei test (generati da pytest --cov e npm run test:coverage)
+.coverage
+coverage.xml
+htmlcov/
+frontend/coverage/

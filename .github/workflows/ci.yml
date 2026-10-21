@@ -41,8 +41,18 @@ jobs:
       - name: Controllo della formattazione (ruff format)
         run: ruff format --check .
 
-      - name: Test (pytest)
-        run: pytest
+      - name: Test (pytest) con misura della copertura
+        # la soglia minima (90%) e i file esclusi sono in backend/.coveragerc: sotto soglia il job fallisce
+        run: pytest --cov --cov-report=term --cov-report=xml --cov-report=html
+
+      - name: Pubblica il report di copertura
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: copertura-backend
+          path: |
+            backend/coverage.xml
+            backend/htmlcov/
 
   backend-postgres:
     # stessa suite di test su un PostgreSQL vero, il database usato in produzione
@@ -82,8 +92,8 @@ jobs:
       - name: Installa le dipendenze
         run: pip install -r requirements-dev.txt
 
-      - name: Test su PostgreSQL (pytest)
-        run: pytest
+      - name: Test su PostgreSQL (pytest) con misura della copertura
+        run: pytest --cov --cov-report=term
 
   frontend:
     name: Frontend
@@ -111,8 +121,15 @@ jobs:
       - name: Controllo della formattazione (Prettier)
         run: npm run format:check
 
-      - name: Test (Vitest)
-        run: npm test
+      - name: Test (Vitest) con misura della copertura
+        # file inclusi/esclusi e soglia minima (90% delle righe) in frontend/vite.config.js
+        run: npm run test:coverage
+
+      - name: Pubblica il report di copertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: copertura-frontend
+          path: frontend/coverage/
 
       - name: Build di produzione
         run: npm run build

@@ -11,6 +11,7 @@ Uso (dalla cartella backend, con il venv attivo):
 La password del database non viene mai stampata.
 """
 
+import io
 import os
 import re
 import subprocess
@@ -20,14 +21,14 @@ import uuid
 from datetime import date, timedelta
 
 import httpx
+from PIL import Image
 
 PORTA = int(os.environ.get("PORTA_VERIFICA", "8765"))
 BASE = f"http://127.0.0.1:{PORTA}"
-# immagine PNG 1x1 valida
-PNG = bytes.fromhex(
-    "89504e470d0a1a0a0000000d4948445200000001000000010806000000"
-    "1f15c4890000000d4944415478da63f8ffff3f0005fe02fea7d6a4580000000049454e44ae426082"
-)
+# piccola immagine PNG vera: il backend controlla il contenuto dei file caricati
+_buffer = io.BytesIO()
+Image.new("RGB", (4, 3), (197, 160, 89)).save(_buffer, format="PNG")
+PNG = _buffer.getvalue()
 
 
 def mascherata(url: str) -> str:

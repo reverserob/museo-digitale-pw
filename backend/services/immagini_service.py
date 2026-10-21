@@ -1,11 +1,13 @@
 """Gestione delle immagini delle mostre: controllo, salvataggio nel database e selezione di quelle da mantenere."""
 
+import io
 import json
 import uuid
 from pathlib import Path
 from typing import Optional
 
 from fastapi import HTTPException, UploadFile, status
+from PIL import Image, UnidentifiedImageError
 from sqlalchemy.orm import Session
 
 import models
@@ -21,6 +23,54 @@ TIPI_MIME = {
     ".webp": "image/webp",
     ".gif": "image/gif",
 }
+# formato reale riconosciuto da Pillow (dai byte del file) per ogni estensione ammessa
+FORMATI_PER_ESTENSIONE = {
+    ".jpg": "JPEG",
+    ".jpeg": "JPEG",
+    ".png": "PNG",
+    ".webp": "WEBP",
+    ".gif": "GIF",
+}
+
+
+def _errore(testo: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=testo)
+
+
+def controlla_contenuto(nome_file: str, estensione: str, contenuto: bytes) -> None:
+    """Verifica che i byte siano davvero un'immagine del formato indicato dall'estensione.
+
+    Il tipo dichiarato dal browser e l'estensione si possono falsificare: qui il file viene aperto con
+    Pillow, che riconosce il formato dalla sua struttura interna. Prima di decodificare i pixel controllo
+    larghezza e altezza, così un file piccolo che si espande in un'immagine enorme ("decompression bomb")
+    viene rifiutato senza occupare memoria; poi decodifico tutta l'immagine, così un file troncato o
+    corrotto non viene salvato.
+
+    Args:
+        nome_file: Nome originale, usato solo nei messaggi di errore.
+        estensione: Estensione già controllata (es. `.png`).
+        contenuto: Byte del file caricato.
+
+    Raises:
+        HTTPException: 400 se il file non è un'immagine valida, se il formato reale non corrisponde
+            all'estensione o se supera `IMMAGINE_MAX_PIXEL`.
+    """
+    try:
+        with Image.open(io.BytesIO(contenuto)) as img:
+            formato = img.format
+            larghezza, altezza = img.size
+            if formato != FORMATI_PER_ESTENSIONE[estensione]:
+                raise _errore(f"Il contenuto del file '{nome_file}' non corrisponde al formato {estensione}.")
+            if larghezza * altezza > settings.IMMAGINE_MAX_PIXEL:
+                raise _errore(
+                    f"L'immagine '{nome_file}' è troppo grande ({larghezza}×{altezza} pixel): "
+                    f"massimo {settings.IMMAGINE_MAX_PIXEL // 1_000_000} milioni di pixel."
+                )
+            img.load()  # decodifica completa: errore se il file è troncato o corrotto
+    except HTTPException:
+        raise
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError, Image.DecompressionBombError):
+        raise _errore(f"Il file '{nome_file}' non è un'immagine valida o è danneggiato.") from None
 
 
 def file_presenti(immagini: Optional[list[UploadFile]]) -> list[UploadFile]:
@@ -85,24 +135,24 @@ async def salva_immagini(immagini: list[UploadFile], db: Session, mostra: models
         Percorsi pubblici delle immagini (`/api/immagini/<nome>`).
 
     Raises:
-        HTTPException: 400 se un file non è un'immagine supportata o supera `UPLOAD_MAX_MB`.
+        HTTPException: 400 se i file sono più di `IMMAGINI_MAX_PER_RICHIESTA`, se un file non è
+            un'immagine valida del formato dichiarato o se supera `UPLOAD_MAX_MB` o `IMMAGINE_MAX_PIXEL`.
     """
+    if len(immagini) > settings.IMMAGINI_MAX_PER_RICHIESTA:
+        raise _errore(f"Puoi caricare al massimo {settings.IMMAGINI_MAX_PER_RICHIESTA} immagini alla volta.")
     limite = settings.UPLOAD_MAX_MB * 1024 * 1024
     da_salvare = []
     for file in immagini:
-        # controllo sia l'estensione del nome sia il tipo dichiarato dal browser
+        # primo controllo (preliminare): estensione del nome e tipo dichiarato dal browser
         estensione = Path(file.filename).suffix.lower()
         if estensione not in settings.ESTENSIONI_IMMAGINI or not (file.content_type or "").startswith("image/"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Il file '{file.filename}' non è un'immagine supportata (jpg, png, webp, gif).",
-            )
-        contenuto = await file.read()
+            raise _errore(f"Il file '{file.filename}' non è un'immagine supportata (jpg, png, webp, gif).")
+        # leggo al massimo un byte oltre il limite: un file più grande viene rifiutato senza leggerlo tutto
+        contenuto = await file.read(limite + 1)
         if len(contenuto) > limite:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Il file '{file.filename}' supera il limite di {settings.UPLOAD_MAX_MB} MB.",
-            )
+            raise _errore(f"Il file '{file.filename}' supera il limite di {settings.UPLOAD_MAX_MB} MB.")
+        # secondo controllo (sul contenuto reale): formato, dimensioni in pixel e integrità
+        controlla_contenuto(file.filename, estensione, contenuto)
         # nome casuale (uuid): evita collisioni e non usa il nome scelto dall'utente
         da_salvare.append((f"{uuid.uuid4().hex}{estensione}", TIPI_MIME[estensione], contenuto))
 

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import models
 from database import SessionLocal
-from tests.conftest import PNG_FINTO
+from tests.conftest import JPG_FINTO, PNG_FINTO, crea_immagine
 
 DATI_MOSTRA = {
     "titolo": "Nuova mostra",
@@ -71,7 +71,7 @@ def test_crea_mostra(client, auth, cartella_upload):
 
 
 def test_crea_mostra_con_piu_immagini(client, auth):
-    files = [immagine("a.png"), immagine("b.jpg", tipo="image/jpeg")]
+    files = [immagine("a.png"), immagine("b.jpg", JPG_FINTO, tipo="image/jpeg")]
     r = client.post("/api/mostre", data=DATI_MOSTRA, files=files, headers=auth)
     assert r.status_code == 201
     assert len(r.json()["immagini"].split(",")) == 2
@@ -92,6 +92,50 @@ def test_crea_mostra_file_non_immagine(client, auth):
     r = client.post("/api/mostre", data=DATI_MOSTRA, files=[immagine("doc.txt", b"ciao", "text/plain")], headers=auth)
     assert r.status_code == 400
     assert "non è un'immagine" in r.json()["detail"]
+
+
+def test_file_travestito_da_immagine_rifiutato(client, auth):
+    # estensione e tipo dichiarato dicono PNG, ma il contenuto è testo: il controllo con Pillow lo scopre
+    r = client.post(
+        "/api/mostre", data=DATI_MOSTRA, files=[immagine("foto.png", b"<script>alert(1)</script>")], headers=auth
+    )
+    assert r.status_code == 400
+    assert "non è un'immagine valida" in r.json()["detail"]
+
+
+def test_formato_reale_diverso_dall_estensione_rifiutato(client, auth):
+    # un JPEG vero chiamato .png
+    r = client.post("/api/mostre", data=DATI_MOSTRA, files=[immagine("foto.png", JPG_FINTO)], headers=auth)
+    assert r.status_code == 400
+    assert "non corrisponde al formato .png" in r.json()["detail"]
+
+
+def test_immagine_troncata_rifiutata(client, auth):
+    troncata = crea_immagine("PNG", (64, 64))[:-30]
+    r = client.post("/api/mostre", data=DATI_MOSTRA, files=[immagine("foto.png", troncata)], headers=auth)
+    assert r.status_code == 400
+    assert "danneggiato" in r.json()["detail"]
+
+
+def test_immagine_con_troppi_pixel_rifiutata(client, auth, monkeypatch):
+    import settings
+
+    monkeypatch.setattr(settings, "IMMAGINE_MAX_PIXEL", 100)
+    r = client.post(
+        "/api/mostre", data=DATI_MOSTRA, files=[immagine("foto.png", crea_immagine("PNG", (20, 20)))], headers=auth
+    )
+    assert r.status_code == 400
+    assert "20×20 pixel" in r.json()["detail"]
+
+
+def test_troppe_immagini_in_una_richiesta(client, auth, monkeypatch):
+    import settings
+
+    monkeypatch.setattr(settings, "IMMAGINI_MAX_PER_RICHIESTA", 2)
+    files = [immagine(f"{i}.png") for i in range(3)]
+    r = client.post("/api/mostre", data=DATI_MOSTRA, files=files, headers=auth)
+    assert r.status_code == 400
+    assert "al massimo 2 immagini" in r.json()["detail"]
 
 
 def test_crea_mostra_immagine_troppo_grande(client, auth, monkeypatch):

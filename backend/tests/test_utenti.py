@@ -182,6 +182,25 @@ def test_reimposta_password(client, email_reset):
     assert nuova.status_code == 200
 
 
+def test_reimpostare_la_password_chiude_le_sessioni_aperte(client, email_reset):
+    # il visitatore è collegato su un dispositivo (token emesso con la vecchia password)
+    sessione = client.post("/api/utenti/registrazione", json=DATI).json()["access_token"]
+    vecchio = {"Authorization": f"Bearer {sessione}"}
+    assert client.get("/api/utenti/me", headers=vecchio).status_code == 200
+    client.post("/api/utenti/password-dimenticata", json={"email": "giulia.verdi@test.it"})
+    token = email_reset[-1]["link"].split("token=")[1]
+    client.post("/api/utenti/reimposta-password", json={"token": token, "password": "NuovaPass1"})
+    # dopo la reimpostazione il vecchio token non vale più, anche se non è scaduto
+    r = client.get("/api/utenti/me", headers=vecchio)
+    assert r.status_code == 401
+    assert r.json()["detail"] == "Sessione scaduta: accedi di nuovo."
+    nuovo = client.post("/api/utenti/login", json={"email": "giulia.verdi@test.it", "password": "NuovaPass1"})
+    assert (
+        client.get("/api/utenti/me", headers={"Authorization": f"Bearer {nuovo.json()['access_token']}"}).status_code
+        == 200
+    )
+
+
 def test_link_di_reset_usabile_una_sola_volta(client, email_reset):
     token = _richiedi_link(client, email_reset)
     assert (

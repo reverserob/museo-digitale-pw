@@ -208,6 +208,26 @@ def test_registra_ingresso_una_sola_volta(client, auth, utente, mostra_in_corso)
     assert client.get("/api/utenti/me/prenotazioni", headers=utente).json()[0]["ingresso_il"] is not None
 
 
+def test_ingresso_atomico_anche_se_due_verifiche_leggono_valida(client, auth, utente, mostra_in_corso, monkeypatch):
+    # simulo la gara tra due operatori: il controllo in Python dice "valida" anche se l'ingresso
+    # è appena stato registrato dall'altro; l'UPDATE condizionato del database lo rifiuta comunque
+    import routers.prenotazioni as router_prenotazioni
+
+    codice = prenota(client, utente, mostra_in_corso)["codice"]
+    assert client.post(f"/api/prenotazioni/verifica/{codice}/ingresso", headers=auth).status_code == 200
+    db = SessionLocal()
+    primo = db.query(models.Prenotazione).filter(models.Prenotazione.codice == codice).one().ingresso_il
+    db.close()
+    monkeypatch.setattr(router_prenotazioni, "stato_ingresso", lambda *_: "valida")
+    secondo = client.post(f"/api/prenotazioni/verifica/{codice}/ingresso", headers=auth)
+    assert secondo.status_code == 409
+    assert secondo.json()["detail"] == "L'ingresso è già stato registrato."
+    db = SessionLocal()
+    # l'orario del primo ingresso non è stato sovrascritto
+    assert db.query(models.Prenotazione).filter(models.Prenotazione.codice == codice).one().ingresso_il == primo
+    db.close()
+
+
 def test_ingresso_rifiutato_se_la_mostra_non_e_iniziata(client, auth, utente, mostra_futura):
     codice = prenota(client, utente, mostra_futura)["codice"]
     r = client.post(f"/api/prenotazioni/verifica/{codice}/ingresso", headers=auth)

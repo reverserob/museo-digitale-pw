@@ -1,7 +1,6 @@
 """API delle prenotazioni: creazione da parte dei visitatori, elenco e verifica all'ingresso per l'amministratore."""
 
 import logging
-from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -15,6 +14,7 @@ from auth import richiedi_admin, richiedi_utente
 from database import get_db
 from services.email_service import invia_email_background
 from services.mostre_service import trova_mostra
+from services.orario_service import adesso_utc, oggi
 from services.prenotazioni_service import (
     genera_codice,
     genera_qr_png,
@@ -24,6 +24,8 @@ from services.prenotazioni_service import (
 )
 
 logger = logging.getLogger("uvicorn.error")
+
+MESSAGGIO_GIA_ENTRATO = "L'ingresso è già stato registrato."
 
 router = APIRouter(prefix="/api", tags=["Prenotazioni"])
 
@@ -48,7 +50,7 @@ def crea_prenotazione(
     mostra = trova_mostra(db, dati.mostra_id)
 
     # non si può prenotare una mostra già conclusa
-    if mostra.data_fine < date.today():
+    if mostra.data_fine < oggi():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra è già conclusa: non è più possibile prenotare."
         )
@@ -166,7 +168,7 @@ def _risultato_verifica(prenotazione: models.Prenotazione) -> dict:
         "titolo_mostra": mostra.titolo,
         "data_inizio": mostra.data_inizio,
         "data_fine": mostra.data_fine,
-        "stato": stato_ingresso(prenotazione, date.today()),
+        "stato": stato_ingresso(prenotazione, oggi()),
     }
 
 
@@ -208,21 +210,32 @@ def registra_ingresso(
 ):
     """`POST /api/prenotazioni/verifica/{riferimento}/ingresso` · Registra l'ingresso del visitatore.
 
-    Ogni prenotazione vale per un solo ingresso, e solo mentre la mostra è aperta.
+    Ogni prenotazione vale per un solo ingresso, e solo mentre la mostra è aperta. La registrazione è
+    un UPDATE condizionato (`ingresso_il IS NULL`): anche con verifiche simultanee riesce una volta sola.
 
     Raises:
         HTTPException: 400 se la mostra non è ancora iniziata o è conclusa; 401 senza token admin;
             404 se la prenotazione non esiste; 409 se l'ingresso è già stato registrato.
     """
     prenotazione = _trova_o_404(db, riferimento)
-    stato = stato_ingresso(prenotazione, date.today())
+    stato = stato_ingresso(prenotazione, oggi())
     if stato == "gia_entrato":
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="L'ingresso è già stato registrato.")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=MESSAGGIO_GIA_ENTRATO)
     if stato == "non_iniziata":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra non è ancora iniziata.")
     if stato == "conclusa":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La mostra è già conclusa.")
-    prenotazione.ingresso_il = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Aggiornamento atomico: il database scrive l'ingresso solo se è ancora vuoto (condizione nella WHERE).
+    # Se due operatori verificano lo stesso QR code nello stesso istante, entrambi possono aver letto
+    # "valida" qui sopra, ma l'UPDATE modifica la riga una sola volta: chi arriva secondo trova 0 righe
+    # aggiornate e riceve 409, quindi l'ingresso viene registrato una volta sola.
+    aggiornate = (
+        db.query(models.Prenotazione)
+        .filter(models.Prenotazione.id == prenotazione.id, models.Prenotazione.ingresso_il.is_(None))
+        .update({models.Prenotazione.ingresso_il: adesso_utc()}, synchronize_session=False)
+    )
     db.commit()
+    if aggiornate == 0:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=MESSAGGIO_GIA_ENTRATO)
     db.refresh(prenotazione)
     return _risultato_verifica(prenotazione)

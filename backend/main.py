@@ -23,6 +23,13 @@ from services.seed_service import inserisci_dati_iniziali
 # uso lo stesso logger di Uvicorn, così i messaggi compaiono nel terminale e nei log di Render
 logger = logging.getLogger("uvicorn.error")
 
+# --- Controllo di sicurezza della configurazione ---
+# In produzione credenziali e chiave dimostrative bloccano l'avvio; in sviluppo sono solo segnalate.
+for problema in settings.problemi_configurazione():
+    if settings.AMBIENTE == "produzione":
+        raise RuntimeError(f"Avvio rifiutato in produzione: {problema}. Imposta la variabile su Render.")
+    logger.warning(f"Configurazione dimostrativa (ammessa solo in sviluppo): {problema}")
+
 # --- Preparazione del database all'avvio ---
 # 1. crea le tabelle che non esistono ancora
 models.Base.metadata.create_all(bind=engine)
@@ -31,11 +38,6 @@ aggiorna_schema(engine)
 # 3. se il catalogo è vuoto, inserisce le mostre dimostrative di data/mostre.json
 inserisci_dati_iniziali()
 
-# --- Avvisi di sicurezza: valori predefiniti che non devono restare in produzione ---
-if settings.SECRET_KEY == "dev-secret-cambiami":
-    logger.warning("SECRET_KEY non impostata: imposta un valore segreto nel file .env o su Render")
-if settings.ADMIN_PASSWORD == "admin2026":
-    logger.warning("Stai usando la password demo dell'area riservata (admin2026)")
 
 # l'applicazione; il titolo compare nella documentazione automatica su /docs
 app = FastAPI(title="Museo Civico Digitale - API")

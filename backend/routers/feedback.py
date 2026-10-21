@@ -1,7 +1,6 @@
 """API dei feedback: lettura pubblica, invio da parte dei visitatori prenotati, moderazione dell'amministratore."""
 
 import logging
-from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -13,6 +12,7 @@ import schemas
 from auth import richiedi_admin, richiedi_utente
 from database import get_db
 from services.mostre_service import trova_mostra
+from services.orario_service import oggi
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -36,7 +36,7 @@ def crea_feedback(
     mostra = trova_mostra(db, dati.mostra_id)
 
     # si può recensire solo una mostra già aperta al pubblico
-    if mostra.data_inizio > date.today():
+    if mostra.data_inizio > oggi():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita.",

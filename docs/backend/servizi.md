@@ -22,3 +22,5 @@ dai router delle mostre, delle prenotazioni e dei feedback senza che un router d
 ::: services.seed_service
 
 ::: services.migrazioni_service
+
+::: services.orario_service

@@ -6,9 +6,13 @@ pydantic>=2.11,<3
 python-dotenv>=1.0,<2
 python-multipart>=0.0.20,<1
 # driver PostgreSQL (database di produzione); le wheel binarie includono già la libreria libpq
+# controllo del contenuto reale delle immagini caricate (formato, pixel, integrità)
+pillow>=11,<14
 psycopg[binary]>=3.2,<4
 # generazione dei QR code delle prenotazioni (solo Python, nessuna dipendenza)
 segno>=1.6,<2
 slowapi>=0.1.9,<0.2
 SQLAlchemy>=2.0.36,<2.1
+# database dei fusi orari per zoneinfo (Europe/Rome), necessario dove il sistema non lo fornisce
+tzdata>=2024.1
 uvicorn>=0.32,<1

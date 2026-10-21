@@ -14,6 +14,7 @@ from auth import (
     crea_token,
     crea_token_reset,
     hash_password,
+    impronta_password,
     leggi_token_reset,
     richiedi_admin,
     richiedi_utente,
@@ -43,7 +44,12 @@ MESSAGGIO_GIA_REGISTRATO = (
 
 def _sessione(utente: models.Utente) -> dict:
     """Risposta di accesso: token con ruolo "utente" e dati del profilo (usata da registrazione e login)."""
-    return {"access_token": crea_token(utente.email, ruolo="utente", utente_id=utente.id), "utente": utente}
+    return {
+        "access_token": crea_token(
+            utente.email, ruolo="utente", utente_id=utente.id, impronta=impronta_password(utente)
+        ),
+        "utente": utente,
+    }
 
 
 # POST /api/utenti/registrazione (dopo la registrazione il visitatore è già collegato)
@@ -219,7 +225,7 @@ def elimina_mio_account(
         nome=nome,
         prenotazioni_annullate=esito["prenotazioni_annullate"],
     )
-    return {"message": "Account eliminato. Ti abbiamo inviato un'email di conferma.", **esito}
+    return {"message": "Account eliminato. Riceverai a breve un'email di conferma.", **esito}
 
 
 # GET /api/utenti/me/prenotazioni
@@ -301,7 +307,7 @@ def annulla_prenotazione(
         data_inizio=mostra.data_inizio,
         data_fine=mostra.data_fine,
     )
-    return {"message": "Prenotazione annullata. Ti abbiamo inviato un'email di conferma."}
+    return {"message": "Prenotazione annullata. Riceverai a breve un'email di conferma."}
 
 
 # --- Gestione degli account dall'area riservata (solo amministratore) ---

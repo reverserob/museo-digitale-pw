@@ -159,14 +159,14 @@ erDiagram
 
 ### Descrizione delle entità
 - **immagini**: immagini caricate dall'area riservata, salvate nel database (contenuto binario) e servite da `GET /api/immagini/{nome}`.
-- **mostre**: memorizza le esposizioni culturali (il catalogo). Nella colonna `immagini` si conservano i percorsi: `/api/immagini/<nome>` per quelle caricate, oppure `/static/uploads/<file>.webp`).
+- **mostre**: memorizza le esposizioni culturali (il catalogo). Nella colonna `immagini` si conservano i percorsi: `/api/immagini/<nome>` per quelle caricate, oppure `/static/uploads/<file>.webp`). È una seconda denormalizzazione voluta (oltre ai dati del visitatore copiati nelle prenotazioni): serve anche per le immagini iniziali, che non sono righe del database, e conserva l'ordine scelto dall'amministratore.
 - **prenotazioni**: memorizza le prenotazioni effettuate dai visitatori, con data e ora di creazione.
 - **feedback**: memorizza le recensioni dei visitatori, con voto da 1 a 5 e commento facoltativo.
 - **utenti**: memorizza gli account dei visitatori. La password non viene mai salvata: si conserva solo il suo hash PBKDF2-SHA256, calcolato con un sale casuale e 200.000 iterazioni. L'email è unica.
 
 **Relazioni**: una mostra ha zero o più prenotazioni e zero o più feedback (relazioni 1:N); ogni prenotazione e ogni feedback appartengono a una sola mostra. Un utente può avere più prenotazioni e più feedback (al massimo uno per mostra). Nella prenotazione nome, cognome ed email vengono copiati dall'account al momento della prenotazione, così lo storico resta leggibile anche se l'account cambia; `utente_id` è facoltativo perché i feedback dimostrativi del seeding non hanno un autore. Eliminando una mostra vengono eliminati anche le prenotazioni e i feedback collegati (cascade), così nel database non restano righe "orfane".
 
-**Vincoli applicativi**: i dati inseriti dagli utenti vengono validati a livello di schema (Pydantic con espressioni regolari e validatori personalizzati) prima di essere salvati. Non è possibile prenotare una mostra già conclusa, né lasciare un feedback su una mostra non ancora iniziata.
+**Vincoli applicativi**: i dati inseriti dagli utenti vengono validati a livello di schema (Pydantic con espressioni regolari e validatori personalizzati) prima di essere salvati. Non è possibile prenotare una mostra già conclusa, né lasciare un feedback su una mostra non ancora iniziata. "Oggi" è calcolato nel fuso orario del museo (`FUSO_ORARIO`, Europe/Rome). Gli indici unici su (utente, mostra) per prenotazioni e feedback sono verificati all'avvio: se mancano il back-end non parte (vedi `bonifica_duplicati.py`). L'ingresso si registra con un aggiornamento atomico condizionato a `ingresso_il IS NULL`.
 
 **Aggiornamento dei database esistenti**: `create_all` crea le tabelle nuove ma non aggiunge colonne a quelle già presenti. All'avvio `migrazioni_service.py` controlla lo schema e, se manca, aggiunge la colonna `utente_id` alle tabelle `prenotazioni` e `feedback` e le colonne `codice` e `ingresso_il` alla tabella `prenotazioni` con `ALTER TABLE`; alle prenotazioni già presenti assegna un codice e crea l'indice unico sulla colonna. Così un `museo.db` creato con una versione precedente continua a funzionare senza perdere dati.
 
