@@ -72,7 +72,7 @@ Account, prenotazioni, feedback, mostre e immagini caricate sono salvati in un d
 
 ### Verifica all'ingresso
 
-Dalla dashboard, con **Verifica ingresso**, il personale inserisce il codice comunicato dal visitatore (anche in minuscolo o senza trattini) oppure il numero della prenotazione. In alternativa basta inquadrare con la fotocamera del telefono il QR code del visitatore: si apre direttamente la pagina di verifica con il codice già inserito (se serve, prima viene chiesto il login). La pagina indica se la prenotazione è valida per oggi, già usata, per una mostra non ancora iniziata o conclusa, e con **Registra ingresso** segna l'entrata: ogni prenotazione vale per un solo ingresso.
+Dalla dashboard, con **Verifica ingresso**, il personale inserisce il codice comunicato dal visitatore (anche in minuscolo o senza trattini) oppure il numero della prenotazione. In alternativa basta inquadrare con la fotocamera del telefono il QR code del visitatore: si apre direttamente la pagina di verifica con il codice già inserito (se serve, prima viene chiesto il login). La pagina indica se la prenotazione è valida per oggi, già usata, per una mostra non ancora iniziata o conclusa, e con **Registra ingresso** segna l'entrata: ogni prenotazione vale per un solo ingresso, anche se due operatori verificano lo stesso QR code nello stesso istante.
 
 ![Verifica della prenotazione](../screenshots/37-verifica-prenotazione.webp){ .screenshot loading=lazy }
 

@@ -45,7 +45,9 @@ Il backend legge la configurazione da `backend/.env` (e da `.env.local`, che ha 
 | Variabile | Descrizione |
 | --- | --- |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Credenziali dell'area riservata |
-| `SECRET_KEY` | Chiave per firmare i token di accesso (valore casuale lungo) |
+| `SECRET_KEY` | Chiave per firmare i token di accesso: in produzione almeno 32 caratteri casuali |
+| `AMBIENTE` | Facoltativa: `sviluppo` o `produzione` (su Render è produzione in automatico); in produzione l'avvio è rifiutato con credenziali o chiave dimostrative |
+| `FUSO_ORARIO` | Facoltativa: fuso del museo per le regole sulle date (default `Europe/Rome`) |
 | `TOKEN_DURATA_ORE` | Durata dei token di accesso (default 8) |
 | `BREVO_API_KEY` | Chiave API di Brevo: se presente le email partono via API HTTPS |
 | `SMTP_USER` / `SMTP_PASSWORD` | In alternativa a Brevo: account e "password per le app" per l'invio via SMTP |
@@ -85,6 +87,7 @@ Senza servizio email configurato l'applicazione funziona lo stesso: le email non
     cd backend
     pip install -r requirements-dev.txt
     pytest                # test automatici
+    pytest --cov          # con la copertura (soglia 90%, file esclusi in .coveragerc)
     # stessi test su un PostgreSQL vero (database di prova vuoto)
     TEST_DATABASE_URL=postgresql://postgres@localhost:5432/museo_test pytest
     ruff check .          # linter
@@ -96,10 +99,11 @@ Senza servizio email configurato l'applicazione funziona lo stesso: le email non
     ```bash
     cd frontend
     npm test              # test automatici (Vitest)
+    npm run test:coverage # con la copertura (soglia 90%)
     npm run lint          # ESLint
     npm run format:check  # Prettier
     npm run build         # build di produzione
     ```
 
 Gli stessi controlli vengono eseguiti da **GitHub Actions** a ogni pull request e a ogni push su `main`,
-insieme alla generazione di questa documentazione ([come si genera](../documentazione.md)).
+con la misura della copertura (i report sono scaricabili come *artifact* di ogni esecuzione), insieme alla generazione di questa documentazione ([come si genera](../documentazione.md)).

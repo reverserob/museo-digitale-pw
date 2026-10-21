@@ -29,7 +29,7 @@ Una copia della Swagger UI è pubblicata anche in questo sito: [Swagger UI](swag
 | Area riservata | 🔒 GET /api/statistiche | Indicatori per la dashboard: conteggi di mostre, prenotazioni e feedback, voto medio, dettaglio per mostra. | 200, 401 |
 | Mostre | GET /api/mostre | Restituisce la lista di tutte le esposizioni, ordinate per data di inizio. | 200 |
 | Mostre | GET /api/mostre/{mostra_id} | Recupera i dettagli di una singola mostra. | 200, 404 |
-| Mostre | 🔒 POST /api/mostre | Caricamento di una nuova mostra e delle relative immagini (multipart/form-data). | 201, 400, 401, 422 |
+| Mostre | 🔒 POST /api/mostre | Caricamento di una nuova mostra e delle relative immagini (multipart/form-data). Ogni file è verificato anche nel contenuto (Pillow): 400 se non è un'immagine valida, se il formato reale non corrisponde all'estensione, oltre 40 milioni di pixel, oltre `UPLOAD_MAX_MB` o con più di 10 file. | 201, 400, 401, 422 |
 | Mostre | 🔒 PUT /api/mostre/{mostra_id} | Aggiornamento di un'esposizione esistente. Il campo `immagini_esistenti` (lista JSON) indica quali immagini attuali tenere; le nuove immagini caricate si aggiungono in coda. Deve restare almeno un'immagine. | 200, 400, 401, 404 |
 | Mostre | 🔒 DELETE /api/mostre/{mostra_id} | Eliminazione di un'esposizione, delle sue prenotazioni e dei suoi feedback. | 200, 401, 404 |
 | Prenotazioni | 👤 POST /api/prenota | Salva la prenotazione con i dati dell'account e un codice di riferimento, restituito nella risposta, e avvia in background l'invio dell'email di conferma con codice e QR code. Una sola prenotazione per visitatore su ogni mostra. | 201, 400, 401, 403, 404, 409, 422 |
@@ -37,7 +37,7 @@ Una copia della Swagger UI è pubblicata anche in questo sito: [Swagger UI](swag
 | Mostre | GET /api/immagini/{nome} | Immagine caricata dall'area riservata, letta dalla tabella immagini del database (sopravvive ai riavvii del server). Solo nomi generati dal server; cache lunga nel browser. | 200, 404 |
 | Prenotazioni | GET /api/prenotazioni/qr/{codice} | Immagine PNG del QR code di una prenotazione, usata nell'email e nell'area personale. Contiene solo l'indirizzo della pagina di verifica. | 200, 404 |
 | Prenotazioni | 🔒 GET /api/prenotazioni/verifica/{riferimento} | Verifica all'ingresso: dati della prenotazione e della mostra e stato (`valida`, `gia_entrato`, `non_iniziata`, `conclusa`). Il riferimento è il codice (anche in minuscolo o senza trattini) o il numero della prenotazione. | 200, 401, 404 |
-| Prenotazioni | 🔒 POST /api/prenotazioni/verifica/{riferimento}/ingresso | Registra l'ingresso del visitatore: una sola volta e solo mentre la mostra è aperta. | 200, 400, 401, 404, 409 |
+| Prenotazioni | 🔒 POST /api/prenotazioni/verifica/{riferimento}/ingresso | Registra l'ingresso del visitatore: una sola volta (UPDATE atomico condizionato a `ingresso_il IS NULL`: con due richieste simultanee la seconda riceve 409) e solo mentre la mostra è aperta. | 200, 400, 401, 404, 409 |
 | Feedback | 👤 POST /api/feedback | Salva il feedback del visitatore su una mostra già iniziata (uno per mostra). | 201, 400, 401, 403, 404, 409, 422 |
 | Feedback | GET /api/feedback | Elenco pubblico dei feedback, filtrabile per mostra (`?mostra_id=`), dal più recente. | 200 |
 | Feedback | 🔒 DELETE /api/feedback/{feedback_id} | Eliminazione di un feedback (moderazione). | 200, 401, 404 |

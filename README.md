@@ -50,7 +50,8 @@ Vai a: [Museo Civico Digitale](https://museo-digitale-pw-azure.vercel.app/)
 - **Account**: registrazione con controllo dei dati mentre si scrive, **conferma dell'email** (va digitata due
   volte: se le due copie sono diverse la registrazione è bloccata, anche dal server) e della password, ed email di
   benvenuto; ogni email si registra una sola volta. Recupero password con link valido 30 minuti e utilizzabile una sola volta.
-- **Prenotazione** della visita (una per visitatore su ogni mostra) con email di conferma che contiene:
+- **Prenotazione** della visita (una per visitatore su ogni mostra, valida per tutto il periodo espositivo: non ci
+  sono date, fasce orarie o posti limitati) con email di conferma che contiene:
   - un **codice di riferimento** nel formato `MCD-XXXX-XXXX` (es. `MCD-68ZY-MT8U`);
   - un **QR code**, sempre in allegato PNG e, con il backend online, anche come immagine nel testo dell'email.
 - **Area personale**: elenco delle prenotazioni con il codice, pulsante **Mostra QR code** da presentare
@@ -58,7 +59,8 @@ Vai a: [Museo Civico Digitale](https://museo-digitale-pw-azure.vercel.app/)
   Da qui il visitatore **modifica i propri dati** (nome, cognome, telefono) ed **elimina l'account** confermando la
   password: le prenotazioni non usate vengono annullate, quelle già usate restano in forma anonima, e arriva
   un'email di conferma dell'eliminazione.
-- **Feedback**: un voto da 1 a 5 con commento facoltativo per ogni mostra già iniziata a cui si è prenotati.
+- **Feedback**: un voto da 1 a 5 con commento facoltativo per ogni mostra già iniziata a cui si è prenotati
+  (opinione di un visitatore prenotato: l'ingresso registrato non è richiesto).
 - **Contatti**: modulo (per utenti registrati) che invia la domanda per email alla casella del museo.
 - **Lingua**: interfaccia in italiano o in inglese.
 
@@ -74,7 +76,8 @@ Vai a: [Museo Civico Digitale](https://museo-digitale-pw-azure.vercel.app/)
 - **Verifica all'ingresso** (`/admin/verifica`): il personale inserisce il codice comunicato dal visitatore (anche
   in minuscolo o senza trattini) o il numero della prenotazione, **oppure inquadra il QR code con la fotocamera
   del telefono**. La pagina indica se la prenotazione è *valida*, *già usata*, per una mostra *non ancora
-  iniziata* o *conclusa*; con **Registra ingresso** segna l'entrata (ogni prenotazione vale per un solo ingresso).
+  iniziata* o *conclusa*; con **Registra ingresso** segna l'entrata (ogni prenotazione vale per un solo ingresso,
+  garantito da un aggiornamento atomico nel database anche con due verifiche simultanee).
 
 ### Cosa contiene il QR code
 Il QR code contiene solo un link alla pagina di verifica, ad esempio
@@ -131,6 +134,7 @@ documentazione e nella cartella [`docs/screenshots`](docs/screenshots).
 - **Pydantic v2**: valida i dati JSON in entrata e in uscita.
 - **segno**: genera i QR code delle prenotazioni (PNG), senza dipendenze esterne.
 - **slowapi**: limita i tentativi di login, registrazione, reset password e invio dei moduli.
+- **Pillow**: controlla il contenuto reale delle immagini caricate (formato, dimensioni in pixel, integrità).
 - **Brevo** (API HTTPS) oppure **SMTP**: invio delle email.
 
 ### Frontend
@@ -226,7 +230,9 @@ Il backend legge la configurazione da `backend/.env` (e da `.env.local`, che ha 
 | Variabile | Descrizione |
 |---|---|
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Credenziali dell'area riservata |
-| `SECRET_KEY` | Chiave per firmare i token di accesso (valore casuale lungo) |
+| `SECRET_KEY` | Chiave per firmare i token di accesso: in produzione almeno 32 caratteri casuali, es. `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `AMBIENTE` | Facoltativa: `sviluppo` o `produzione`. Su Render è produzione in automatico (variabile `RENDER`): l'avvio viene rifiutato se `SECRET_KEY` o `ADMIN_PASSWORD` sono quelle dimostrative o la chiave è corta |
+| `FUSO_ORARIO` | Facoltativa: fuso del museo per decidere "oggi" in apertura, chiusura e ingressi (default `Europe/Rome`) |
 | `TOKEN_DURATA_ORE` | Durata dei token di accesso (default 8) |
 | `BREVO_API_KEY` | Chiave API di Brevo: se presente le email partono via API HTTPS (necessario su Render free, che blocca SMTP) |
 | `SMTP_USER` / `SMTP_PASSWORD` | In alternativa a Brevo: account e "password per le app" per l'invio via SMTP |
@@ -306,12 +312,13 @@ L'elenco completo, con permessi e codici di risposta, è nella pagina
 
 ## Test e controlli di qualità
 
-### Backend (233 test pytest, su SQLite e su PostgreSQL)
+### Backend (257 test pytest, su SQLite e su PostgreSQL)
 ```bash
 cd backend
 source venv/bin/activate
 pip install -r requirements-dev.txt
 pytest                # test automatici (SQLite)
+pytest --cov          # con la copertura (soglia 90%, file esclusi in .coveragerc; report HTML: --cov-report=html)
 # stessi test su un PostgreSQL vero (database di prova vuoto), come nel job CI "Backend (PostgreSQL)"
 TEST_DATABASE_URL=postgresql://postgres@localhost:5432/museo_test pytest
 ruff check .          # linter
@@ -327,6 +334,7 @@ visitatore, mostra con immagine e prenotazione, riavvia il server e controlla ch
 cd frontend
 npm install
 npm test              # test automatici (Vitest + Testing Library)
+npm run test:coverage # con la copertura (soglia 90%, report in frontend/coverage/)
 npm run lint          # ESLint
 npm run format:check  # Prettier (npm run format per correggere)
 npm run build         # build di produzione
@@ -352,8 +360,9 @@ A ogni push su `main` il workflow `.github/workflows/docs.yml` rigenera tutto e 
 
 ## Integrazione continua (GitHub Actions)
 A ogni push su `main` e a ogni pull request il workflow `.github/workflows/ci.yml` esegue:
-- **backend**: ruff e pytest su Python 3.9, 3.12 e 3.15;
-- **frontend**: ESLint, Prettier, Vitest e la build;
+- **backend**: ruff e pytest con copertura su Python 3.9, 3.12 e 3.15 e su PostgreSQL 16;
+- **frontend**: ESLint, Prettier, Vitest con copertura e la build;
+- **report di copertura**: pubblicati come *artifact* (`copertura-backend`, `copertura-frontend`) in ogni esecuzione; sotto il 90% il job fallisce;
 - **documentazione**: JSDoc, esportazione dello schema OpenAPI e `mkdocs build --strict`.
 
 L'esito si vede nella scheda **Actions** del repository e nel badge in cima a questo file.
