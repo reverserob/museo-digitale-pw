@@ -15,25 +15,25 @@ flowchart LR
     subgraph Render["Render (Web Service)"]
         U["Uvicorn<br/>server ASGI"] --> A["Applicazione FastAPI<br/>router + servizi"]
         A --> O["SQLAlchemy ORM"]
-        A --> S["Cartella static/uploads<br/>immagini delle mostre iniziali"]
+        S["Cartella static/uploads<br/>immagini delle mostre iniziali<br/>(nel codice, sola lettura)"] -. "lettura" .-> A
     end
     subgraph Neon["Neon (PostgreSQL gestito)"]
         D[("PostgreSQL<br/>tabelle + immagini caricate")]
     end
-    O -- "TLS, porta 5432" --> D
+    O <-- "TLS, porta 5432: lettura e scrittura" --> D
     subgraph Brevo["Brevo"]
         M["API email transazionali"]
     end
     B -- "1. HTTPS: scarica l'applicazione" --> F
     B -- "2. HTTPS + JSON: chiamate REST /api/..." --> U
-    B -- "3. HTTPS: immagini /static/..." --> U
+    B -- "3. HTTPS: immagini /static/... e /api/immagini/..." --> U
     A -- "4. HTTPS: invio email di conferma" --> M
     M -- "SMTP" --> E["Casella email del visitatore"]
 ```
 
 1. Il browser scarica da Vercel il front-end, cioè file statici distribuiti tramite una rete di server vicini all'utente (CDN).
 2. L'applicazione React, in esecuzione nel browser, chiama le API REST del back-end su Render scambiando dati in formato JSON.
-3. Le immagini delle mostre sono servite direttamente dal back-end come file statici.
+3. Le immagini sono servite dal back-end in due modi: quelle delle mostre iniziali fanno parte del codice e sono solo **lette** dalla cartella `static/uploads` (`/static/...`), che a runtime non viene mai scritta; quelle caricate dall'amministratore sono scritte e lette nel database PostgreSQL (`/api/immagini/...`), quindi sopravvivono ai riavvii del disco effimero di Render.
 
 ## Struttura del backend
 
