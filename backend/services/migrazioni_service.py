@@ -4,6 +4,7 @@ import logging
 import secrets
 
 from sqlalchemy import inspect, text
+from sqlalchemy.engine import Engine
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -74,7 +75,7 @@ INDICI_UNICI = {
 }
 
 
-def _indici_applicabili(engine) -> dict[str, tuple[str, str]]:
+def _indici_applicabili(engine: Engine) -> dict[str, tuple[str, str]]:
     """Indici unici le cui tabelle e colonne esistono (in un database molto vecchio possono mancare)."""
     ispettore = inspect(engine)
     tabelle = set(ispettore.get_table_names())
@@ -91,7 +92,7 @@ class ErroreIntegrita(RuntimeError):
     """Il database non ha (o non può avere) un vincolo indispensabile: l'avvio del back-end viene interrotto."""
 
 
-def trova_duplicati(engine) -> dict[str, int]:
+def trova_duplicati(engine: Engine) -> dict[str, int]:
     """Conta le righe in più che impedirebbero la creazione degli indici unici.
 
     Args:
@@ -113,7 +114,7 @@ def trova_duplicati(engine) -> dict[str, int]:
     return risultato
 
 
-def bonifica_duplicati(engine) -> dict[str, int]:
+def bonifica_duplicati(engine: Engine) -> dict[str, int]:
     """Procedura esplicita di bonifica: per ogni coppia (utente, mostra) tiene la riga più vecchia ed elimina le altre.
 
     Non viene mai eseguita in automatico: la lancia l'amministratore con lo script `bonifica_duplicati.py`
