@@ -65,6 +65,8 @@ Vai a: [Museo Civico Digitale](https://museo-digitale-pw-azure.vercel.app/)
 - **Dashboard** con indicatori (prenotazioni, mostre in corso, voto medio, prenotazioni per mostra).
 - **Gestione delle mostre**: creazione, modifica ed eliminazione con caricamento delle immagini.
 - **Prenotazioni e moderazione dei feedback** per ogni mostra.
+- **Persistenza dei dati**: account, prenotazioni, mostre e immagini caricate sono salvati su PostgreSQL (Neon) e
+  restano anche quando il server su Render si riavvia (caso d'uso *Conservare dati e immagini in modo persistente*).
 - **Gestione utenti** (`/admin/utenti`): elenco degli account con ricerca, numero di prenotazioni e feedback,
   modifica dei dati ed eliminazione. Insieme alla registrazione completa il **CRUD degli utenti**.
 - **Verifica all'ingresso** (`/admin/verifica`): il personale inserisce il codice comunicato dal visitatore (anche
@@ -302,7 +304,7 @@ L'elenco completo, con permessi e codici di risposta, è nella pagina
 
 ## Test e controlli di qualità
 
-### Backend (226 test pytest, su SQLite e su PostgreSQL)
+### Backend (227 test pytest, su SQLite e su PostgreSQL)
 ```bash
 cd backend
 source venv/bin/activate

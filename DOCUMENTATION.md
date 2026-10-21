@@ -110,7 +110,7 @@ Il presente Project Work ha come obiettivo la progettazione e lo sviluppo di una
 - **Sicurezza**: credenziali fuori dal codice, password dei visitatori salvate solo come hash, token firmati con ruolo (amministratore o visitatore), limite ai tentativi di accesso, validazione di tutti i dati in ingresso, controllo dei file caricati.
 - **Usabilità**: interfaccia responsive, messaggi di errore comprensibili, validazione dei form in tempo reale.
 - **Manutenibilità**: codice suddiviso per responsabilità, configurazione tramite variabili d'ambiente, test automatici e integrazione continua.
-- **Persistenza**: i dati (comprese le immagini caricate) devono restare dopo il riavvio o la sospensione del server: in produzione si usa PostgreSQL.
+- **Persistenza**: i dati (comprese le immagini caricate) devono restare dopo il riavvio o la sospensione del server: in produzione si usa PostgreSQL (caso d'uso *Conservare dati e immagini in modo persistente*, §6.1).
 - **Portabilità**: lo stesso codice funziona con SQLite (sviluppo e test) e PostgreSQL (produzione), cambiando solo la variabile `DATABASE_URL`; il back-end funziona con Python dalla 3.9 alla 3.15.
 - **Prestazioni**: email inviate in background dopo la risposta, pagine caricate su richiesta, pacchetto JavaScript principale sotto i 200 KB compresso.
 - **Privacy**: dati personali ridotti al minimo, QR code senza dati personali, modifica ed eliminazione dell'account da parte del visitatore (GDPR).
@@ -323,13 +323,14 @@ Lo stesso script si può eseguire contro il database su Neon impostando `DATABAS
 ### 6. Diagrammi UML
 
 #### 6.1. Diagramma dei casi d'uso
-Gli attori sono il **visitatore** (che consulta il catalogo senza account e si registra per prenotare e lasciare feedback), l'**amministratore** (personale del museo) e il **servizio email** esterno.
+Gli attori sono il **visitatore** (che consulta il catalogo senza account e si registra per prenotare e lasciare feedback), l'**amministratore** (personale del museo) e due sistemi esterni: il **servizio email** e il **database PostgreSQL gestito su Neon**. Il caso d'uso *Conservare dati e immagini in modo persistente* è incluso da tutti i casi d'uso che scrivono dati (registrazione, prenotazione, gestione delle mostre con le immagini e degli utenti): l'attore Neon rappresenta il servizio esterno che garantisce che questi dati restino anche quando il server su Render si riavvia (§5.3).
 
 ```mermaid
 flowchart LR
     V(["👤 Visitatore"])
     AM(["👤 Amministratore"])
     EM(["⚙️ Servizio email"])
+    DB(["🗄️ Database PostgreSQL<br/>Neon"])
 
     subgraph SYS["Piattaforma Museo Civico Digitale"]
         UC1(("Consultare il catalogo"))
@@ -347,6 +348,7 @@ flowchart LR
         UC10(("Consultare la dashboard"))
         UC14(("Gestire gli utenti<br/>elenco, modifica, elimina"))
         UC15(("Ricevere la conferma<br/>di eliminazione account"))
+        UC16(("Conservare dati e immagini<br/>in modo persistente"))
     end
 
     V --- UC1
@@ -365,6 +367,11 @@ flowchart LR
     UC13 -. "include" .-> UC15
     UC14 -. "include" .-> UC15
     UC15 --- EM
+    UC3 -. "include" .-> UC16
+    UC11 -. "include" .-> UC16
+    UC7 -. "include" .-> UC16
+    UC14 -. "include" .-> UC16
+    UC16 --- DB
     AM --- UC6
     AM --- UC7
     AM --- UC8
@@ -903,7 +910,7 @@ Per mantenere il codice uniforme e individuare gli errori prima della pubblicazi
 |---|---|---|
 | Controllo del codice (linter) | Ruff | ESLint |
 | Formattazione | Ruff format | Prettier |
-| Test automatici | pytest + TestClient di FastAPI (226 test, eseguiti su SQLite e su PostgreSQL) | Vitest + React Testing Library (163 test) |
+| Test automatici | pytest + TestClient di FastAPI (227 test, eseguiti su SQLite e su PostgreSQL) | Vitest + React Testing Library (163 test) |
 
 **Test del back-end** (cartella `backend/tests/`): verificano le API in modo completo — login corretto ed errato, rifiuto di token assenti, falsi, manomessi o scaduti, limite ai tentativi di accesso, creazione, modifica ed eliminazione delle mostre, controllo degli upload (tipo, dimensione, nomi di file malevoli), modifica delle immagini (mantenute, rimosse, aggiunte), prenotazioni valide e non valide, mostre concluse, invio dell'email di conferma, feedback validi e non validi, moderazione, calcolo degli indicatori della dashboard, registrazione e login dei visitatori, hash delle password, separazione dei ruoli (un visitatore non entra nell'area riservata e l'admin non prenota), un solo feedback per mostra e solo dopo la prenotazione, email di registrazione e avviso di registrazione doppia, recupero della password (link valido, scaduto, già usato, token non valido), codice di prenotazione (formato, unicità, varianti di scrittura accettate), QR code (contenuto e immagine PNG), email con codice e allegato (immagine nel testo solo con un backend pubblico, solo allegato in locale), verifica e registrazione dell'ingresso (solo admin, una sola volta, mostre non iniziate o concluse), aggiornamento di un database della versione precedente con assegnazione dei codici mancanti. I test usano un database temporaneo e sostituiscono l'invio delle email con una funzione simulata, quindi non modificano i dati reali.
 
