@@ -16,15 +16,20 @@ class Mostra(Base):
     id = Column(Integer, primary_key=True, index=True)
     titolo = Column(String, index=True, nullable=False)
     descrizione = Column(Text, nullable=False)
-    # Percorsi relativi (es. "/static/uploads/abc.webp") separati da virgola
+    # Percorsi pubblici delle immagini, separati da virgola e nell'ordine di visualizzazione (la prima è la
+    # principale): "/api/immagini/<nome>" per quelle caricate (tabella immagini) oppure
+    # "/static/uploads/<file>" per le immagini delle mostre iniziali, che fanno parte del codice
     immagini = Column(String, nullable=False, default="")
     data_inizio = Column(Date, nullable=False)
     data_fine = Column(Date, nullable=False)
 
-    # composizione: prenotazioni e feedback non esistono senza la loro mostra,
+    # composizione: prenotazioni, feedback e immagini caricate non esistono senza la loro mostra,
     # quindi eliminando la mostra vengono eliminati anche loro (cascade)
     prenotazioni = relationship("Prenotazione", back_populates="mostra", cascade="all, delete-orphan")
     feedback = relationship("Feedback", back_populates="mostra", cascade="all, delete-orphan")
+    # file delle immagini caricate dall'area riservata (relazione 1-a-N con la tabella immagini);
+    # la colonna "immagini" qui sopra conserva l'ordine di visualizzazione e i percorsi pubblici
+    file_immagini = relationship("Immagine", back_populates="mostra", cascade="all, delete-orphan")
 
 
 class Prenotazione(Base):
@@ -108,8 +113,12 @@ class Immagine(Base):
     __tablename__ = "immagini"
 
     id = Column(Integer, primary_key=True, index=True)
+    # mostra a cui appartiene l'immagine: eliminando la mostra vengono eliminate anche le sue immagini
+    mostra_id = Column(Integer, ForeignKey("mostre.id", ondelete="CASCADE"), nullable=True, index=True)
     # nome generato dal server (uuid + estensione), usato nell'indirizzo pubblico
     nome = Column(String(64), unique=True, index=True, nullable=False)
     tipo = Column(String(50), nullable=False)  # tipo MIME, es. image/webp
     dati = Column(LargeBinary, nullable=False)
     creata_il = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    mostra = relationship("Mostra", back_populates="file_immagini")

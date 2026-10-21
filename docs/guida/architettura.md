@@ -103,11 +103,13 @@ Le pagine non chiamano mai direttamente le API: usano le funzioni dei moduli `se
 erDiagram
     MOSTRE ||--o{ PRENOTAZIONI : "riceve"
     MOSTRE ||--o{ FEEDBACK : "riceve"
+    MOSTRE ||--o{ IMMAGINI : "contiene"
     UTENTI |o--o{ PRENOTAZIONI : "effettua"
     UTENTI |o--o{ FEEDBACK : "scrive"
 
     IMMAGINI {
         int id PK
+        int mostra_id FK "ON DELETE CASCADE"
         string nome "unico, uuid + estensione"
         string tipo "MIME, es. image/webp"
         bytes dati "BYTEA in PostgreSQL"
@@ -128,7 +130,7 @@ erDiagram
         int id PK
         string titolo "obbligatorio, 3-200 caratteri"
         text descrizione "obbligatoria"
-        string immagini "percorsi separati da virgola"
+        string immagini "percorsi in ordine di visualizzazione"
         date data_inizio
         date data_fine "non precede data_inizio"
     }
