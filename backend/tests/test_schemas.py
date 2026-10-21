@@ -48,6 +48,30 @@ def test_registrazione_dati_non_validi(campo, valore):
         RegistrazioneRequest(**dati)
 
 
+def test_conferma_email_uguale_ignorando_maiuscole_e_spazi():
+    r = RegistrazioneRequest(
+        nome="Anna",
+        cognome="Bianchi",
+        email="anna@test.it",
+        conferma_email=" ANNA@Test.it ",
+        telefono="0612345678",
+        password="Museo2026",
+    )
+    assert r.conferma_email == "anna@test.it"
+
+
+def test_conferma_email_diversa_rifiutata():
+    with pytest.raises(ValidationError, match="Le email non coincidono"):
+        RegistrazioneRequest(
+            nome="Anna",
+            cognome="Bianchi",
+            email="anna@test.it",
+            conferma_email="ana@test.it",
+            telefono="0612345678",
+            password="Museo2026",
+        )
+
+
 def test_prenotazione_telefono_facoltativo():
     assert PrenotazioneCreate(mostra_id=1).telefono is None
     assert PrenotazioneCreate(mostra_id=1, telefono=" 0612345678 ").telefono == "0612345678"

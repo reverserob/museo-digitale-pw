@@ -10,7 +10,9 @@ La pagina **Esposizioni** mostra tutte le mostre; ogni scheda porta al dettaglio
 
 ### Account
 
-Per prenotare e lasciare un feedback serve un account. La registrazione controlla i dati mentre si scrive (email, telefono, requisiti della password) e invia un'email di benvenuto. Ogni email può essere registrata una sola volta: un secondo tentativo mostra un errore e avvisa per email il titolare dell'account.
+Per prenotare e lasciare un feedback serve un account. La registrazione controlla i dati mentre si scrive (email, telefono, requisiti della password) e invia un'email di benvenuto. L'email va digitata due volte (campo **Conferma email**, dove non si può incollare): se le due copie non coincidono il campo diventa rosso, il pulsante **CREA ACCOUNT** resta disattivato e anche il server rifiuta la richiesta, così l'account non nasce con un indirizzo sbagliato. Ogni email può essere registrata una sola volta: un secondo tentativo mostra un errore e avvisa per email il titolare dell'account.
+
+![Registrazione bloccata: le due email non coincidono](../screenshots/43-conferma-email.webp){ .screenshot loading=lazy }
 
 ![Registrazione](../screenshots/15-registrazione.webp){ .screenshot loading=lazy }
 

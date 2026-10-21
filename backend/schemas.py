@@ -10,7 +10,7 @@ import re
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, ValidationInfo, field_validator
 
 
 class MostraResponse(BaseModel):
@@ -67,6 +67,9 @@ class RegistrazioneRequest(BaseModel):
     nome: str
     cognome: str
     email: EmailStr  # EmailStr controlla che l'indirizzo sia sintatticamente valido
+    # seconda digitazione dell'email nel form: deve coincidere con la prima (controllo anche lato server).
+    # Facoltativa per i client che usano l'API direttamente (script, test); se presente viene verificata.
+    conferma_email: Optional[str] = None
     telefono: str
     password: str
 
@@ -80,6 +83,25 @@ class RegistrazioneRequest(BaseModel):
     def normalizza_email(cls, v: str) -> str:
         # salvo l'email in minuscolo: "Mario@Test.it" e "mario@test.it" sono lo stesso account
         return v.strip().lower()
+
+    @field_validator("conferma_email")
+    @classmethod
+    def verifica_conferma_email(cls, v: Optional[str], info: ValidationInfo) -> Optional[str]:
+        """Rifiuta la registrazione se le due email digitate sono diverse.
+
+        Il confronto ignora maiuscole e spazi ai lati, come la normalizzazione del campo email.
+
+        Raises:
+            ValueError: se la conferma non coincide con l'email (risposta 422).
+        """
+        if v is None:
+            return v
+        conferma = v.strip().lower()
+        # se l'email non è valida info.data non la contiene: l'errore è già segnalato sul campo email
+        email = info.data.get("email")
+        if email is not None and conferma != email:
+            raise ValueError("Le email non coincidono.")
+        return conferma
 
     @field_validator("telefono")
     @classmethod

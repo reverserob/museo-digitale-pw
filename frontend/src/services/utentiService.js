@@ -17,7 +17,8 @@ const salvaSessione = (res) => {
  * Crea un account visitatore (`POST /api/utenti/registrazione`).
  * Dopo la registrazione il visitatore è già collegato e riceve un'email di benvenuto.
  *
- * @param {{nome: string, cognome: string, email: string, telefono: string, password: string}} dati Dati del nuovo account.
+ * @param {{nome: string, cognome: string, email: string, conferma_email: string, telefono: string, password: string}} dati
+ *     Dati del nuovo account; `conferma_email` è la seconda digitazione dell'email, ricontrollata dal backend.
  * @returns {Promise<module:tipi~Utente>} Il profilo creato (errore 409 se l'email è già registrata).
  */
 export const registrazione = (dati) => api.post('/api/utenti/registrazione', dati).then(salvaSessione);

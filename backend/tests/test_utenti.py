@@ -46,6 +46,22 @@ def test_registrazione_password_corta(client):
     assert "almeno 6 caratteri" in r.json()["detail"]
 
 
+def test_registrazione_con_conferma_email_corretta(client):
+    r = client.post("/api/utenti/registrazione", json={**DATI, "conferma_email": "giulia.verdi@test.it "})
+    assert r.status_code == 201
+
+
+def test_registrazione_bloccata_se_le_email_non_coincidono(client, email_registrazione):
+    r = client.post("/api/utenti/registrazione", json={**DATI, "conferma_email": "giulia.verde@test.it"})
+    assert r.status_code == 422
+    assert r.json()["detail"] == "conferma_email: Le email non coincidono."
+    # nessun account creato e nessuna email inviata
+    db = SessionLocal()
+    assert db.query(models.Utente).count() == 0
+    db.close()
+    assert email_registrazione == []
+
+
 def test_login_corretto(client):
     client.post("/api/utenti/registrazione", json=DATI)
     r = client.post("/api/utenti/login", json={"email": " GIULIA.verdi@test.it ", "password": "Museo2026"})

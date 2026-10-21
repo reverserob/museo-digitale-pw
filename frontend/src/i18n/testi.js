@@ -35,6 +35,8 @@ const it = {
     'comune.password': 'Password',
     'comune.confermaPassword': 'Conferma password',
     'comune.passwordNonCoincidono': 'Le password non coincidono',
+    'comune.confermaEmail': 'Conferma email',
+    'comune.emailNonCoincidono': "Le email non coincidono: ricontrolla l'indirizzo",
     'comune.passwordValida': 'Password valida',
     'comune.serve': 'Serve: {elenco}',
 
@@ -269,6 +271,8 @@ const en = {
     'comune.password': 'Password',
     'comune.confermaPassword': 'Confirm password',
     'comune.passwordNonCoincidono': 'Passwords do not match',
+    'comune.confermaEmail': 'Confirm email',
+    'comune.emailNonCoincidono': 'The emails do not match: check the address',
     'comune.passwordValida': 'Valid password',
     'comune.serve': 'Required: {elenco}',
 
@@ -477,6 +481,7 @@ export const TESTI = { it, en };
  */
 export const MESSAGGI_SERVER_EN = {
     'Password errata.': 'Incorrect password.',
+    'Le email non coincidono.': 'The emails do not match.',
     'Account eliminato.': 'Account deleted.',
     "Account eliminato. Ti abbiamo inviato un'email di conferma.":
         'Account deleted. We have sent you a confirmation email.',
