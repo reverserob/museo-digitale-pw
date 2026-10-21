@@ -118,7 +118,7 @@ const it = {
     'prenota.titolo': 'Prenotazione: {titolo}',
     'prenota.confermata': 'Prenotazione confermata con successo!',
     'prenota.emailInviata':
-        "Abbiamo inviato un'email di riepilogo all'indirizzo {email} con tutti i dettagli dell'esposizione.",
+        "Riceverai a breve all'indirizzo {email} un'email di riepilogo con tutti i dettagli dell'esposizione.",
     'prenota.telefono': 'Telefono *',
     'prenota.invio': 'Invio prenotazione in corso...',
     'prenota.errore': 'Errore di validazione o di rete. Controlla i dati inseriti.',
@@ -175,7 +175,7 @@ const it = {
     // area personale
     'profilo.ciao': 'Ciao, {nome}',
     'profilo.esci': 'Esci',
-    'profilo.registrato': "Registrazione completata! Ti abbiamo inviato un'email di conferma.",
+    'profilo.registrato': "Registrazione completata! Riceverai a breve un'email di conferma.",
     'profilo.mie': 'Le mie prenotazioni',
     'profilo.errore': 'Impossibile caricare le prenotazioni.',
     'profilo.nessuna': 'Non hai ancora prenotato nessuna visita.',
@@ -346,7 +346,8 @@ const en = {
     'prenota.indietro': '← Back to exhibition details',
     'prenota.titolo': 'Booking: {titolo}',
     'prenota.confermata': 'Booking confirmed!',
-    'prenota.emailInviata': 'We have sent a summary email to {email} with all the details of the exhibition.',
+    'prenota.emailInviata':
+        'You will shortly receive a summary email at {email} with all the details of the exhibition.',
     'prenota.telefono': 'Phone *',
     'prenota.invio': 'Sending booking...',
     'prenota.errore': 'Validation or network error. Please check your details.',
@@ -400,7 +401,7 @@ const en = {
 
     'profilo.ciao': 'Hi, {nome}',
     'profilo.esci': 'Sign out',
-    'profilo.registrato': 'Registration complete! We have sent you a confirmation email.',
+    'profilo.registrato': 'Registration complete! You will shortly receive a confirmation email.',
     'profilo.mie': 'My bookings',
     'profilo.errore': 'Unable to load your bookings.',
     'profilo.nessuna': 'You have not booked any visit yet.',
@@ -483,14 +484,15 @@ export const MESSAGGI_SERVER_EN = {
     'Password errata.': 'Incorrect password.',
     'Le email non coincidono.': 'The emails do not match.',
     'Account eliminato.': 'Account deleted.',
-    "Account eliminato. Ti abbiamo inviato un'email di conferma.":
-        'Account deleted. We have sent you a confirmation email.',
+    "Account eliminato. Riceverai a breve un'email di conferma.":
+        'Account deleted. You will shortly receive a confirmation email.',
     'Email o password errate.': 'Incorrect email or password.',
     'Utente già registrato: esiste già un account con questa email. Accedi oppure reimposta la password.':
         'User already registered: an account with this email already exists. Sign in or reset your password.',
     'Accedi o registrati per continuare.': 'Sign in or create an account to continue.',
     'Questa operazione è riservata ai visitatori registrati.': 'This action is reserved for registered visitors.',
     'Account non trovato: accedi di nuovo.': 'Account not found: please sign in again.',
+    'Sessione scaduta: accedi di nuovo.': 'Session expired: please sign in again.',
     'Impossibile completare la registrazione.': 'Unable to complete the registration.',
     'Troppi tentativi di accesso. Riprova tra qualche minuto.': 'Too many attempts. Please try again in a few minutes.',
     "Se l'email è registrata riceverai a breve un link per reimpostare la password.":
@@ -507,8 +509,8 @@ export const MESSAGGI_SERVER_EN = {
     'Prenotazione non trovata.': 'Booking not found.',
     "La prenotazione è già stata usata per l'ingresso e non può essere annullata.":
         'This booking has already been used to enter the museum and cannot be cancelled.',
-    "Prenotazione annullata. Ti abbiamo inviato un'email di conferma.":
-        'Booking cancelled. We have sent you a confirmation email.',
+    "Prenotazione annullata. Riceverai a breve un'email di conferma.":
+        'Booking cancelled. You will shortly receive a confirmation email.',
     'La mostra non è ancora iniziata: potrai lasciare un feedback dopo la visita.':
         'The exhibition has not started yet: you can leave a review after your visit.',
     'Puoi lasciare un feedback solo sulle mostre a cui ti sei prenotato.':

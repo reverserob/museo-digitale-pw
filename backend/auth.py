@@ -105,13 +105,31 @@ def verifica_password(password: str, hash_salvato: str) -> bool:
 
 
 # --- Token di accesso ---
-def crea_token(email: str, ruolo: str = "admin", utente_id: Optional[int] = None) -> str:
+def impronta_admin() -> str:
+    """Impronta delle credenziali attuali dell'amministratore, inserita nei suoi token.
+
+    È un HMAC (con la chiave segreta) di email e password: non rivela la password, ma cambia quando la
+    password viene cambiata su Render, e da quel momento tutti i token dell'amministratore già emessi
+    vengono rifiutati, anche se non sono ancora scaduti.
+
+    Returns:
+        Prime 16 cifre esadecimali dell'HMAC-SHA256.
+    """
+    credenziali = f"{settings.ADMIN_EMAIL}:{settings.ADMIN_PASSWORD}".encode()
+    return hmac.new(settings.SECRET_KEY.encode(), credenziali, hashlib.sha256).hexdigest()[:16]
+
+
+def crea_token(
+    email: str, ruolo: str = "admin", utente_id: Optional[int] = None, impronta: Optional[str] = None
+) -> str:
     """Crea un token firmato con scadenza; il ruolo distingue l'amministratore dai visitatori.
 
     Args:
         email: Email del titolare del token.
         ruolo: `"admin"`, `"utente"` oppure `"reset"`.
         utente_id: Id del visitatore (solo per i ruoli dei visitatori).
+        impronta: Impronta della password attuale (per l'amministratore, se omessa, `impronta_admin()`):
+            quando la password cambia, i token già emessi smettono di valere.
 
     Returns:
         Token nel formato `contenuto.firma`, entrambi in Base64.
@@ -121,6 +139,10 @@ def crea_token(email: str, ruolo: str = "admin", utente_id: Optional[int] = None
     dati = {"sub": email, "ruolo": ruolo, "exp": scadenza}
     if utente_id is not None:
         dati["uid"] = utente_id
+    if impronta is None and ruolo == "admin":
+        impronta = impronta_admin()
+    if impronta is not None:
+        dati["pw"] = impronta
     payload = _b64(json.dumps(dati).encode())
     # il token è "contenuto.firma": il contenuto è leggibile, ma non modificabile senza la chiave
     return f"{payload}.{_firma(payload)}"
@@ -159,10 +181,16 @@ def richiedi_admin(credenziali: Optional[HTTPAuthorizationCredentials] = Depends
         Email dell'amministratore contenuta nel token.
 
     Raises:
-        HTTPException: 401 se il token manca, non è valido, è scaduto o non ha ruolo `admin`.
+        HTTPException: 401 se il token manca, non è valido, è scaduto, non ha ruolo `admin` o è stato
+            emesso prima di un cambio della password dell'amministratore.
     """
     dati = _leggi_token(credenziali.credentials) if credenziali else None
-    if dati is None or dati.get("ruolo") != "admin":
+    # il token deve avere ruolo admin ed essere stato emesso con la password attuale dell'amministratore
+    if (
+        dati is None
+        or dati.get("ruolo") != "admin"
+        or not hmac.compare_digest(str(dati.get("pw", "")), impronta_admin())
+    ):
         raise _non_autorizzato("Accesso non autorizzato: effettua il login nell'area riservata.")
     return dati["sub"]
 
@@ -181,7 +209,8 @@ def richiedi_utente(
         L'account del visitatore indicato nel token.
 
     Raises:
-        HTTPException: 401 se il token manca, non è valido, è scaduto o l'account non esiste più;
+        HTTPException: 401 se il token manca, non è valido, è scaduto, l'account non esiste più o la
+            password è cambiata dopo l'emissione del token;
             403 se il token è valido ma di un altro ruolo (es. l'amministratore che prova a prenotare).
     """
     dati = _leggi_token(credenziali.credentials) if credenziali else None
@@ -198,11 +227,14 @@ def richiedi_utente(
     if utente is None:
         # l'account non esiste più (es. eliminato dopo l'emissione del token)
         raise _non_autorizzato("Account non trovato: accedi di nuovo.")
+    if not hmac.compare_digest(str(dati.get("pw", "")), impronta_password(utente)):
+        # la password è stata reimpostata dopo l'emissione del token: le vecchie sessioni non valgono più
+        raise _non_autorizzato("Sessione scaduta: accedi di nuovo.")
     return utente
 
 
 # --- Token per reimpostare la password ---
-def _impronta_password(utente: models.Utente) -> str:
+def impronta_password(utente: models.Utente) -> str:
     """Breve impronta dell'hash attuale della password."""
     # cambia quando cambia la password: così il link di reset si può usare una sola volta
     return hashlib.sha256(utente.password_hash.encode()).hexdigest()[:16]
@@ -221,7 +253,7 @@ def crea_token_reset(utente: models.Utente) -> str:
         Token firmato.
     """
     scadenza = int(time.time()) + settings.RESET_PASSWORD_MINUTI * 60
-    dati = {"sub": utente.email, "ruolo": "reset", "uid": utente.id, "pw": _impronta_password(utente), "exp": scadenza}
+    dati = {"sub": utente.email, "ruolo": "reset", "uid": utente.id, "pw": impronta_password(utente), "exp": scadenza}
     payload = _b64(json.dumps(dati).encode())
     return f"{payload}.{_firma(payload)}"
 
@@ -242,6 +274,6 @@ def leggi_token_reset(token: str, db: Session) -> Optional[models.Utente]:
         return None
     utente = db.get(models.Utente, dati.get("uid"))
     # se la password è già stata cambiata l'impronta non corrisponde più: link già usato
-    if utente is None or not hmac.compare_digest(dati.get("pw", ""), _impronta_password(utente)):
+    if utente is None or not hmac.compare_digest(dati.get("pw", ""), impronta_password(utente)):
         return None
     return utente

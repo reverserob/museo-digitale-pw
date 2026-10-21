@@ -63,11 +63,20 @@ CORS_ORIGINS = _lista(
     )
 )
 
+# --- Ambiente: "sviluppo" (valori dimostrativi ammessi) oppure "produzione" ---
+# Render imposta da solo la variabile RENDER: online l'ambiente è quindi produzione anche senza AMBIENTE.
+AMBIENTE = _env("AMBIENTE", "produzione" if os.getenv("RENDER") else "sviluppo").lower()
+
 # --- Area riservata (i valori predefiniti valgono solo per la demo locale) ---
-ADMIN_EMAIL = _env("ADMIN_EMAIL", "admin@museo.it")
-ADMIN_PASSWORD = _env("ADMIN_PASSWORD", "admin2026")
+ADMIN_EMAIL_DEMO = "admin@museo.it"
+ADMIN_PASSWORD_DEMO = "admin2026"
+SECRET_KEY_DEMO = "dev-secret-cambiami"
+ADMIN_EMAIL = _env("ADMIN_EMAIL", ADMIN_EMAIL_DEMO)
+ADMIN_PASSWORD = _env("ADMIN_PASSWORD", ADMIN_PASSWORD_DEMO)
 # chiave segreta con cui vengono firmati i token di accesso (HMAC-SHA256)
-SECRET_KEY = _env("SECRET_KEY", "dev-secret-cambiami")
+SECRET_KEY = _env("SECRET_KEY", SECRET_KEY_DEMO)
+# lunghezza minima della chiave in produzione (es. python -c "import secrets; print(secrets.token_hex(32))")
+SECRET_KEY_MIN = 32
 # durata dei token di accesso, in ore
 TOKEN_DURATA_ORE = int(_env("TOKEN_DURATA_ORE", "8"))
 
@@ -100,8 +109,34 @@ EMAIL_MITTENTE_NOME = _env("EMAIL_MITTENTE_NOME", "Museo Civico Digitale")
 # --- Modulo Contatti: casella che riceve le domande dei visitatori ---
 CONTATTI_EMAIL = _env("CONTATTI_EMAIL", "r.randazzo85@gmail.com")
 
+# --- Fuso orario del museo: decide "oggi" per apertura, chiusura, prenotazioni e ingressi ---
+# Il server (Render, CI) lavora in UTC: senza fuso esplicito tra le 22 e le 24 italiane "oggi" sarebbe ancora ieri.
+FUSO_ORARIO = _env("FUSO_ORARIO", "Europe/Rome")
+
 # --- Upload delle immagini delle mostre ---
 STATIC_DIR = Path(__file__).parent / "static"  # cartella servita all'indirizzo /static
 UPLOAD_DIR = STATIC_DIR / "uploads"  # qui finiscono le immagini caricate dall'area riservata
 UPLOAD_MAX_MB = int(_env("UPLOAD_MAX_MB", "5"))  # dimensione massima di ogni file
 ESTENSIONI_IMMAGINI = {".jpg", ".jpeg", ".png", ".webp", ".gif"}  # formati accettati
+IMMAGINI_MAX_PER_RICHIESTA = 10  # file caricabili in una sola creazione o modifica di mostra
+IMMAGINE_MAX_PIXEL = 40_000_000  # larghezza × altezza massima (protezione dalle "decompression bomb")
+
+
+def problemi_configurazione() -> list[str]:
+    """Elenca i valori di sicurezza non accettabili in produzione.
+
+    In sviluppo i valori dimostrativi sono ammessi (e main.py mostra solo un avviso); in produzione
+    main.py rifiuta l'avvio se questo elenco non è vuoto, così un'installazione configurata male non
+    parte con credenziali o chiave pubblicamente note.
+
+    Returns:
+        Messaggi leggibili, uno per ogni problema (lista vuota se la configurazione è sicura).
+    """
+    problemi = []
+    if SECRET_KEY == SECRET_KEY_DEMO:
+        problemi.append("SECRET_KEY non impostata (valore dimostrativo)")
+    elif len(SECRET_KEY) < SECRET_KEY_MIN:
+        problemi.append(f"SECRET_KEY troppo corta: servono almeno {SECRET_KEY_MIN} caratteri casuali")
+    if ADMIN_PASSWORD == ADMIN_PASSWORD_DEMO:
+        problemi.append("ADMIN_PASSWORD non impostata (password dimostrativa)")
+    return problemi

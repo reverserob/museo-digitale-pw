@@ -1,11 +1,13 @@
 """Configurazione comune dei test pytest: ambiente isolato, database pulito e fixture riutilizzabili."""
 
+import io
 import os
 import tempfile
 from datetime import date
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 # Configurazione di test: va impostata PRIMA di importare l'app,
 # perché settings.py legge le variabili d'ambiente all'import.
@@ -170,8 +172,16 @@ def mostra_conclusa():
     return crea_mostra_nel_db("2000-01-01", "2000-02-01", "Mostra conclusa")
 
 
-# immagine PNG minima valida per i test di upload
-PNG_FINTO = b"\x89PNG\r\n\x1a\n" + b"0" * 100
+def crea_immagine(formato: str = "PNG", dimensioni: tuple = (4, 3)) -> bytes:
+    """Restituisce i byte di una piccola immagine vera nel formato indicato (per i test di upload)."""
+    buffer = io.BytesIO()
+    Image.new("RGB", dimensioni, (197, 160, 89)).save(buffer, format=formato)
+    return buffer.getvalue()
+
+
+# immagini minime valide per i test di upload (il server ne controlla il contenuto reale con Pillow)
+PNG_FINTO = crea_immagine("PNG")
+JPG_FINTO = crea_immagine("JPEG")
 
 
 def registra_utente(client, email="mario.rossi@test.it", nome="Mario", cognome="Rossi", telefono="3331234567"):

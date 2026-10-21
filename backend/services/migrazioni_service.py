@@ -23,7 +23,11 @@ COLONNE_AGGIUNTE = {
 
 
 def aggiorna_schema(engine):
-    """Aggiunge le colonne mancanti elencate in COLONNE_AGGIUNTE (chiamata all'avvio da main.py)."""
+    """Aggiunge le colonne mancanti elencate in COLONNE_AGGIUNTE (chiamata all'avvio da main.py).
+
+    Raises:
+        ErroreIntegrita: se gli indici unici indispensabili non possono essere creati.
+    """
     ispettore = inspect(engine)
     tabelle = set(ispettore.get_table_names())
     with engine.begin() as conn:
@@ -62,6 +66,7 @@ def _collega_immagini_alle_mostre(engine):
 
 # Una prenotazione e un feedback per visitatore su ogni mostra: oltre al controllo nelle API,
 # la regola è garantita dal database con un indice unico (anche con due richieste contemporanee).
+# Se l'indice non si può creare l'avvio si interrompe (ErroreIntegrita): niente funzionamento "a metà".
 # I nomi coincidono con quelli dichiarati in models.py, quindi IF NOT EXISTS evita duplicati.
 INDICI_UNICI = {
     "uq_prenotazioni_utente_mostra": ("prenotazioni", "utente_id, mostra_id"),
@@ -69,18 +74,92 @@ INDICI_UNICI = {
 }
 
 
-def _crea_indici_unici(engine):
-    """Crea sui database esistenti gli indici unici introdotti dopo la prima versione."""
-    tabelle = set(inspect(engine).get_table_names())
+def _indici_applicabili(engine) -> dict[str, tuple[str, str]]:
+    """Indici unici le cui tabelle e colonne esistono (in un database molto vecchio possono mancare)."""
+    ispettore = inspect(engine)
+    tabelle = set(ispettore.get_table_names())
+    applicabili = {}
     for nome, (tabella, colonne) in INDICI_UNICI.items():
-        if tabella not in tabelle:
-            continue
-        try:
-            with engine.begin() as conn:
-                conn.execute(text(f"CREATE UNIQUE INDEX IF NOT EXISTS {nome} ON {tabella} ({colonne})"))
-        except Exception as e:
-            # dati vecchi con duplicati: l'applicazione funziona comunque grazie al controllo nelle API
-            logger.warning(f"Indice unico {nome} non creato: {e}")
+        if tabella in tabelle:
+            esistenti = {c["name"] for c in ispettore.get_columns(tabella)}
+            if {c.strip() for c in colonne.split(",")} <= esistenti:
+                applicabili[nome] = (tabella, colonne)
+    return applicabili
+
+
+class ErroreIntegrita(RuntimeError):
+    """Il database non ha (o non può avere) un vincolo indispensabile: l'avvio del back-end viene interrotto."""
+
+
+def trova_duplicati(engine) -> dict[str, int]:
+    """Conta le righe in più che impedirebbero la creazione degli indici unici.
+
+    Args:
+        engine: Motore SQLAlchemy del database.
+
+    Returns:
+        Per ogni indice, il numero di righe duplicate sulla coppia (utente_id, mostra_id).
+    """
+    risultato = {}
+    with engine.connect() as conn:
+        for nome, (tabella, colonne) in _indici_applicabili(engine).items():
+            # le righe con utente_id NULL (account eliminati) non violano l'indice unico
+            risultato[nome] = conn.execute(
+                text(
+                    f"SELECT COALESCE(SUM(n - 1), 0) FROM (SELECT COUNT(*) AS n FROM {tabella} "
+                    f"WHERE utente_id IS NOT NULL GROUP BY {colonne} HAVING COUNT(*) > 1) AS doppie"
+                )
+            ).scalar()
+    return risultato
+
+
+def bonifica_duplicati(engine) -> dict[str, int]:
+    """Procedura esplicita di bonifica: per ogni coppia (utente, mostra) tiene la riga più vecchia ed elimina le altre.
+
+    Non viene mai eseguita in automatico: la lancia l'amministratore con lo script `bonifica_duplicati.py`
+    dopo aver letto il messaggio di errore dell'avvio (ed eventualmente fatto una copia del database).
+
+    Args:
+        engine: Motore SQLAlchemy del database.
+
+    Returns:
+        Numero di righe eliminate per ogni indice.
+    """
+    eliminate = {}
+    with engine.begin() as conn:
+        for nome, (tabella, colonne) in _indici_applicabili(engine).items():
+            eliminate[nome] = conn.execute(
+                text(
+                    f"DELETE FROM {tabella} WHERE utente_id IS NOT NULL AND id NOT IN "
+                    f"(SELECT MIN(id) FROM {tabella} WHERE utente_id IS NOT NULL GROUP BY {colonne})"
+                )
+            ).rowcount
+    return eliminate
+
+
+def _crea_indici_unici(engine):
+    """Crea sui database esistenti gli indici unici e verifica che esistano davvero.
+
+    Questi indici sono la garanzia, anche con richieste simultanee, di "una prenotazione e un feedback per
+    visitatore su ogni mostra": se mancano, l'applicazione non deve partire.
+
+    Raises:
+        ErroreIntegrita: se ci sono dati duplicati che impediscono l'indice (va eseguita la bonifica)
+            o se, dopo la creazione, l'indice non risulta presente.
+    """
+    duplicati = {nome: n for nome, n in trova_duplicati(engine).items() if n}
+    if duplicati:
+        elenco = ", ".join(f"{nome}: {n} righe in più" for nome, n in duplicati.items())
+        raise ErroreIntegrita(
+            f"Impossibile creare gli indici unici per dati duplicati ({elenco}). "
+            "Esegui 'python bonifica_duplicati.py' (tiene la riga più vecchia di ogni coppia) e riavvia."
+        )
+    for nome, (tabella, colonne) in _indici_applicabili(engine).items():
+        with engine.begin() as conn:
+            conn.execute(text(f"CREATE UNIQUE INDEX IF NOT EXISTS {nome} ON {tabella} ({colonne})"))
+        indici = {i["name"]: i for i in inspect(engine).get_indexes(tabella)}
+        if nome not in indici or not indici[nome]["unique"]:
+            raise ErroreIntegrita(f"L'indice unico {nome} sulla tabella {tabella} non risulta presente.")
 
 
 def _assegna_codici_mancanti(engine):

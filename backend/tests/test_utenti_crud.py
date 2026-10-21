@@ -170,7 +170,7 @@ def test_utente_inesistente(client, auth):
 def test_eliminazione_dal_profilo_invia_email(client, utente, mostra_futura, email_account_eliminato):
     client.post("/api/prenota", json={"mostra_id": mostra_futura, "telefono": "3331234567"}, headers=utente)
     r = client.request("DELETE", "/api/utenti/me", json={"password": "Museo2026"}, headers=utente)
-    assert r.json()["message"] == "Account eliminato. Ti abbiamo inviato un'email di conferma."
+    assert r.json()["message"] == "Account eliminato. Riceverai a breve un'email di conferma."
     assert email_account_eliminato == [
         {"destinatario": "mario.rossi@test.it", "nome": "Mario", "prenotazioni_annullate": 1}
     ]

@@ -7,6 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
+from services.orario_service import oggi
 
 # Indicatori per la dashboard dell'area riservata
 
@@ -44,7 +45,7 @@ def calcola_statistiche(db: Session) -> dict:
     Returns:
         Dizionario con le chiavi di `schemas.StatisticheResponse`.
     """
-    oggi = date.today()
+    data_oggi = oggi()
     mostre = db.query(models.Mostra).order_by(models.Mostra.data_inizio).all()
 
     # conteggi raggruppati per mostra: una query per tabella invece di una per mostra
@@ -66,7 +67,7 @@ def calcola_statistiche(db: Session) -> dict:
     per_mostra = []
     stati = {"in corso": 0, "futura": 0, "conclusa": 0}
     for m in mostre:
-        stato = stato_mostra(m, oggi)
+        stato = stato_mostra(m, data_oggi)
         stati[stato] += 1
         totale_fb, media_fb = feedback_per_mostra.get(m.id, (0, None))
         per_mostra.append(

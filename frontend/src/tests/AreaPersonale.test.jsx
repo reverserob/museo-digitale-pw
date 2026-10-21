@@ -64,7 +64,7 @@ describe('AreaPersonale', () => {
             </MemoryRouter>
         );
         expect(
-            screen.getByText(/Registrazione completata! Ti abbiamo inviato un'email di conferma/)
+            screen.getByText(/Registrazione completata! Riceverai a breve un'email di conferma/)
         ).toBeInTheDocument();
         expect(await screen.findByText(/Non hai ancora prenotato/)).toBeInTheDocument();
     });
@@ -84,7 +84,7 @@ describe('AreaPersonale', () => {
             ],
         });
         api.delete.mockResolvedValue({
-            data: { message: "Prenotazione annullata. Ti abbiamo inviato un'email di conferma." },
+            data: { message: "Prenotazione annullata. Riceverai a breve un'email di conferma." },
         });
         const conferma = vi.spyOn(window, 'confirm').mockReturnValue(true);
         const user = userEvent.setup();

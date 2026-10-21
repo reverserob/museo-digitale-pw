@@ -201,6 +201,20 @@ def test_prenotazioni_simultanee_ne_accetta_una_sola(client, mostra_futura):
     db.close()
 
 
+@solo_postgres
+def test_ingressi_simultanei_ne_registra_uno_solo(client, auth, mostra_in_corso):
+    intestazione = registra_utente(client)
+    codice = client.post("/api/prenota", json={"mostra_id": mostra_in_corso}, headers=intestazione).json()["codice"]
+
+    def registra(_):
+        return client.post(f"/api/prenotazioni/verifica/{codice}/ingresso", headers=auth).status_code
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        esiti = list(pool.map(registra, range(8)))
+    assert esiti.count(200) == 1
+    assert esiti.count(409) == 7
+
+
 # --- persistenza: i dati restano dopo il "riavvio" (nuovo motore e nuove connessioni) ---
 def test_dati_e_immagini_restano_dopo_il_riavvio_della_connessione(client, auth, mostra_futura):
     intestazione = registra_utente(client)

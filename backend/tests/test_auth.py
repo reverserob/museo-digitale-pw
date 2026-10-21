@@ -80,6 +80,26 @@ def test_token_firmato_con_altra_chiave_viene_rifiutato(client, monkeypatch):
     assert r.status_code == 401
 
 
+def test_cambio_password_admin_invalida_i_token_emessi(client, token, monkeypatch):
+    intestazione = {"Authorization": f"Bearer {token}"}
+    assert client.get("/api/prenotazioni", headers=intestazione).status_code == 200
+    # la password dell'amministratore viene cambiata (su Render): i token già emessi non valgono più
+    monkeypatch.setattr(auth.settings, "ADMIN_PASSWORD", "nuova-password-admin")
+    assert client.get("/api/prenotazioni", headers=intestazione).status_code == 401
+    nuovo = client.post("/api/login", json={"email": ADMIN_EMAIL, "password": "nuova-password-admin"})
+    assert (
+        client.get("/api/prenotazioni", headers={"Authorization": f"Bearer {nuovo.json()['access_token']}"}).status_code
+        == 200
+    )
+
+
+def test_token_admin_senza_impronta_rifiutato(client):
+    # un token "admin" firmato correttamente ma senza l'impronta delle credenziali (vecchio formato)
+    payload = auth._b64(b'{"sub": "admin@test.it", "ruolo": "admin", "exp": 9999999999}')
+    token = f"{payload}.{auth._firma(payload)}"
+    assert client.get("/api/prenotazioni", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+
+
 def test_token_valido_permette_accesso(client, auth):
     r = client.get("/api/prenotazioni", headers=auth)
     assert r.status_code == 200

@@ -960,7 +960,7 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 | TF19 | Feedback senza account | Visitatore | Aprire una mostra in corso senza login | Le recensioni sono visibili; al posto del form c'è l'invito ad accedere | ✅ Superato |
 | TF20 | Login visitatore errato | Visitatore | Password sbagliata nella scheda "Accedi" | Messaggio "Email o password errate."; poi con la password giusta si entra nell'area personale | ✅ Superato |
 | TF21 | Registrazione doppia | Visitatore | Registrarsi una seconda volta con la stessa email | Errore "Utente già registrato…"; nessun nuovo account; email di avviso al titolare | ✅ Superato |
-| TF22 | Email di registrazione | Visitatore | Registrazione corretta | Area personale con "Registrazione completata! Ti abbiamo inviato un'email di conferma." e email di benvenuto | ✅ Superato |
+| TF22 | Email di registrazione | Visitatore | Registrazione corretta | Area personale con "Registrazione completata! Riceverai a breve un'email di conferma." e email di benvenuto | ✅ Superato |
 | TF23 | Logout | Visitatore | Pulsante "Esci" nell'intestazione | Torna alla home, compaiono di nuovo "Accedi" e "Area Riservata" | ✅ Superato |
 | TF24 | Area riservata con visitatore collegato | Visitatore | Aprire /admin da collegato | Avviso "devi prima uscire" e nessun form di login admin; dopo "Esci dall'account visitatore" compare il login | ✅ Superato |
 | TF25 | Feedback senza prenotazione | Visitatore | Collegato, aprire una mostra in corso non prenotata | Avviso "solo sulle mostre a cui ti sei prenotato" e pulsante Prenota; dopo la prenotazione compare il form | ✅ Superato |
@@ -970,7 +970,7 @@ I test automatici verificano il codice; i test funzionali verificano invece che 
 | TF29 | Admin collegato | Amministratore | Dopo il login aprire home, dettaglio mostra, /accedi e /prenota/1 | Header "Ciao, Admin · Esci", nessun PRENOTA, /accedi mostra l'invito a uscire, /prenota riporta alla dashboard | ✅ Superato |
 | TF30 | Prenotazione senza account | Visitatore anonimo | Premere PRENOTA senza login | Si apre la pagina Accedi; dopo la registrazione si torna al form di prenotazione | ✅ Superato |
 | TF31 | Una sola prenotazione per mostra | Visitatore | Prenotare una mostra e riaprire /prenota della stessa mostra | Il form non compare ("Ti sei già prenotato…"); nel catalogo c'è "MOSTRA PRENOTATA"; il server risponde 409 | ✅ Superato |
-| TF32 | Annullamento della prenotazione | Visitatore | Area personale → "Annulla prenotazione" → conferma | La prenotazione sparisce, compare "Prenotazione annullata. Ti abbiamo inviato un'email di conferma." e parte l'email; poi ci si può riprenotare | ✅ Superato |
+| TF32 | Annullamento della prenotazione | Visitatore | Area personale → "Annulla prenotazione" → conferma | La prenotazione sparisce, compare "Prenotazione annullata. Riceverai a breve un'email di conferma." e parte l'email; poi ci si può riprenotare | ✅ Superato |
 | TF33 | Home di presentazione | Visitatore | Aprire l'indirizzo principale e premere "Scopri le esposizioni correnti" | Presentazione del museo; il pulsante porta a /esposizioni | ✅ Superato |
 | TF34 | Cambio lingua | Visitatore | Menu ITA/EN → EN, poi ricaricare la pagina | Intestazione, pagine, footer e messaggi del server in inglese; la scelta resta dopo la ricarica | ✅ Superato |
 | TF35 | Footer | Visitatore | Scorrere in fondo a una pagina | Orari lunedì–sabato 09:00–18:30, indirizzo, indicazione che si prenota solo dal pulsante PRENOTA della mostra; nessuna email o telefono | ✅ Superato |

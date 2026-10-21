@@ -1,0 +1,16 @@
+# Copertura dei test del backend (pytest --cov): stessi file inclusi ed esclusi in locale e nella CI.
+[run]
+source = .
+omit =
+    tests/*
+    venv/*
+    .venv/*
+    # script da riga di comando eseguiti a mano, fuori dall'applicazione
+    verifica_persistenza.py
+    esporta_openapi.py
+
+[report]
+show_missing = False
+skip_covered = True
+fail_under = 90
+precision = 1
