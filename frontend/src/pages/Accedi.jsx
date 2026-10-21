@@ -74,7 +74,15 @@ export default function Accedi() {
 
     // scheda attiva: 0 = Accedi, 1 = Registrati
     const [scheda, setScheda] = useState(0);
-    const [dati, setDati] = useState({ nome: '', cognome: '', email: '', telefono: '', password: '', conferma: '' });
+    const [dati, setDati] = useState({
+        nome: '',
+        cognome: '',
+        email: '',
+        confermaEmail: '',
+        telefono: '',
+        password: '',
+        conferma: '',
+    });
     const [errore, setErrore] = useState('');
     const [invio, setInvio] = useState(false);
 
@@ -84,6 +92,9 @@ export default function Accedi() {
     const requisitiMancanti = REGOLE_PASSWORD.filter((r) => !r.ok(dati.password)).map((r) => t(r.chiave));
     const passwordValida = requisitiMancanti.length === 0;
     const confermaErrata = dati.conferma.length > 0 && dati.conferma !== dati.password;
+    // la seconda email deve essere identica alla prima (senza distinguere maiuscole e spazi ai lati, come il backend)
+    const emailCoincidono = dati.confermaEmail.trim().toLowerCase() === dati.email.trim().toLowerCase();
+    const confermaEmailErrata = dati.confermaEmail.length > 0 && !emailCoincidono;
 
     // le funzioni di controllo restituiscono la chiave del messaggio, tradotta qui
     const traduciChiave = (chiave) => (chiave ? t(chiave) : '');
@@ -100,12 +111,15 @@ export default function Accedi() {
         dati.cognome.trim().length >= 3 &&
         dati.email.trim() !== '' &&
         !errori.email &&
+        emailCoincidono &&
         /^\d{6,15}$/.test(dati.telefono.trim()) &&
         passwordValida &&
         dati.conferma === dati.password;
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        // doppia sicurezza: con dati non validi (es. email diverse) la registrazione non parte nemmeno premendo Invio
+        if (scheda === 1 && !registrazioneValida) return;
         setErrore('');
         setInvio(true);
         // la stessa funzione gestisce login e registrazione, in base alla scheda attiva
@@ -116,6 +130,7 @@ export default function Accedi() {
                       nome: dati.nome.trim(),
                       cognome: dati.cognome.trim(),
                       email: dati.email.trim(),
+                      conferma_email: dati.confermaEmail.trim(),
                       telefono: dati.telefono.trim(),
                       password: dati.password,
                   });
@@ -203,7 +218,7 @@ export default function Accedi() {
                         onSubmit={handleSubmit}
                         sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}
                     >
-                        {/* i campi nome, cognome, telefono e conferma password compaiono solo nella scheda Registrati */}
+                        {/* i campi nome, cognome, conferma email, telefono e conferma password compaiono solo nella scheda Registrati */}
                         {scheda === 1 && (
                             <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                                 <TextField
@@ -237,6 +252,21 @@ export default function Accedi() {
                             helperText={errori.email}
                             required
                         />
+                        {/* seconda digitazione dell'email: evita account con un indirizzo sbagliato */}
+                        {scheda === 1 && (
+                            <TextField
+                                {...campo}
+                                label={t('comune.confermaEmail')}
+                                type="email"
+                                autoComplete="off"
+                                value={dati.confermaEmail}
+                                onChange={aggiorna('confermaEmail')}
+                                onPaste={(e) => e.preventDefault()}
+                                error={confermaEmailErrata}
+                                helperText={confermaEmailErrata ? t('comune.emailNonCoincidono') : ''}
+                                required
+                            />
+                        )}
                         {scheda === 1 && (
                             <TextField
                                 {...campo}

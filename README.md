@@ -47,8 +47,9 @@ Vai a: [Museo Civico Digitale](https://museo-digitale-pw-azure.vercel.app/)
 
 ### Visitatori
 - **Catalogo delle mostre** con dettaglio, periodo e galleria di immagini (pubblico, senza account).
-- **Account**: registrazione con controllo dei dati mentre si scrive ed email di benvenuto; ogni email si registra
-  una sola volta. Recupero password con link valido 30 minuti e utilizzabile una sola volta.
+- **Account**: registrazione con controllo dei dati mentre si scrive, **conferma dell'email** (va digitata due
+  volte: se le due copie sono diverse la registrazione è bloccata, anche dal server) e della password, ed email di
+  benvenuto; ogni email si registra una sola volta. Recupero password con link valido 30 minuti e utilizzabile una sola volta.
 - **Prenotazione** della visita (una per visitatore su ogni mostra) con email di conferma che contiene:
   - un **codice di riferimento** nel formato `MCD-XXXX-XXXX` (es. `MCD-68ZY-MT8U`);
   - un **QR code**, sempre in allegato PNG e, con il backend online, anche come immagine nel testo dell'email.
@@ -305,7 +306,7 @@ L'elenco completo, con permessi e codici di risposta, è nella pagina
 
 ## Test e controlli di qualità
 
-### Backend (229 test pytest, su SQLite e su PostgreSQL)
+### Backend (233 test pytest, su SQLite e su PostgreSQL)
 ```bash
 cd backend
 source venv/bin/activate
@@ -321,7 +322,7 @@ ruff format --check . # formattazione (ruff format . per correggere)
 visitatore, mostra con immagine e prenotazione, riavvia il server e controlla che i dati siano ancora presenti
 (la password del database non viene stampata).
 
-### Frontend (163 test Vitest)
+### Frontend (166 test Vitest)
 ```bash
 cd frontend
 npm install

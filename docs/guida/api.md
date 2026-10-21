@@ -11,7 +11,7 @@ Una copia della Swagger UI è pubblicata anche in questo sito: [Swagger UI](swag
 | Router | Metodo e percorso | Descrizione | Risposte principali |
 |---|---|---|---|
 | Area riservata | POST /api/login | Verifica le credenziali dell'amministratore e restituisce un token di accesso firmato a tempo. | 200, 401, 429 |
-| Visitatori | POST /api/utenti/registrazione | Crea l'account del visitatore (password salvata come hash), invia l'email di conferma e restituisce subito il token e il profilo. Con un'email già registrata risponde 409 "Utente già registrato" e avvisa per email il titolare dell'account. | 201, 409, 422, 429 |
+| Visitatori | POST /api/utenti/registrazione | Crea l'account del visitatore (password salvata come hash), invia l'email di conferma e restituisce subito il token e il profilo. Se `conferma_email` è diversa da `email` risponde 422 "Le email non coincidono". Con un'email già registrata risponde 409 "Utente già registrato" e avvisa per email il titolare dell'account. | 201, 409, 422, 429 |
 | Visitatori | POST /api/utenti/login | Verifica email e password del visitatore e restituisce token e profilo. | 200, 401, 429 |
 | Visitatori | POST /api/utenti/password-dimenticata | Se l'email è registrata invia un link per reimpostare la password (valido 30 minuti, usabile una volta). La risposta è sempre la stessa, così non si rivela quali email sono registrate. | 200, 429 |
 | Visitatori | POST /api/utenti/reimposta-password | Riceve il token del link e la nuova password (stessa regola della registrazione) e aggiorna l'hash. | 200, 400, 422, 429 |

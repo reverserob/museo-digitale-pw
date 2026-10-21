@@ -69,6 +69,9 @@ describe('traduci e traduciServer', () => {
         ).toBe(
             'password: The password must contain at least one number. · telefono: The phone number must contain 6 to 15 digits.'
         );
+        expect(traduciServer('conferma_email: Le email non coincidono.', 'en')).toBe(
+            'conferma_email: The emails do not match.'
+        );
         expect(traduciServer('Messaggio sconosciuto', 'en')).toBe('Messaggio sconosciuto');
     });
 

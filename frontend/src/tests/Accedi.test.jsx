@@ -32,7 +32,7 @@ describe('Accedi', () => {
         const user = userEvent.setup();
         apri('/accedi?next=%2Fprenota%2F3');
 
-        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/^Email/), 'mario@test.it');
         await user.type(screen.getByLabelText(/Password/), 'Museo2026');
         await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
 
@@ -48,7 +48,7 @@ describe('Accedi', () => {
         api.post.mockResolvedValue(SESSIONE);
         const user = userEvent.setup();
         apri();
-        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/^Email/), 'mario@test.it');
         await user.type(screen.getByLabelText(/Password/), 'Museo2026');
         await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
         expect(await screen.findByText('Pagina Profilo')).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('Accedi', () => {
         api.post.mockResolvedValue(SESSIONE);
         const user = userEvent.setup();
         apri('/accedi?next=https%3A%2F%2Fsito-esterno.example');
-        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/^Email/), 'mario@test.it');
         await user.type(screen.getByLabelText(/Password/), 'Museo2026');
         await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
         expect(await screen.findByText('Pagina Profilo')).toBeInTheDocument();
@@ -68,7 +68,7 @@ describe('Accedi', () => {
         api.post.mockRejectedValue(erroreHttp(401, 'Email o password errate.'));
         const user = userEvent.setup();
         apri();
-        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/^Email/), 'mario@test.it');
         await user.type(screen.getByLabelText(/Password/), 'sbagliata');
         await user.click(screen.getByRole('button', { name: 'ACCEDI' }));
 
@@ -87,7 +87,8 @@ describe('Accedi', () => {
 
         await user.type(screen.getByLabelText(/^Nome/), 'Mario');
         await user.type(screen.getByLabelText(/Cognome/), 'Rossi');
-        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/^Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/Conferma email/), 'Mario@Test.it');
         await user.type(screen.getByLabelText(/Telefono/), '3331234567');
 
         const password = screen.getByLabelText(/^Password/);
@@ -109,11 +110,12 @@ describe('Accedi', () => {
         expect(pulsante).toBeEnabled();
         await user.click(pulsante);
 
-        // la conferma resta nel browser: al server arriva solo la password
+        // la conferma della password resta nel browser; la conferma dell'email viene ricontrollata dal server
         expect(api.post).toHaveBeenCalledWith('/api/utenti/registrazione', {
             nome: 'Mario',
             cognome: 'Rossi',
             email: 'mario@test.it',
+            conferma_email: 'Mario@Test.it',
             telefono: '3331234567',
             password: 'Museo2026',
         });
@@ -127,13 +129,61 @@ describe('Accedi', () => {
         await user.click(screen.getByRole('tab', { name: 'Registrati' }));
         await user.type(screen.getByLabelText(/^Nome/), 'Mario');
         await user.type(screen.getByLabelText(/Cognome/), 'Rossi');
-        await user.type(screen.getByLabelText(/Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/^Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/Conferma email/), 'mario@test.it');
         await user.type(screen.getByLabelText(/Telefono/), '3331234567');
         await user.type(screen.getByLabelText(/^Password/), 'Museo2026');
         await user.type(screen.getByLabelText(/Conferma password/), 'Museo2026');
         await user.click(screen.getByRole('button', { name: 'CREA ACCOUNT' }));
 
         expect(await screen.findByRole('alert')).toHaveTextContent('Esiste già un account');
+    });
+
+    it('registrazione bloccata se le due email non coincidono', async () => {
+        const user = userEvent.setup();
+        apri();
+        await user.click(screen.getByRole('tab', { name: 'Registrati' }));
+        await user.type(screen.getByLabelText(/^Nome/), 'Mario');
+        await user.type(screen.getByLabelText(/Cognome/), 'Rossi');
+        await user.type(screen.getByLabelText(/^Email/), 'mario@test.it');
+        await user.type(screen.getByLabelText(/Telefono/), '3331234567');
+        await user.type(screen.getByLabelText(/^Password/), 'Museo2026');
+        await user.type(screen.getByLabelText(/Conferma password/), 'Museo2026');
+
+        const pulsante = screen.getByRole('button', { name: 'CREA ACCOUNT' });
+        expect(pulsante).toBeDisabled(); // conferma email ancora vuota
+
+        const confermaEmail = screen.getByLabelText(/Conferma email/);
+        await user.type(confermaEmail, 'mario@tset.it');
+        expect(screen.getByText("Le email non coincidono: ricontrolla l'indirizzo")).toBeInTheDocument();
+        expect(confermaEmail).toHaveAttribute('aria-invalid', 'true');
+        expect(pulsante).toBeDisabled();
+        // anche inviando il form con Invio la richiesta non parte
+        await user.type(confermaEmail, '{Enter}');
+        expect(api.post).not.toHaveBeenCalled();
+
+        await user.clear(confermaEmail);
+        await user.type(confermaEmail, ' mario@test.it ');
+        expect(screen.queryByText(/Le email non coincidono/)).not.toBeInTheDocument();
+        expect(pulsante).toBeEnabled();
+    });
+
+    it("nella conferma email non si può incollare: l'indirizzo va digitato di nuovo", async () => {
+        const user = userEvent.setup();
+        apri();
+        await user.click(screen.getByRole('tab', { name: 'Registrati' }));
+        const confermaEmail = screen.getByLabelText(/Conferma email/);
+        await user.click(confermaEmail);
+        await user.paste('mario@test.it');
+        expect(confermaEmail).toHaveValue('');
+    });
+
+    it('la conferma email compare solo nella scheda Registrati', async () => {
+        const user = userEvent.setup();
+        apri();
+        expect(screen.queryByLabelText(/Conferma email/)).not.toBeInTheDocument();
+        await user.click(screen.getByRole('tab', { name: 'Registrati' }));
+        expect(screen.getByLabelText(/Conferma email/)).toBeInTheDocument();
     });
 
     it('se il visitatore è già collegato non mostra il form', () => {
@@ -147,7 +197,7 @@ describe('Accedi', () => {
         const user = userEvent.setup();
         apri();
         await user.click(screen.getByRole('tab', { name: 'Registrati' }));
-        const email = screen.getByLabelText(/Email/);
+        const email = screen.getByLabelText(/^Email/);
 
         const casi = [
             ['mario rossi@test.it', "L'email non può contenere spazi"],
