@@ -1,4 +1,4 @@
-""" verifica persistenza: i dati restano nel database dopo il riavvio del backend.
+"""verifica persistenza: i dati restano nel database dopo il riavvio del backend.
 Lo script avvia il backend uvicorn sul database indicato da DATABASE_URL, registra un visitatore,
 crea una prenotazione e una mostra con un'immagine, ferma il server, lo riavvia e controlla che
 prenotazione, mostra e immagine siano ancora presenti.

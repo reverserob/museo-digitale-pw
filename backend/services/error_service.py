@@ -1,4 +1,4 @@
-"""Gestione degli errori di validazione dei dati """
+"""Gestione degli errori di validazione dei dati"""
 
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 # In caso di errore 422 di FastAPI
 # gestione con messaggio di testo da mostratre a frontend
 async def errore_validazione(request: Request, exc: RequestValidationError):
-    """Trasforma gli errori in tringa di testo composto da campo + testo """
+    """Trasforma gli errori in tringa di testo composto da campo + testo"""
     messaggi = []
     for err in exc.errors():
         campo = err["loc"][-1] if err.get("loc") else ""

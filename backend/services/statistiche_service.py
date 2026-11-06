@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 import models
 from services.orario_service import oggi
 
+
 # Indicatori per la dashboard dell'area riservata
 def stato_mostra(mostra: models.Mostra, oggi: date) -> str:
     """Stato della mostra rispetto a una data.
@@ -28,7 +29,7 @@ def stato_mostra(mostra: models.Mostra, oggi: date) -> str:
 
 
 def _arrotonda(valore) -> Optional[float]:
-    """Arrotonda a un decimale; None se non ci sono voti """
+    """Arrotonda a un decimale; None se non ci sono voti"""
     return round(float(valore), 1) if valore is not None else None
 
 

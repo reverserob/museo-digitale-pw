@@ -37,8 +37,8 @@ def leggi_mostre(db: Session = Depends(get_db)):
 @router.get("/{mostra_id}", response_model=schemas.MostraResponse)
 def leggi_singola_mostra(mostra_id: int, db: Session = Depends(get_db)):
     """`GET /api/mostre/{mostra_id}` Dettaglio di una mostra
-     ERRORE:
-        - 404 se la mostra non viene trovata
+    ERRORE:
+       - 404 se la mostra non viene trovata
     """
     return trova_mostra(db, mostra_id)
 
