@@ -1,6 +1,7 @@
 /**
  * Sezione dei feedback nella pagina di una mostra: media dei voti, form per lasciare un feedback
- * (solo visitatori prenotati, uno per mostra) ed elenco dei commenti; l'admin può eliminarli.
+ * solo per visitatori prenotati, un visitatore per mostra con elenco dei commenti
+ * l'admin può eliminare i commenti
  *
  * @module components/SezioneFeedback
  */
@@ -27,13 +28,15 @@ const oggiIso = () => new Date().toISOString().slice(0, 10);
 /**
  * Sezione dei feedback di una mostra.
  *
- * Sotto la media dei voti mostra, in ordine di priorità: il messaggio per l'admin, l'avviso di mostra
- * non ancora iniziata, l'invito ad accedere, il feedback già lasciato, l'invito a prenotare oppure il form.
+ * Sotto la media dei voti mostra, in ordine di priorità:
+ * il messaggio per l'admin, l'avviso di mostra
+ * non ancora iniziata, l'invito ad accedere,
+ * il feedback già lasciato, l'invito a prenotare oppure il form di feedback
  *
- * @param {object} props Proprietà del componente.
- * @param {module:tipi~Mostra} props.mostra Mostra di cui mostrare i feedback.
- * @param {boolean} [props.admin=false] `true` per l'amministratore: legge ed elimina i feedback, ma non ne scrive.
- * @returns {JSX.Element} La sezione dei feedback.
+ * @param {object} props Proprietà del componente
+ * @param {module:tipi~Mostra} props.mostra Mostra di cui mostrare i feedback
+ * @param {boolean} [props.admin=false] true per l'amministratore che legge ed elimina i feedback
+ * @returns {JSX.Element} La sezione dei feedback
  * @alias module:components/SezioneFeedback.SezioneFeedback
  */
 export default function SezioneFeedback({ mostra, admin = false }) {
@@ -45,26 +48,26 @@ export default function SezioneFeedback({ mostra, admin = false }) {
     const [errore, setErrore] = useState('');
     const [conferma, setConferma] = useState('');
     const [invio, setInvio] = useState(false);
-    // null = verifica in corso; true/false = il visitatore è prenotato a questa mostra
+    // null per verifica in corso; true/false per il visitatore se prenotato a questa mostra
     const [prenotato, setPrenotato] = useState(null);
-    // true se il visitatore ha già lasciato il suo (unico) feedback su questa mostra
+    // true se il visitatore ha già lasciato il suo feedback sulla mostra
     const [giaRecensito, setGiaRecensito] = useState(false);
 
-    // carica i feedback della mostra (pubblici, visibili anche senza login)
+    // carica i feedback della mostra che sono pubblici
     useEffect(() => {
         getFeedback(mostra.id)
             .then(setElenco)
             .catch(() => setElenco([]));
     }, [mostra.id]);
 
-    // solo chi si è prenotato a questa mostra può lasciare un feedback, e uno soltanto
+    // solo chi si è prenotato a questa mostra può lasciare un solo feedback
     useEffect(() => {
         if (!utente || admin) {
             setPrenotato(null);
             setGiaRecensito(false);
             return;
         }
-        // le due richieste partono in parallelo: prenotazioni e feedback del visitatore
+        // le due richieste partono in parallelo sia prenotazioni che feedback del visitatore
         Promise.all([getMiePrenotazioni(), getMieiFeedback().catch(() => [])])
             .then(([miePrenotazioni, mieiFeedback]) => {
                 setGiaRecensito(mieiFeedback.some((f) => f.mostra_id === mostra.id));
@@ -73,12 +76,12 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             .catch(() => setPrenotato(false));
     }, [utente, admin, mostra.id]);
 
-    // media dei voti (null se non ci sono ancora feedback)
+    // media dei voti
     const media = elenco.length ? elenco.reduce((somma, f) => somma + f.voto, 0) / elenco.length : null;
     const nonIniziata = mostra.data_inizio > oggiIso();
     const conclusa = mostra.data_fine < oggiIso();
 
-    // solo admin: elimina un feedback dopo la conferma e lo toglie dall'elenco senza ricaricare la pagina
+    // solo admin: elimina un feedback dopo la conferma e lo toglie dall'elenco
     const handleElimina = (id) => {
         if (!window.confirm(t('feedback.confermaElimina'))) return;
         setErrore('');
@@ -87,7 +90,7 @@ export default function SezioneFeedback({ mostra, admin = false }) {
             .catch((err) => setErrore(messaggioErrore(err, t('feedback.erroreElimina'))));
     };
 
-    // invio del feedback: il voto è obbligatorio, il commento facoltativo
+    // invio del feedback, il voto è obbligatorio, il commento facoltativo
     const handleSubmit = (e) => {
         e.preventDefault(); // evita il ricaricamento della pagina
         setErrore('');

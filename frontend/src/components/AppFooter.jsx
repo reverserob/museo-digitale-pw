@@ -1,5 +1,5 @@
 /**
- * Piè di pagina mostrato in tutte le pagine.
+ * Footer mostrato in tutte le pagine
  *
  * @module components/AppFooter
  */
@@ -12,7 +12,7 @@ const titolo = { color: '#c5a059', mb: 1.5, letterSpacing: '0.12em', textTransfo
 const riga = { color: '#cccccc', fontSize: '0.95rem', lineHeight: 1.8 };
 
 /**
- * Footer con orari di apertura, indirizzo (di esempio) e indicazioni per le prenotazioni,
+ * Footer con orari di apertura, indirizzo di esempio e indicazioni per le prenotazioni,
  * che avvengono solo online dal pulsante PRENOTA di ogni mostra.
  *
  * @returns {JSX.Element} Il footer del sito.
@@ -21,7 +21,7 @@ const riga = { color: '#cccccc', fontSize: '0.95rem', lineHeight: 1.8 };
 export default function AppFooter() {
     const { t } = useLingua();
     return (
-        // il contenitore spinge il footer in fondo alla pagina e lascia spazio sopra
+        // il contenitore porta il footer in fondo alla pagina
         <Box sx={{ mt: 'auto', pt: { xs: 8, md: 10 } }}>
             <Box
                 component="footer"
@@ -58,7 +58,7 @@ export default function AppFooter() {
                             <Typography variant="h6" component="h2" sx={titolo}>
                                 {t('footer.prenotazioniTitolo')}
                             </Typography>
-                            {/* le prenotazioni avvengono solo dal pulsante PRENOTA della mostra */}
+                            {/* le prenotazioni avvengono dal pulsante PRENOTA della mostra */}
                             <Typography sx={riga}>{t('footer.soloOnline')}</Typography>
                             <Typography sx={riga}>
                                 <Link to="/esposizioni" style={{ color: '#c5a059' }}>
@@ -72,7 +72,7 @@ export default function AppFooter() {
                             </Typography>
                         </Grid>
                     </Grid>
-                    {/* riga dei diritti con l'anno corrente calcolato automaticamente */}
+                    {/* riga dei diritti con l'anno corrente */}
                     <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', my: 4 }} />
                     <Typography sx={{ color: '#777777', fontSize: '0.8rem', textAlign: 'center' }}>
                         {t('footer.diritti', { anno: new Date().getFullYear() })}

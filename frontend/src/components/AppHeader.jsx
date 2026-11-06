@@ -1,5 +1,5 @@
 /**
- * Barra superiore del sito: nome del museo, menu di navigazione, accesso/uscita e scelta della lingua.
+ * Header con nome del museo, menu di navigazione, accesso/uscita e scelta della lingua.
  *
  * @module components/AppHeader
  */
@@ -16,7 +16,7 @@ import { logout } from '../services/authService';
  * Menu a tendina per scegliere la lingua (ITA / EN).
  *
  * @private
- * @returns {JSX.Element} Il selettore della lingua.
+ * @returns {JSX.Element} selettore della lingua.
  * @alias module:components/AppHeader.SceltaLingua
  */
 function SceltaLingua() {
@@ -44,9 +44,9 @@ function SceltaLingua() {
 
 /**
  * Header dell'applicazione. Il menu cambia in base a chi è collegato:
- * - amministratore: "Ciao, Admin" ed Esci;
- * - visitatore: saluto con il nome (porta all'area personale) ed Esci;
- * - nessuno: Accedi e Area Riservata.
+ * - amministratore: "Ciao, Admin" ed Esci
+ * - visitatore registrato: Ciao con il nome utente che porta all'area personale ed Esci
+ * - visitatore non registrato: Accedi e Area Riservata.
  *
  * @returns {JSX.Element} La barra di navigazione.
  * @alias module:components/AppHeader.AppHeader
@@ -84,7 +84,7 @@ export default function AppHeader() {
                         {t('header.contatti')}
                     </Button>
                     {admin ? (
-                        // amministratore collegato: niente Accedi/Registrati dei visitatori
+                        // amministratore
                         <>
                             <Button component={Link} to="/admin" color="inherit" className="app-header__button">
                                 {t('header.ciaoAdmin')}
@@ -94,7 +94,7 @@ export default function AppHeader() {
                             </Button>
                         </>
                     ) : utente ? (
-                        // visitatore collegato: saluto con il nome (porta all'area personale) ed Esci
+                        // utente registrato
                         <>
                             <Button component={Link} to="/profilo" color="inherit" className="app-header__button">
                                 {t('header.ciao', { nome: utente.nome })}
@@ -104,7 +104,7 @@ export default function AppHeader() {
                             </Button>
                         </>
                     ) : (
-                        // nessuno collegato: accesso visitatori e area riservata
+                        // utente non registrato
                         <>
                             <Button component={Link} to="/accedi" color="inherit" className="app-header__button">
                                 {t('header.accedi')}

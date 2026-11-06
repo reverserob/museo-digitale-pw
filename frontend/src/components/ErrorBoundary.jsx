@@ -1,5 +1,5 @@
 /**
- * Componente che intercetta gli errori di rendering delle pagine.
+ * Componente che intercetta gli errori di rendering delle pagine
  *
  * @module components/ErrorBoundary
  */
@@ -8,8 +8,7 @@ import { Container, Alert, Button, Typography } from '@mui/material';
 import { traduci } from '../i18n/lingua';
 
 /**
- * Cattura gli errori di rendering delle pagine e mostra un messaggio invece di una pagina bianca.
- * È una classe perché React offre questa funzione solo ai componenti a classe.
+ * Recupera gli errori di rendering delle pagine e mostra un messaggio
  *
  * @extends React.Component
  * @param {object} props Proprietà del componente.
@@ -22,7 +21,7 @@ export default class ErrorBoundary extends Component {
         this.state = { errore: null };
     }
 
-    // chiamato da React quando un componente figlio genera un errore: salva l'errore nello stato
+    // chiamato da React quando un componente figlio genera un errore e salva l'errore nello stato
     static getDerivedStateFromError(errore) {
         return { errore };
     }
@@ -33,7 +32,7 @@ export default class ErrorBoundary extends Component {
     }
 
     render() {
-        // nessun errore: mostra normalmente la pagina
+        // nessun errore
         if (!this.state.errore) return this.props.children;
         return (
             <Container maxWidth="md" sx={{ mt: 10 }}>

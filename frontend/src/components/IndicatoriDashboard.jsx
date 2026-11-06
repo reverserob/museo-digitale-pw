@@ -16,14 +16,14 @@ const boxSx = {
 };
 
 /**
- * Un singolo riquadro: etichetta, numero grande e (facoltativo) una riga di dettaglio.
+ * Un singolo riquadro: etichetta, numero e riga di dettaglio
  *
  * @private
- * @param {object} props Proprietà del componente.
- * @param {string} props.etichetta Nome dell'indicatore.
- * @param {(number|string)} props.valore Valore da mostrare in grande.
- * @param {string} [props.dettaglio] Riga di dettaglio facoltativa.
- * @returns {JSX.Element} Il riquadro.
+ * @param {object} props Proprietà del componente
+ * @param {string} props.etichetta Nome dell'indicatore
+ * @param {(number|string)} props.valore Valore da mostrare in grande
+ * @param {string} [props.dettaglio] Riga di dettaglio facoltativa
+ * @returns {JSX.Element} riquadro
  * @alias module:components/IndicatoriDashboard.Indicatore
  */
 function Indicatore({ etichetta, valore, dettaglio }) {
@@ -45,9 +45,9 @@ function Indicatore({ etichetta, valore, dettaglio }) {
 }
 
 /**
- * Indicatori della dashboard amministratore.
+ * Indicatori della dashboard amministratore
  *
- * @param {object} props Proprietà del componente.
+ * @param {object} props Proprietà del componente
  * @param {?module:tipi~Statistiche} props.statistiche Indicatori calcolati dal backend; con `null` non mostra nulla.
  * @returns {?JSX.Element} Riquadri e barre, oppure `null` finché i dati non arrivano.
  * @alias module:components/IndicatoriDashboard.IndicatoriDashboard
@@ -90,7 +90,7 @@ export default function IndicatoriDashboard({ statistiche }) {
             <Typography variant="subtitle2" sx={{ color: '#c5a059', mb: 1.5, letterSpacing: 1 }}>
                 PRENOTAZIONI PER MOSTRA
             </Typography>
-            {/* una riga per mostra: titolo, stato, numero di prenotazioni, voto medio e barra proporzionale */}
+            {/* una riga per mostra con titolo, stato, numero di prenotazioni, voto medio e barra proporzionale */}
             {s.per_mostra.map((m) => (
                 <Box key={m.mostra_id} sx={{ mb: 1.2 }}>
                     <Box

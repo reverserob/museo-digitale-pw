@@ -1,5 +1,5 @@
 /**
- * Codice di riferimento e QR code di una prenotazione, da mostrare all'ingresso del museo.
+ * Codice di riferimento e QR code di una prenotazione, da mostrare all'ingresso del museo
  *
  * @module components/QrPrenotazione
  */
@@ -11,9 +11,9 @@ import useLingua from '../hooks/useLingua';
  * Riquadro con il codice della prenotazione in grande e l'immagine del QR code generata dal backend.
  *
  * @param {object} props Proprietà del componente.
- * @param {string} props.codice Codice della prenotazione (es. `MCD-7K3F-9QXA`).
- * @param {number} [props.dimensione=180] Lato dell'immagine del QR code in pixel.
- * @returns {JSX.Element} Il riquadro.
+ * @param {string} props.codice Codice della prenotazione  MCD-XXXX-XXXX
+ * @param {number} [props.dimensione=180] immagine del QR code
+ * @returns {JSX.Element} elemento
  * @alias module:components/QrPrenotazione.QrPrenotazione
  */
 export default function QrPrenotazione({ codice, dimensione = 180 }) {
@@ -46,7 +46,6 @@ export default function QrPrenotazione({ codice, dimensione = 180 }) {
             >
                 {codice}
             </Typography>
-            {/* sfondo bianco: i lettori di QR code hanno bisogno di contrasto */}
             <Box
                 component="img"
                 src={qrUrl(codice)}
