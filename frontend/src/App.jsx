@@ -1,5 +1,6 @@
 /**
- * Componente principale: tema, router con le pagine definite in `config/routes.json`, header e footer.
+ * Componente principale
+ * tema e router con le pagine definite in `config/routes.json`, header e footer.
  *
  * @module App
  */
@@ -34,7 +35,7 @@ const AreaPersonale = lazy(() => import('./pages/AreaPersonale'));
 const PasswordDimenticata = lazy(() => import('./pages/PasswordDimenticata'));
 const ReimpostaPassword = lazy(() => import('./pages/ReimpostaPassword'));
 
-// Nel JSON le pagine sono indicate per nome: qui associo ogni nome al componente vero
+// Nel JSON le pagine sono indicate per nome
 const pages = {
     Home,
     Esposizioni,
@@ -54,10 +55,10 @@ const pages = {
 
 /**
  * Applicazione completa. Per ogni voce di `config/routes.json` crea una rotta; le pagine con
- * `protected` passano da {@link module:components/ProtectedRoute} e ogni pagina è avvolta da
+ * `protected` passano da {@link module:components/ProtectedRoute} e ogni pagina è wrappata da
  * {@link module:components/ErrorBoundary}.
  *
- * @returns {JSX.Element} L'applicazione.
+ * @returns {JSX.Element}
  * @alias module:App.App
  */
 function App() {

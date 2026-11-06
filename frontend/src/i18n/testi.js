@@ -1,6 +1,6 @@
 /**
- * Testi dell'interfaccia pubblica e dell'area visitatori in italiano e in inglese.
- * Le chiavi sono raggruppate per pagina; `{nome}` indica un valore inserito al momento.
+ * Testi dell'interfaccia pubblica e dell'area visitatori in italiano e in inglese
+ * Le chiavi sono raggruppate per pagina
  *
  * @module i18n/testi
  */

@@ -2,14 +2,13 @@
  * Tipi dei dati scambiati con il backend, descritti con JSDoc.
  *
  * Il file contiene solo documentazione: corrisponde agli schemi Pydantic di `backend/schemas.py`
- * e non viene importato dall'applicazione. Le date arrivano come testo ISO
  * (`AAAA-MM-GG` per le date, `AAAA-MM-GGThh:mm:ss` in UTC per data e ora).
  *
  * @module tipi
  */
 
 /**
- * Una mostra del catalogo.
+ * Una mostra del catalogo
  *
  * @typedef {object} Mostra
  * @property {number} id Identificativo della mostra.
@@ -21,7 +20,7 @@
  */
 
 /**
- * Profilo di un visitatore registrato.
+ * Profilo di un visitatore registrato
  *
  * @typedef {object} Utente
  * @property {number} id Identificativo dell'account.
@@ -32,7 +31,7 @@
  */
 
 /**
- * Account visto dall'amministratore nella gestione utenti (`GET /api/utenti`).
+ * Account visto dall'amministratore nella gestione utenti
  *
  * @typedef {object} UtenteAdmin
  * @property {number} id Identificativo dell'account.
@@ -46,7 +45,7 @@
  */
 
 /**
- * Sessione del visitatore salvata nel browser dopo login o registrazione.
+ * Sessione del visitatore salvata nel browser dopo login o registrazione
  *
  * @typedef {object} SessioneUtente
  * @property {string} token Token firmato con ruolo `utente`.
@@ -54,7 +53,7 @@
  */
 
 /**
- * Prenotazione vista dall'amministratore (`GET /api/prenotazioni`).
+ * Prenotazione vista dall'amministratore (`GET /api/prenotazioni`)
  *
  * @typedef {object} Prenotazione
  * @property {number} id Identificativo della prenotazione.
@@ -69,7 +68,7 @@
  */
 
 /**
- * Risultato della verifica di una prenotazione all'ingresso (`GET /api/prenotazioni/verifica/{riferimento}`).
+ * Risultato della verifica di una prenotazione all'ingresso
  *
  * @typedef {object} VerificaPrenotazione
  * @property {number} id Identificativo della prenotazione.
@@ -88,7 +87,7 @@
  */
 
 /**
- * Prenotazione vista dal visitatore nella sua area personale (`GET /api/utenti/me/prenotazioni`).
+ * Prenotazione vista dal visitatore nella sua area personale
  *
  * @typedef {object} MiaPrenotazione
  * @property {number} id Identificativo della prenotazione.
@@ -102,7 +101,7 @@
  */
 
 /**
- * Feedback (recensione) lasciato da un visitatore su una mostra.
+ * Feedback lasciato da un visitatore su una mostra
  *
  * @typedef {object} Feedback
  * @property {number} id Identificativo del feedback.
@@ -114,7 +113,7 @@
  */
 
 /**
- * Indicatori di una singola mostra nella dashboard.
+ * Indicatori di una singola mostra nella dashboard
  *
  * @typedef {object} StatisticheMostra
  * @property {number} mostra_id Identificativo della mostra.
@@ -126,7 +125,7 @@
  */
 
 /**
- * Indicatori della dashboard amministratore (`GET /api/statistiche`).
+ * Indicatori della dashboard amministratore
  *
  * @typedef {object} Statistiche
  * @property {number} totale_mostre Numero di mostre.
@@ -141,7 +140,7 @@
  */
 
 /**
- * Dati del modulo Contatti (`POST /api/contatti`).
+ * Dati del modulo Contatti
  *
  * @typedef {object} RichiestaContatto
  * @property {string} titolo Oggetto della domanda (da 3 a 120 caratteri).

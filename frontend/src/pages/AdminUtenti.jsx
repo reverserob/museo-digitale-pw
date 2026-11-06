@@ -1,9 +1,11 @@
 /**
  * Gestione degli account dei visitatori (`/admin/utenti`, solo amministratore).
  *
- * Completa il CRUD degli utenti lato area riservata: elenco con ricerca (Read), correzione di nome,
- * cognome e telefono (Update) ed eliminazione dell'account (Delete). La creazione (Create) avviene con la
- * registrazione del visitatore, che sceglie la propria password.
+ * CRUD degli utenti lato area riservata
+ * elenco con ricerca - Read,
+ * modifica di nome,cognome e telefono - Update
+ * eliminazione dell'account - Delete
+ * creazione  utente - Create
  *
  * @module pages/AdminUtenti
  */
@@ -45,9 +47,9 @@ const datiValidi = (d) =>
 const data = (iso) => new Date(iso + 'Z').toLocaleDateString('it-IT');
 
 /**
- * Pagina di gestione utenti: tabella degli account con ricerca, modifica in linea ed eliminazione.
+ * Pagina di gestione utenti con tabella degli account con ricerca, modifica in linea ed eliminazione.
  *
- * @returns {JSX.Element} La pagina.
+ * @returns {JSX.Element}
  * @alias module:pages/AdminUtenti.AdminUtenti
  */
 export default function AdminUtenti() {

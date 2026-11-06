@@ -1,5 +1,5 @@
 /**
- * Pagina di accesso dei visitatori (`/accedi`) con due schede: Accedi (login) e Registrati (nuovo account).
+ * Pagina di accesso dei visitatori /accedi con due schede Accedi (login) e Registrati (nuovo account)
  *
  * @module pages/Accedi
  */
@@ -28,9 +28,8 @@ const campo = { slotProps: { inputLabel: { shrink: true } }, fullWidth: true, sx
  * Controllo dell'email durante la digitazione.
  *
  * @private
- * @param {string} valore Email digitata.
- * @returns {string} Chiave del messaggio che spiega l'errore specifico (spazi, chiocciola mancante,
- *   dominio non valido...) oppure `''` se l'email è valida o il campo è vuoto.
+ * @param {string} valore Email
+ * @returns {string} messaggio
  * @alias module:pages/Accedi.erroreEmail
  */
 function erroreEmail(valore) {
@@ -49,7 +48,7 @@ function erroreEmail(valore) {
     return '';
 }
 
-// nome e cognome: almeno 3 caratteri
+// nome e cognome almeno 3 caratteri
 const erroreNome = (valore) => (valore.length > 0 && valore.trim().length < 3 ? 'accedi.nomeCorto' : '');
 
 // accetto solo indirizzi interni al sito come destinazione dopo il login
@@ -58,8 +57,8 @@ const destinazioneSicura = (next) => (next && next.startsWith('/') && !next.star
 /**
  * Pagina Accedi / Registrati.
  *
- * Dopo l'accesso porta all'indirizzo indicato nel parametro `next` (solo indirizzi interni al sito),
- * altrimenti all'area personale. Se è già collegato l'admin o un visitatore mostra solo dei collegamenti.
+ * Dopo l'accesso porta all'indirizzo indicato nel parametro next
+ *  Se l'utente è già collegato che sia l'admin o un utente
  *
  * @returns {JSX.Element} La pagina.
  * @alias module:pages/Accedi.Accedi
@@ -86,7 +85,7 @@ export default function Accedi() {
     const [errore, setErrore] = useState('');
     const [invio, setInvio] = useState(false);
 
-    // restituisce il gestore onChange di un campo: aggiorna solo quella proprietà di dati
+    // restituisce il gestore onChange di un campo che aggiorna solo quella proprietà di dati
     const aggiorna = (nomeCampo) => (e) => setDati({ ...dati, [nomeCampo]: e.target.value });
 
     const requisitiMancanti = REGOLE_PASSWORD.filter((r) => !r.ok(dati.password)).map((r) => t(r.chiave));
@@ -96,7 +95,7 @@ export default function Accedi() {
     const emailCoincidono = dati.confermaEmail.trim().toLowerCase() === dati.email.trim().toLowerCase();
     const confermaEmailErrata = dati.confermaEmail.length > 0 && !emailCoincidono;
 
-    // le funzioni di controllo restituiscono la chiave del messaggio, tradotta qui
+    // le funzioni di controllo restituiscono la chiave del messaggio
     const traduciChiave = (chiave) => (chiave ? t(chiave) : '');
     const errori = {
         nome: traduciChiave(erroreNome(dati.nome)),
@@ -118,11 +117,11 @@ export default function Accedi() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // doppia sicurezza: con dati non validi (es. email diverse) la registrazione non parte nemmeno premendo Invio
+        // doppio check con controllo dati non validi
         if (scheda === 1 && !registrazioneValida) return;
         setErrore('');
         setInvio(true);
-        // la stessa funzione gestisce login e registrazione, in base alla scheda attiva
+        // funzione che gestisce login e registrazione
         const richiesta =
             scheda === 0
                 ? loginUtente(dati.email.trim(), dati.password)
@@ -135,13 +134,13 @@ export default function Accedi() {
                       password: dati.password,
                   });
         richiesta
-            // dopo la registrazione la pagina successiva mostra la conferma (email inviata)
+            // dopo la registrazione la pagina successiva mostra la conferma
             .then(() => navigate(next, { replace: true, state: scheda === 1 ? { registrato: true } : null }))
             .catch((err) => setErrore(messaggioErrore(err, t('accedi.errore'))))
             .finally(() => setInvio(false));
     };
 
-    // amministratore collegato: niente login visitatori, solo il collegamento alla dashboard
+    // amministratore collegato
     if (admin) {
         return (
             <Container maxWidth="sm" sx={{ mt: { xs: 5, md: 10 } }}>
@@ -167,7 +166,7 @@ export default function Accedi() {
         );
     }
 
-    // visitatore già collegato: collegamenti all'area personale e alle mostre
+    // visitatore loggato
     if (utente) {
         return (
             <Container maxWidth="sm" sx={{ mt: { xs: 5, md: 10 } }}>
@@ -252,7 +251,7 @@ export default function Accedi() {
                             helperText={errori.email}
                             required
                         />
-                        {/* seconda digitazione dell'email: evita account con un indirizzo sbagliato */}
+                        {/* seconda digitazione dell'email */}
                         {scheda === 1 && (
                             <TextField
                                 {...campo}

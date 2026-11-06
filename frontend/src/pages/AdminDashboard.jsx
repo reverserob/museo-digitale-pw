@@ -1,6 +1,7 @@
 /**
- * Area riservata (`/admin`): form di login dell'amministratore e, dopo l'accesso, dashboard con indicatori,
- * elenco delle mostre, prenotazioni e feedback di ciascuna mostra e comandi di gestione.
+ * Area riservata /admin`
+ * form di login dell'amministratore con pagina di accesso e dashboard con indicatori
+ * elenco delle mostre, prenotazioni e feedback di ciascuna mostra e comandi di gestione
  *
  * @module pages/AdminDashboard
  */
@@ -39,12 +40,12 @@ const cardSx = {
 const inputStyle = { input: { color: 'white' }, label: { color: '#999999' } };
 
 /**
- * Pagina dell'area riservata. Mostra tre contenuti diversi:
- * - visitatore collegato: avviso e pulsante per uscire dall'account visitatore;
- * - admin non collegato: form di login;
- * - admin collegato: dashboard.
+ * Pagina dell'area riservata
+ * - visitatore collegato: avviso e pulsante per uscire dall'account visitatore
+ * - admin non collegato: form di login
+ * - admin collegato: dashboard
  *
- * @returns {JSX.Element} La pagina.
+ * @returns {JSX.Element} pagina di visualizzare
  * @alias module:pages/AdminDashboard.AdminDashboard
  */
 export default function AdminDashboard() {
@@ -74,18 +75,17 @@ export default function AdminDashboard() {
     const [errore, setErrore] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // Carica insieme tutti i dati della dashboard. useCallback mantiene la stessa funzione tra un
-    // render e l'altro, così può essere usata come dipendenza di useEffect senza cicli infiniti.
+    // Carica i dati della dashboard
     const caricaDati = useCallback(() => {
         setLoading(true);
-        // feedback e statistiche sono facoltativi: se non rispondono la dashboard mostra comunque mostre e prenotazioni
+        // feedback e statistiche sono facoltativi
         const facoltativo = (promessa, valoreDiRiserva) =>
             promessa.catch((err) => {
                 console.warn('Dati della dashboard non disponibili:', messaggioErrore(err));
                 return valoreDiRiserva;
             });
 
-        // le quattro richieste partono in parallelo; mostre e prenotazioni sono indispensabili
+        // richieste che partono in parallelo
         Promise.all([
             getMostre(),
             getPrenotazioni(),
@@ -131,7 +131,7 @@ export default function AdminDashboard() {
         logout();
     };
 
-    // eliminazione di una mostra (con le sue prenotazioni e i suoi feedback) e ricarica dei dati
+    // eliminazione di una mostra con prenotazioni e feedback e ricarica dei dati
     const eliminaMostra = (id) => {
         if (
             !window.confirm(
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
             .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione.")));
     };
 
-    // moderazione: eliminazione di un feedback
+    // eliminazione di un feedback
     const eliminaFeedback = (id) => {
         if (!window.confirm('Eliminare questo feedback?')) return;
         setErrore('');
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
             .catch((err) => setErrore(messaggioErrore(err, "Errore durante l'eliminazione del feedback.")));
     };
 
-    // apre il pannello scelto sotto la mostra; un secondo clic sullo stesso pulsante lo richiude
+    // apre il pannello sotto la mostra
     const apriPannello = (id, tipo) => setAperta(aperta?.id === id && aperta?.tipo === tipo ? null : { id, tipo });
 
     return (

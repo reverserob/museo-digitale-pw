@@ -1,6 +1,6 @@
 /**
- * Lingua dell'interfaccia: `'it'` (predefinita) o `'en'`, ricordata nel browser.
- * Contiene le funzioni di traduzione dei testi e dei messaggi del backend.
+ * Lingua dell'interfaccia: it (predefinita) o en in cache nel browser
+ * Contiene le funzioni di traduzione dei testi e dei messaggi del backend
  *
  * @module i18n/lingua
  */
@@ -14,7 +14,7 @@ import { TESTI, MESSAGGI_SERVER_EN } from './testi';
 export const LINGUE = ['it', 'en'];
 
 /**
- * Nome dell'evento del browser lanciato quando cambia la lingua (ascoltato da {@link module:hooks/useLingua}).
+ * Nome dell'evento del browser lanciato quando cambia la lingua in ascolto da {@link module:hooks/useLingua}).
  *
  * @type {string}
  */
@@ -33,15 +33,15 @@ const leggiLinguaSalvata = () => {
 /**
  * Lingua scelta nelle visite precedenti.
  *
- * @returns {('it'|'en')} La lingua salvata, oppure `'it'`.
+ * @returns {('it'|'en')} La lingua salvata, oppure it
  */
 export const getLingua = () => leggiLinguaSalvata();
 
 /**
- * Salva la lingua scelta, aggiorna l'attributo `lang` della pagina e avvisa i componenti.
- * Le lingue non previste vengono ignorate.
+ * Salva la lingua scelta, aggiorna l'attributo lang della pagina e avvisa i componenti
+ * Le lingue non previste vengono ignorate
  *
- * @param {string} lingua `'it'` oppure `'en'`.
+ * @param {string} lingua it oppure en
  * @returns {void}
  */
 export const setLingua = (lingua) => {
@@ -57,15 +57,15 @@ export const setLingua = (lingua) => {
 
 /**
  * Restituisce il testo di una chiave nella lingua scelta, con i segnaposto `{nome}` sostituiti.
- * Se manca la traduzione inglese si usa l'italiano; se manca anche quello, la chiave stessa.
+ * Se manca la traduzione inglese usa l'italiano; se manca la stringa di traduzione restituisce la chiave
  *
  * @example
  * traduci('header.ciao', { nome: 'Mario' }, 'it'); // 'Ciao, Mario'
  *
  * @param {string} chiave Chiave del testo (vedi {@link module:i18n/testi}).
- * @param {Object<string, (string|number)>} [parametri={}] Valori dei segnaposto.
- * @param {('it'|'en')} [lingua] Lingua; predefinita quella scelta dall'utente.
- * @returns {string} Testo tradotto.
+ * @param {Object<string, (string|number)>} [parametri={}] Valori dei placeholder
+ * @param {('it'|'en')} [lingua] Lingua; predefinita scelta dall'utente
+ * @returns {string} Testo tradotto
  */
 export const traduci = (chiave, parametri = {}, lingua = getLingua()) => {
     const testo = TESTI[lingua]?.[chiave] ?? TESTI.it[chiave] ?? chiave;
@@ -73,12 +73,12 @@ export const traduci = (chiave, parametri = {}, lingua = getLingua()) => {
 };
 
 /**
- * Traduce in inglese un messaggio del backend (che risponde sempre in italiano), quando è conosciuto.
- * Gestisce anche gli errori di validazione nel formato `"campo: messaggio · campo: messaggio"`.
+ * Traduce in inglese un messaggio del backend
+ * Gestisce anche gli errori di validazione nel formato campo: messaggio
  *
- * @param {string} messaggio Messaggio ricevuto dal backend.
- * @param {('it'|'en')} [lingua] Lingua; predefinita quella scelta dall'utente.
- * @returns {string} Messaggio tradotto, oppure invariato se in italiano o sconosciuto.
+ * @param {string} messaggio Messaggio ricevuto dal backend
+ * @param {('it'|'en')} [lingua] Lingua predefinita scelta dall'utente
+ * @returns {string} Messaggio tradotto
  */
 export const traduciServer = (messaggio, lingua = getLingua()) => {
     if (lingua === 'it' || typeof messaggio !== 'string') return messaggio;
@@ -95,11 +95,11 @@ export const traduciServer = (messaggio, lingua = getLingua()) => {
 };
 
 /**
- * Formatta una data nel formato della lingua scelta (`gg/mm/aaaa` in entrambe le lingue).
+ * Formatta una data nel formato della lingua scelta gg/mm/aaaa
  *
  * @param {string} iso Data in formato ISO.
- * @param {('it'|'en')} [lingua] Lingua; predefinita quella scelta dall'utente.
- * @returns {string} Data formattata.
+ * @param {('it'|'en')} [lingua] Lingua predefinita scelta dall'utente
+ * @returns {string} Data formattata
  */
 export const formatoData = (iso, lingua = getLingua()) =>
     new Date(iso).toLocaleDateString(lingua === 'en' ? 'en-GB' : 'it-IT');

@@ -18,8 +18,8 @@ const salvaSessione = (res) => {
  * Dopo la registrazione il visitatore è già collegato e riceve un'email di benvenuto.
  *
  * @param {{nome: string, cognome: string, email: string, conferma_email: string, telefono: string, password: string}} dati
- *     Dati del nuovo account; `conferma_email` è la seconda digitazione dell'email, ricontrollata dal backend.
- * @returns {Promise<module:tipi~Utente>} Il profilo creato (errore 409 se l'email è già registrata).
+ *  Dati del nuovo account; `conferma_email` è la seconda digitazione dell'email
+ * @returns {Promise<module:tipi~Utente>} Il profilo creato - errore 409 se l'email è già registrata
  */
 export const registrazione = (dati) => api.post('/api/utenti/registrazione', dati).then(salvaSessione);
 
@@ -49,23 +49,23 @@ export const getUtente = () => getSessioneUtente()?.utente || null;
 /**
  * Prenotazioni del visitatore collegato (`GET /api/utenti/me/prenotazioni`).
  *
- * @returns {Promise<module:tipi~MiaPrenotazione[]>} Le prenotazioni, dalla più recente.
+ * @returns {Promise<module:tipi~MiaPrenotazione[]>} Le prenotazioni in ordine cronologico dall più recente
  */
 export const getMiePrenotazioni = () => api.get('/api/utenti/me/prenotazioni').then((res) => res.data);
 
 /**
  * Feedback lasciati dal visitatore collegato (`GET /api/utenti/me/feedback`).
  *
- * @returns {Promise<module:tipi~Feedback[]>} I feedback del visitatore.
+ * @returns {Promise<module:tipi~Feedback[]>} I feedback del visitatore
  */
 export const getMieiFeedback = () => api.get('/api/utenti/me/feedback').then((res) => res.data);
 
 /**
- * Richiede il link per reimpostare la password (`POST /api/utenti/password-dimenticata`).
- * Il backend invia per email un link con un token valido per poco tempo.
+ * Richiede il link per reimpostare la password (`POST /api/utenti/password-dimenticata`)
+ * Il backend invia per email un link con un token valido per un tempo limitato
  *
  * @param {string} email Email dell'account.
- * @returns {Promise<string>} Messaggio di conferma (uguale anche se l'email non è registrata).
+ * @returns {Promise<string>} Messaggio di conferma
  */
 export const passwordDimenticata = (email) =>
     api.post('/api/utenti/password-dimenticata', { email }).then((res) => res.data.message);
@@ -73,16 +73,16 @@ export const passwordDimenticata = (email) =>
 /**
  * Imposta una nuova password (`POST /api/utenti/reimposta-password`).
  *
- * @param {string} token Token ricevuto nel link dell'email.
- * @param {string} password Nuova password.
- * @returns {Promise<string>} Messaggio di conferma (errore 400 se il link è scaduto o già usato).
+ * @param {string} token Token ricevuto nel link dell'email
+ * @param {string} password Nuova password
+ * @returns {Promise<string>} Messaggio di conferma - errore 400 se il link è scaduto o già usato
  */
 export const reimpostaPassword = (token, password) =>
     api.post('/api/utenti/reimposta-password', { token, password }).then((res) => res.data.message);
 
 /**
  * Annulla una propria prenotazione (`DELETE /api/utenti/me/prenotazioni/{id}`).
- * Il backend invia l'email di conferma dell'annullamento.
+ * Il backend invia l'email di conferma dell'annullamento
  *
  * @param {number} id Identificativo della prenotazione.
  * @returns {Promise<string>} Messaggio di conferma.
@@ -92,7 +92,7 @@ export const annullaPrenotazione = (id) =>
 
 /**
  * Modifica nome, cognome e telefono del visitatore collegato (`PUT /api/utenti/me`).
- * Aggiorna anche il profilo salvato nella sessione, così header e pagine mostrano subito i nuovi dati.
+ * Aggiorna anche il profilo salvato nella sessione
  *
  * @param {{nome: string, cognome: string, telefono: string}} dati Nuovi dati del profilo.
  * @returns {Promise<module:tipi~Utente>} Il profilo aggiornato.
@@ -110,7 +110,7 @@ export const aggiornaProfilo = (dati) =>
  * Il backend invia l'email di conferma dell'eliminazione.
  *
  * @param {string} password Password dell'account, richiesta come conferma.
- * @returns {Promise<string>} Messaggio di conferma (errore 400 se la password è errata).
+ * @returns {Promise<string>} Messaggio di conferma - errore 400 se la password è errata
  */
 export const eliminaAccount = (password) =>
     api.delete('/api/utenti/me', { data: { password } }).then((res) => {
