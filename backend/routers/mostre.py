@@ -18,30 +18,35 @@ logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/api/mostre", tags=["Mostre"])
 
 
-# GET /api/mostre (pubblica)
+# GET /api/mostre
+# Restituisce l'elenco delle mostre
 @router.get("", response_model=list[schemas.MostraResponse])
 def leggi_mostre(db: Session = Depends(get_db)):
-    """`GET /api/mostre` · Elenco di tutte le mostre, ordinate per data di inizio."""
+    """`GET /api/mostre` Elenco di tutte le mostre, ordinate per data di inizio."""
     try:
         return db.query(models.Mostra).order_by(models.Mostra.data_inizio).all()
     except Exception as e:
-        # errore inatteso del database: lo registro nel log e rispondo con un messaggio generico
+        # in caso di errore inatteso del database: salvato nei log e inviata risposta con un messaggio di errore generico
         logger.error(f"Errore nel recupero delle mostre: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Errore nel recupero delle mostre dal database."
         ) from e
 
 
-# GET /api/mostre/{id} (pubblica)
+# GET /api/mostre/{id}
 @router.get("/{mostra_id}", response_model=schemas.MostraResponse)
 def leggi_singola_mostra(mostra_id: int, db: Session = Depends(get_db)):
-    """`GET /api/mostre/{mostra_id}` · Dettaglio di una mostra (404 se non esiste)."""
+    """`GET /api/mostre/{mostra_id}` Dettaglio di una mostra
+     ERRORE:
+        - 404 se la mostra non viene trovata
+    """
     return trova_mostra(db, mostra_id)
 
 
-# POST /api/mostre (solo amministratore)
-# I dati arrivano come form-data (multipart) e non come JSON, perché insieme ai campi
-# di testo vengono inviati i file delle immagini. Form(...) indica un campo obbligatorio;
+# POST /api/mostre Permette all'mministratore di pubblicare nuove mostre
+# I dati arrivano come form-data multipart e non come JSON, perché insieme ai campi
+# di testo vengono inviati i file delle immagini.
+# Form(...) indica un campo obbligatorio;
 # min_length e max_length vengono controllati da FastAPI prima di eseguire la funzione.
 # La funzione è "async" perché la lettura dei file caricati è un'operazione di I/O asincrona.
 @router.post("", response_model=schemas.MostraResponse, status_code=status.HTTP_201_CREATED)
@@ -54,14 +59,15 @@ async def crea_mostra(
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
-    """`POST /api/mostre` · Pubblica una nuova mostra con una o più immagini (solo amministratore).
+    """`POST /api/mostre` Pubblica una nuova mostra con una o più immagini (solo amministratore).
 
-    Raises:
-        HTTPException: 400 per date non valide o immagini mancanti/non valide;
-            401 senza token admin; 422 per campi del form non validi.
+    ERROR HTTPException:
+        - 400 in caso di date o immagini mancanti/non valide
+        - 401 chiamata priva di token admin
+        - 422 in caso di  campi del form non validi
     """
     inizio, fine = converti_date(data_inizio, data_fine)
-    # ignoro eventuali campi file vuoti inviati dal browser
+    # ignorati eventuali campi file vuoti non compilati dall'utente admin
     file_validi = file_presenti(immagini)
     if not file_validi:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Carica almeno un'immagine.")
@@ -86,7 +92,7 @@ async def crea_mostra(
         ) from e
 
 
-# PUT /api/mostre/{id} (solo amministratore)
+# PUT /api/mostre/{id} Permette all'amministratore di effettuare modifiche su una mostra
 @router.put("/{mostra_id}", response_model=schemas.MostraResponse)
 async def aggiorna_mostra(
     mostra_id: int,
@@ -101,11 +107,11 @@ async def aggiorna_mostra(
     db: Session = Depends(get_db),
     _admin: str = Depends(richiedi_admin),
 ):
-    """`PUT /api/mostre/{mostra_id}` · Modifica una mostra: mantiene le immagini scelte e aggiunge quelle nuove (solo amministratore).
-
-    Raises:
-        HTTPException: 400 per date non valide o se la mostra resterebbe senza immagini;
-            401 senza token admin; 404 se la mostra non esiste.
+    """`PUT /api/mostre/{mostra_id}` Modifica una mostra: mantiene le immagini scelte e aggiunge quelle nuove (solo amministratore).
+    ERROR HTTPException
+        - 400 in caso di date non valide o in caso di mancanza di immagini
+        - 401 in caso di assenza del token admin
+        - 404 se la mostra non viene trovata
     """
     mostra = trova_mostra(db, mostra_id)
     inizio, fine = converti_date(data_inizio, data_fine)
@@ -136,7 +142,7 @@ async def aggiorna_mostra(
         ) from e
 
 
-# DELETE /api/mostre/{id} (solo amministratore)
+# DELETE /api/mostre/{id} Permette all'amministratore di solo amministratore
 @router.delete("/{mostra_id}")
 def elimina_mostra(
     mostra_id: int,
@@ -145,8 +151,9 @@ def elimina_mostra(
 ):
     """`DELETE /api/mostre/{mostra_id}` · Elimina una mostra insieme alle sue prenotazioni e ai suoi feedback (solo amministratore).
 
-    Raises:
-        HTTPException: 401 senza token admin; 404 se la mostra non esiste.
+    ERROR HTTPException:
+        - 401 in caso di assenza del token admin
+        - 404 in caso di mostra non trovata
     """
     mostra = trova_mostra(db, mostra_id)
     try:

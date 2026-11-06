@@ -1,8 +1,6 @@
 """Configurazione dell'applicazione letta dalle variabili d'ambiente.
-
-In locale i valori arrivano dai file .env.local e .env (esclusi da Git); in produzione
-dal pannello Environment di Render. Ogni impostazione ha un valore predefinito pensato
-solo per la demo locale: le credenziali vere non vengono mai scritte nel codice.
+In locale i valori arrivano dai file .env.local e .env (esclusi da Git);
+in produzione i valori sono settati su Environment in Render
 """
 
 import os
@@ -51,11 +49,10 @@ def normalizza_database_url(url: str) -> str:
     return url
 
 
-# In sviluppo SQLite in un file locale; in produzione PostgreSQL (es. Neon) indicato con DATABASE_URL.
-# Il codice non cambia: l'ORM SQLAlchemy genera l'SQL adatto a ciascun database.
+# In sviluppo SQLite in un file locale mentre in produzione PostgreSQL Neon con DATABASE_URL
 DATABASE_URL = normalizza_database_url(_env("DATABASE_URL", "sqlite:///./museo.db"))
 
-# --- CORS: indirizzi del front-end autorizzati a chiamare le API dal browser ---
+# getione CORS indirizzi del front-end autorizzati per richiamare le API dal browser
 CORS_ORIGINS = _lista(
     _env(
         "CORS_ORIGINS",
@@ -63,11 +60,11 @@ CORS_ORIGINS = _lista(
     )
 )
 
-# --- Ambiente: "sviluppo" (valori dimostrativi ammessi) oppure "produzione" ---
-# Render imposta da solo la variabile RENDER: online l'ambiente è quindi produzione anche senza AMBIENTE.
+# Ambiente: sviluppo oppure produzione
+# Render imposta da solo la variabile RENDER mentre online l'ambiente produzione
 AMBIENTE = _env("AMBIENTE", "produzione" if os.getenv("RENDER") else "sviluppo").lower()
 
-# --- Area riservata (i valori predefiniti valgono solo per la demo locale) ---
+# -Area riservata iqui  valori predefiniti valgono solo per la demo locale
 ADMIN_EMAIL_DEMO = "admin@museo.it"
 ADMIN_PASSWORD_DEMO = "admin2026"
 SECRET_KEY_DEMO = "dev-secret-cambiami"
@@ -80,57 +77,54 @@ SECRET_KEY_MIN = 32
 # durata dei token di accesso, in ore
 TOKEN_DURATA_ORE = int(_env("TOKEN_DURATA_ORE", "8"))
 
-# --- Reset della password: durata del link e indirizzo del front-end da usare nel link ---
-# (se la richiesta arriva da uno dei CORS_ORIGINS si usa direttamente quell'indirizzo)
+# Reset della password con durata del link e indirizzo del front-end
 RESET_PASSWORD_MINUTI = int(_env("RESET_PASSWORD_MINUTI", "30"))
 FRONTEND_URL = _env("FRONTEND_URL", "https://museo-digitale-pw-azure.vercel.app").rstrip("/")
-# indirizzo pubblico del backend, usato per l'immagine del QR code nelle email di conferma;
-# se è vuoto si usa l'indirizzo da cui è arrivata la richiesta di prenotazione
+# indirizzo pubblico del backend usato per l'immagine del QR code nelle email di conferma
 BACKEND_URL = _env("BACKEND_URL").rstrip("/")
 
-# --- Limite ai tentativi di login (sintassi di slowapi: "numero/periodo") ---
+# Limite ai tentativi di login di slowapi
 LOGIN_RATE_LIMIT = _env("LOGIN_RATE_LIMIT", "5/minute")
 
-# --- Invio email tramite SMTP (usato in locale) ---
+# Invio email tramite SMTP (usato in locale)
 SMTP_SERVER = _env("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(_env("SMTP_PORT", "587"))
 SMTP_USER = _env("SMTP_USER")
 # la password per le app di Google viene mostrata con gli spazi: li tolgo
 SMTP_PASSWORD = _env("SMTP_PASSWORD").replace(" ", "")
 
-# --- Invio tramite API di Brevo (porta HTTPS 443) ---
-# Da usare dove le porte SMTP sono bloccate (es. piano gratuito di Render).
-# Se BREVO_API_KEY è impostata ha la precedenza su SMTP.
+# Invio tramite API di Brevo su porta HTTPS 443
+# Da usare dove le porte SMTP sono bloccate come da  piano gratuito di Render
+# Se BREVO_API_KEY è impostata ha la precedenza su SMTP
 BREVO_API_KEY = _env("BREVO_API_KEY")
-# indirizzo mittente (deve essere verificato su Brevo) e nome visualizzato
+# indirizzo mittente verificato su Brevo e nome visualizzato
 EMAIL_MITTENTE = _env("EMAIL_MITTENTE", SMTP_USER)
 EMAIL_MITTENTE_NOME = _env("EMAIL_MITTENTE_NOME", "Museo Civico Digitale")
 
-# --- Modulo Contatti: casella che riceve le domande dei visitatori ---
+# Modulo Contatti casella email che riceve le domande dei visitatori
 CONTATTI_EMAIL = _env("CONTATTI_EMAIL", "r.randazzo85@gmail.com")
 
-# --- Fuso orario del museo: decide "oggi" per apertura, chiusura, prenotazioni e ingressi ---
-# Il server (Render, CI) lavora in UTC: senza fuso esplicito tra le 22 e le 24 italiane "oggi" sarebbe ancora ieri.
+# Fuso orario del museo  per apertura, chiusura, prenotazioni e ingressi
+# Il server (Render, CI) lavora in UTC senza fuso esplicito
 FUSO_ORARIO = _env("FUSO_ORARIO", "Europe/Rome")
 
-# --- Upload delle immagini delle mostre ---
+# Upload delle immagini delle mostre
 STATIC_DIR = Path(__file__).parent / "static"  # cartella servita all'indirizzo /static
 UPLOAD_DIR = STATIC_DIR / "uploads"  # qui finiscono le immagini caricate dall'area riservata
 UPLOAD_MAX_MB = int(_env("UPLOAD_MAX_MB", "5"))  # dimensione massima di ogni file
 ESTENSIONI_IMMAGINI = {".jpg", ".jpeg", ".png", ".webp", ".gif"}  # formati accettati
 IMMAGINI_MAX_PER_RICHIESTA = 10  # file caricabili in una sola creazione o modifica di mostra
-IMMAGINE_MAX_PIXEL = 40_000_000  # larghezza × altezza massima (protezione dalle "decompression bomb")
+IMMAGINE_MAX_PIXEL = 40_000_000  # larghezza X altezza massima
 
 
 def problemi_configurazione() -> list[str]:
     """Elenca i valori di sicurezza non accettabili in produzione.
 
-    In sviluppo i valori dimostrativi sono ammessi (e main.py mostra solo un avviso); in produzione
-    main.py rifiuta l'avvio se questo elenco non è vuoto, così un'installazione configurata male non
-    parte con credenziali o chiave pubblicamente note.
+    In sviluppo i valori dimostrativi sono ammessi mentre in produzione
+    main.py rifiuta l'avvio se questo elenco non è vuoto
 
     Returns:
-        Messaggi leggibili, uno per ogni problema (lista vuota se la configurazione è sicura).
+        Messaggi di errore
     """
     problemi = []
     if SECRET_KEY == SECRET_KEY_DEMO:

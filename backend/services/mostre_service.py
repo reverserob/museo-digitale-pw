@@ -15,14 +15,13 @@ def trova_mostra(db: Session, mostra_id: int) -> models.Mostra:
     """Restituisce la mostra con l'id indicato.
 
     Args:
-        db: Sessione del database.
-        mostra_id: Identificativo della mostra.
+        db: Sessione del database
+        mostra_id: Identificativo della mostra
 
     Returns:
-        La mostra trovata.
+        La mostra recuperata
 
-    Raises:
-        HTTPException: 404 se la mostra non esiste.
+    ERROR HTTPException: 404 se la mostra non esiste
     """
     mostra = db.query(models.Mostra).filter(models.Mostra.id == mostra_id).first()
     if mostra is None:
@@ -34,14 +33,13 @@ def converti_date(data_inizio: str, data_fine: str) -> tuple[date, date]:
     """Controlla le date ricevute dal form e le restituisce come oggetti date.
 
     Args:
-        data_inizio: Data di apertura (`AAAA-MM-GG`).
-        data_fine: Data di chiusura (`AAAA-MM-GG`).
+        data_inizio: Data di apertura in formato AAAA-MM-GG
+        data_fine: Data di chiusura in formato AAAA-MM-GG`
 
     Returns:
         Coppia (inizio, fine).
 
-    Raises:
-        HTTPException: 400 se le date non sono valide o sono invertite.
+    ERROR HTTPException: 400 se le date non sono valide o sono invertite
     """
     try:
         return schemas.valida_date(data_inizio, data_fine)

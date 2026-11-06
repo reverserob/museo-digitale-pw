@@ -1,11 +1,6 @@
-"""Esporta lo schema OpenAPI delle API in un file JSON, per pubblicare la Swagger UI nella documentazione.
-
-Uso (dalla cartella backend):
-
-    python esporta_openapi.py ../docs/swagger/openapi.json
-
-L'applicazione viene importata con un database SQLite temporaneo, così l'esportazione
-non crea né modifica `museo.db`. Nel file viene indicato come server il backend pubblicato su Render.
+"""Esporta lo schema OpenAPI delle API in un file JSON, per pubblicare la Swagger UI nella documentazione
+dalla cartella backend python esporta_openapi.py ../docs/swagger/openapi.json
+L'applicazione viene importata con un database SQLite temporaneo
 """
 
 import json
@@ -14,7 +9,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-# database temporaneo: importare main crea le tabelle e inserisce le mostre iniziali
+# database temporaneo importa main crea le tabelle e inserisce le mostre iniziali
 os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.mkdtemp()) / 'openapi.db'}"
 
 from main import app  # noqa: E402
@@ -27,7 +22,7 @@ def esporta(destinazione: Path) -> None:
     """Scrive lo schema OpenAPI dell'applicazione nel file indicato.
 
     Args:
-        destinazione: Percorso del file JSON da creare (le cartelle mancanti vengono create).
+        destinazione: Percorso del file JSON
     """
     schema = app.openapi()
     schema["servers"] = [{"url": SERVER_PUBBLICO, "description": "Backend pubblicato su Render"}]

@@ -1,4 +1,4 @@
-"""Logica degli account dei visitatori condivisa tra area personale e area riservata."""
+"""Logica degli account dei visitatori condivisa tra area personale e area riservata"""
 
 from sqlalchemy.orm import Session
 
@@ -13,13 +13,13 @@ FEEDBACK_ANONIMO = "Visitatore"
 
 
 def riepilogo(utente: models.Utente) -> dict:
-    """Profilo dell'account con il numero di prenotazioni e di feedback (per l'area riservata).
+    """Profilo dell'account con il numero di prenotazioni e di feedback
 
     Args:
         utente: Account del visitatore.
 
     Returns:
-        Dizionario compatibile con `schemas.UtenteAdminResponse`.
+        Dizionario compatibile con schemas.UtenteAdminResponse
     """
     return {
         "id": utente.id,
@@ -35,9 +35,6 @@ def riepilogo(utente: models.Utente) -> dict:
 
 def aggiorna_profilo(db: Session, utente: models.Utente, dati: schemas.ProfiloUpdateRequest) -> models.Utente:
     """Aggiorna nome, cognome e telefono dell'account.
-
-    Le prenotazioni già fatte conservano i dati copiati al momento della prenotazione (storico),
-    mentre le prenotazioni future useranno i nuovi dati.
 
     Args:
         db: Sessione del database.
@@ -56,13 +53,10 @@ def aggiorna_profilo(db: Session, utente: models.Utente, dati: schemas.ProfiloUp
 
 
 def elimina_account(db: Session, utente: models.Utente) -> dict:
-    """Elimina l'account applicando il diritto alla cancellazione (art. 17 GDPR).
-
-    - le prenotazioni non ancora usate vengono annullate (eliminate);
-    - le prenotazioni già usate per l'ingresso restano nello storico del museo, ma senza dati personali;
-    - i feedback restano visibili con un nome generico e senza collegamento all'account.
-
-    Tutto avviene in un'unica transazione: se qualcosa fallisce non viene modificato nulla.
+    """Elimina l'account applicando il diritto alla cancellazione
+    - le prenotazioni non ancora usate vengono annullate
+    - le prenotazioni già usate per l'ingresso restano nello storico del museo ma senza dati personali
+    - i feedback restano visibili con un nome generico e senza collegamento all'utente che li ha scritti
 
     Args:
         db: Sessione del database.

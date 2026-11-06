@@ -1,7 +1,7 @@
-"""Invio delle email del museo (conferme, annullamenti, registrazione, reset password, contatti).
+"""Invio delle email del museo come conferme, annullamenti, registrazione, reset password, form contatti.
 
 Le email partono con l'API HTTPS di Brevo se è impostata BREVO_API_KEY, altrimenti con SMTP.
-Se nessuno dei due è configurato (es. in locale) l'invio viene saltato e annotato nel log.
+Se nessuno dei due è configurato (es. in locale) l'invio non avviene e annotato nel log.
 """
 
 import base64
@@ -37,7 +37,7 @@ def _layout(contenuto: str) -> str:
     """
 
 
-# --- Modelli HTML delle email ---
+# Modelli HTML delle email
 
 
 def crea_html_conferma(
@@ -58,8 +58,7 @@ def crea_html_conferma(
         codice: Codice della prenotazione (es. `MCD-7K3F-9QXA`).
         url_qr: Indirizzo pubblico dell'immagine del QR code; se manca il QR è solo in allegato.
 
-    Returns:
-        Il corpo HTML dell'email.
+    Returns: testo email prenotazione con QrCode in formato HTML
     """
     # i dati inseriti dall'utente vengono "escapati" prima di finire nell'HTML
     nome_html = html.escape(nome)
@@ -130,15 +129,14 @@ def crea_html_gia_registrato(nome: str) -> str:
 
 
 def crea_html_account_eliminato(nome: str, prenotazioni_annullate: int, da_amministratore: bool = False) -> str:
-    """Conferma dell'eliminazione dell'account (diritto alla cancellazione).
+    """Conferma dell'eliminazione dell'account
 
     Args:
         nome: Nome del visitatore.
         prenotazioni_annullate: Prenotazioni non ancora usate annullate insieme all'account.
         da_amministratore: `True` se l'account è stato eliminato dal personale del museo.
 
-    Returns:
-        Corpo HTML dell'email.
+    Returns: testo email eliminazione utente in formato HTML
     """
     chi = "dal personale del museo" if da_amministratore else "su tua richiesta"
     if prenotazioni_annullate == 1:
@@ -175,10 +173,9 @@ def crea_html_reset_password(nome: str, link: str, minuti: int) -> str:
     """)
 
 
-# --- Canali di invio ---
+# API invio email
 
-
-# allegato di un'email: (nome del file, contenuto)
+# allegato di un'email: nome del file, contenuto
 Allegato = tuple[str, bytes]
 
 
@@ -198,10 +195,10 @@ def invia_con_brevo(
         "htmlContent": html_content,
     }
     if rispondi_a:
-        # "Rispondi" nel programma di posta scrive direttamente a chi ha inviato la richiesta
+        # "Rispondi" nel servizio di posta scrive direttamente a chi ha inviato la richiesta
         dati["replyTo"] = {"email": rispondi_a}
     if allegati:
-        # Brevo vuole il contenuto dei file codificato in Base64
+        # Brevo richiede il contenuto dei file codificato in Base64
         dati["attachment"] = [
             {"name": nome_file, "content": base64.b64encode(contenuto).decode("ascii")}
             for nome_file, contenuto in allegati
@@ -221,7 +218,7 @@ def invia_con_brevo(
         with urllib.request.urlopen(richiesta, timeout=10) as risposta:
             risposta.read()
     except urllib.error.HTTPError as e:
-        # Brevo spiega nel corpo della risposta cosa non va (es. mittente non verificato, chiave errata)
+        # Brevo risponde con errore
         dettaglio = e.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"Brevo ha risposto {e.code}: {dettaglio}") from e
 
@@ -303,7 +300,7 @@ def _invia(
 
 
 def crea_html_contatto(dati: dict) -> str:
-    # tutti i campi arrivano dall'utente: vengono "escapati" prima di finire nell'HTML
+    # restituizione dei dati presenti nei campi di input con escape del testo prima di generare l'HTML
     e = {k: html.escape(str(v)) for k, v in dati.items()}
     descrizione = e["descrizione"].replace("\n", "<br>")
     return _layout(f"""
@@ -319,10 +316,10 @@ def crea_html_contatto(dati: dict) -> str:
     """)
 
 
-# --- Funzioni chiamate dai router ---
+# Funzioni chiamate dai router
 
 
-# Email del modulo Contatti, inviata alla casella del museo con "Rispondi a" = email del visitatore
+# Email del modulo Contatti, inviata alla casella del museo con "Rispondi a" email del visitatore
 def invia_email_contatto(dati: dict) -> bool:
     oggetto = f"[Contatti] {dati['titolo']}"
     return _invia(settings.CONTATTI_EMAIL, "Museo Civico Digitale", oggetto, crea_html_contatto(dati), dati["email"])
@@ -335,10 +332,10 @@ def _indirizzo_pubblico(url: Optional[str]) -> bool:
     nell'email risulterebbe rotta, perché il programma di posta non può raggiungere il computer di sviluppo.
 
     Args:
-        url: Indirizzo del backend.
+        url: Indirizzo del backend
 
     Returns:
-        False se l'indirizzo manca o punta al computer locale, True altrimenti.
+        False se l'indirizzo manca o punta al computer locale, viceversa torna True
     """
     host = (urlparse(url).hostname or "") if url else ""
     return bool(host) and host not in {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
@@ -356,8 +353,7 @@ def invia_email_background(
 ):
     """Invia la conferma della prenotazione con codice di riferimento e QR code.
 
-    Il QR code è sia nel corpo dell'email (immagine servita dal backend) sia in allegato PNG,
-    così resta disponibile anche se il programma di posta blocca le immagini esterne.
+    Il QR code è nel corpo dell'email e come immagine in allegato PNG
 
     Args:
         destinatario: Email del visitatore.

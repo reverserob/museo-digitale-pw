@@ -3,10 +3,8 @@
 Da usare solo se all'avvio il back-end si ferma con "Impossibile creare gli indici unici per dati duplicati".
 Per ogni visitatore e mostra tiene la prenotazione (e il feedback) più vecchia ed elimina le altre.
 
-Uso (dalla cartella backend, con il venv attivo e la stessa DATABASE_URL del server):
-
-    python bonifica_duplicati.py            # mostra solo quante righe verrebbero eliminate
-    python bonifica_duplicati.py --esegui   # elimina davvero i duplicati
+    python bonifica_duplicati.py  mostra solo quante righe verrebbero eliminate
+    python bonifica_duplicati.py --esegui elimina  i duplicati
 """
 
 import sys

@@ -1,4 +1,4 @@
-"""Calcolo degli indicatori della dashboard amministratore."""
+"""Calcolo degli indicatori della dashboard amministratore"""
 
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
@@ -10,8 +10,6 @@ import models
 from services.orario_service import oggi
 
 # Indicatori per la dashboard dell'area riservata
-
-
 def stato_mostra(mostra: models.Mostra, oggi: date) -> str:
     """Stato della mostra rispetto a una data.
 
@@ -20,7 +18,7 @@ def stato_mostra(mostra: models.Mostra, oggi: date) -> str:
         oggi: Data di riferimento.
 
     Returns:
-        `"conclusa"`, `"futura"` oppure `"in corso"`.
+        conclusa, futura oppure in corso.
     """
     if mostra.data_fine < oggi:
         return "conclusa"
@@ -30,20 +28,19 @@ def stato_mostra(mostra: models.Mostra, oggi: date) -> str:
 
 
 def _arrotonda(valore) -> Optional[float]:
-    """Arrotonda a un decimale; None se non ci sono voti (media non calcolabile)."""
+    """Arrotonda a un decimale; None se non ci sono voti """
     return round(float(valore), 1) if valore is not None else None
 
 
 def calcola_statistiche(db: Session) -> dict:
-    """Calcola totali generali e dettaglio per mostra (prenotazioni, feedback, voto medio).
-
-    I conteggi sono raggruppati per mostra con una query per tabella invece di una per mostra.
+    """Calcola totali generali e dettaglio per mostra come prenotazioni, feedback e voto medio
+    I conteggi sono raggruppati per mostra con una query per tabella
 
     Args:
         db: Sessione del database.
 
     Returns:
-        Dizionario con le chiavi di `schemas.StatisticheResponse`.
+        Dizionario con le chiavi di schemas.StatisticheResponse
     """
     data_oggi = oggi()
     mostre = db.query(models.Mostra).order_by(models.Mostra.data_inizio).all()
@@ -81,7 +78,7 @@ def calcola_statistiche(db: Session) -> dict:
             }
         )
 
-    # creata_il è salvata in UTC senza fuso nel DB SQLite: confronto con un datetime "naive"
+    # creata_il è salvata in UTC
     limite = (datetime.now(timezone.utc) - timedelta(days=7)).replace(tzinfo=None)
     ultimi_7 = db.query(models.Prenotazione).filter(models.Prenotazione.creata_il >= limite).count()
 

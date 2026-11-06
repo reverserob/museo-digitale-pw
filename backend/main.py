@@ -20,18 +20,18 @@ from services.migrazioni_service import aggiorna_schema
 from services.rate_limit_service import limiter, troppe_richieste
 from services.seed_service import inserisci_dati_iniziali
 
-# uso lo stesso logger di Uvicorn, così i messaggi compaiono nel terminale e nei log di Render
+# uso lo stesso logger di Uvicorn e i messaggi compaiono nel terminale e nei log di Render
 logger = logging.getLogger("uvicorn.error")
 
-# --- Controllo di sicurezza della configurazione ---
+# Controllo di sicurezza della configurazione
 # In produzione credenziali e chiave dimostrative bloccano l'avvio; in sviluppo sono solo segnalate.
 for problema in settings.problemi_configurazione():
     if settings.AMBIENTE == "produzione":
         raise RuntimeError(f"Avvio rifiutato in produzione: {problema}. Imposta la variabile su Render.")
     logger.warning(f"Configurazione dimostrativa (ammessa solo in sviluppo): {problema}")
 
-# --- Preparazione del database all'avvio ---
-# 1. crea le tabelle che non esistono ancora
+# Preparazione del database all'avvio
+# 1. crea le tabelle che non esistono
 models.Base.metadata.create_all(bind=engine)
 # 2. aggiunge le colonne nuove ai database creati con versioni precedenti dell'applicazione
 aggiorna_schema(engine)

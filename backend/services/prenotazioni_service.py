@@ -1,8 +1,9 @@
-"""Codice di riferimento e QR code delle prenotazioni, usati dal museo per verificare chi si presenta.
+"""Codice di riferimento e QR code delle prenotazioni
 
-Ogni prenotazione riceve un codice casuale nel formato `MCD-XXXX-XXXX` (es. `MCD-7K3F-9QXA`).
+Ogni prenotazione riceve un codice casuale nel formato MCD-XXXX-XXXX
 Il codice compare nell'email di conferma insieme a un QR code che contiene l'indirizzo della pagina
-di verifica dell'area riservata: inquadrandolo con il telefono, il personale apre direttamente la prenotazione.
+di verifica dell'area riservata.
+Inquadrando il QrCode con il telefono apre in dettaglio della prenotazione
 """
 
 import io
@@ -19,14 +20,14 @@ import settings
 
 # prefisso del codice (Museo Civico Digitale)
 PREFISSO = "MCD"
-# alfabeto senza caratteri che si confondono quando vengono letti o dettati (0/O, 1/I/L)
+# alfabeto senza caratteri speciali
 ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-# 8 caratteri casuali: 31^8 ≈ 850 miliardi di combinazioni, impossibili da indovinare per tentativi
+# 8 caratteri
 LUNGHEZZA = 8
 
 
 def _codice_casuale() -> str:
-    """Genera un codice nel formato `MCD-XXXX-XXXX` con caratteri casuali crittograficamente sicuri."""
+    """Genera un codice nel formato MCD-XXXX-XXXX con caratteri casuali """
     caratteri = "".join(secrets.choice(ALFABETO) for _ in range(LUNGHEZZA))
     return f"{PREFISSO}-{caratteri[:4]}-{caratteri[4:]}"
 
@@ -35,28 +36,26 @@ def genera_codice(db: Session) -> str:
     """Genera un codice di prenotazione non ancora usato.
 
     Args:
-        db: Sessione del database, usata per controllare che il codice sia unico.
+        db: Sessione del database
 
     Returns:
-        Il nuovo codice, ad esempio `MCD-7K3F-9QXA`.
+        Il codice tipo MCD-XXXX-XXXX
     """
     while True:
         codice = _codice_casuale()
-        # una collisione è praticamente impossibile, ma il controllo garantisce l'unicità
         if db.query(models.Prenotazione.id).filter(models.Prenotazione.codice == codice).first() is None:
             return codice
 
 
 def normalizza_codice(testo: str) -> Optional[str]:
     """Riporta al formato standard un codice digitato a mano o letto dal QR code.
-
     Accetta minuscole, spazi e trattini in posizioni diverse, con o senza il prefisso `MCD`.
 
     Args:
         testo: Codice inserito, ad esempio `mcd 7k3f 9qxa` oppure `7K3F9QXA`.
 
     Returns:
-        Il codice nel formato `MCD-XXXX-XXXX`, oppure None se il testo non può essere un codice valido.
+        Il codice nel formato MCD-XXXX-XXXX oppure none se non è valido
     """
     pulito = re.sub(r"[^A-Za-z0-9]", "", testo or "").upper()
     if pulito.startswith(PREFISSO):
@@ -67,11 +66,11 @@ def normalizza_codice(testo: str) -> Optional[str]:
 
 
 def trova_per_codice_o_id(db: Session, riferimento: str) -> Optional[models.Prenotazione]:
-    """Cerca una prenotazione dal suo codice (`MCD-...`) oppure dal numero identificativo.
+    """Cerca una prenotazione dal suo codice MCD-XXXX-XXXX oppure dal ID prenotazione
 
     Args:
         db: Sessione del database.
-        riferimento: Codice di prenotazione o numero (id) della prenotazione.
+        riferimento: Codice di prenotazione o ID) della prenotazione.
 
     Returns:
         La prenotazione trovata, oppure None.
@@ -86,28 +85,27 @@ def trova_per_codice_o_id(db: Session, riferimento: str) -> Optional[models.Pren
 
 
 def url_verifica(codice: str) -> str:
-    """Indirizzo della pagina di verifica dell'area riservata, contenuto nel QR code.
+    """Indirizzo della pagina di verifica dell'area riservata contenuto nel QR code
 
     Args:
-        codice: Codice della prenotazione.
+        codice: Codice della prenotazione
 
     Returns:
-        URL del tipo `https://<sito>/admin/verifica?codice=MCD-XXXX-XXXX`.
+        URL tipo https://<sito>/admin/verifica?codice=MCD-XXXX-XXXX
     """
     return f"{settings.FRONTEND_URL}/admin/verifica?codice={codice}"
 
 
 def genera_qr_png(codice: str, scala: int = 8) -> bytes:
-    """Crea l'immagine PNG del QR code di una prenotazione.
+    """Crea l'immagine PNG del QR code di una prenotazione
 
     Args:
-        codice: Codice della prenotazione.
-        scala: Dimensione in pixel di ogni "quadratino" del QR code.
+        codice: Codice della prenotazione
+        scala: Dimensione in pixel del QR code
 
     Returns:
-        Il contenuto del file PNG.
+        Il contenuto del file PNG
     """
-    # livello di correzione "M": il QR resta leggibile anche se una parte (circa il 15%) è rovinata
     qr = segno.make(url_verifica(codice), error="m")
     buffer = io.BytesIO()
     qr.save(buffer, kind="png", scale=scala, border=2)
@@ -115,15 +113,15 @@ def genera_qr_png(codice: str, scala: int = 8) -> bytes:
 
 
 def stato_ingresso(prenotazione: models.Prenotazione, oggi: date) -> str:
-    """Dice se il visitatore può entrare oggi con questa prenotazione.
+    """ conferma che il visitatore può entrare con la prenotazione mostrata
 
     Args:
-        prenotazione: Prenotazione da verificare.
-        oggi: Data del controllo.
+        prenotazione: Prenotazione
+        oggi: Data del check
 
     Returns:
-        `"valida"` (mostra aperta, ingresso non ancora registrato), `"gia_entrato"`,
-        `"non_iniziata"` oppure `"conclusa"`.
+        valida se la mostra è aperta con ingresso non ancora registrato
+         oppure gia_entrato opure non_iniziata` oppure `"conclusa"
     """
     mostra = prenotazione.mostra
     if prenotazione.ingresso_il is not None:

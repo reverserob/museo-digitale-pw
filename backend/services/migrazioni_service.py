@@ -26,8 +26,7 @@ COLONNE_AGGIUNTE = {
 def aggiorna_schema(engine):
     """Aggiunge le colonne mancanti elencate in COLONNE_AGGIUNTE (chiamata all'avvio da main.py).
 
-    Raises:
-        ErroreIntegrita: se gli indici unici indispensabili non possono essere creati.
+    ERROR ErroreIntegrita: se gli indici univoci indispensabili non possono essere creati.
     """
     ispettore = inspect(engine)
     tabelle = set(ispettore.get_table_names())
@@ -47,9 +46,9 @@ def aggiorna_schema(engine):
 
 
 def _collega_immagini_alle_mostre(engine):
-    """Collega alle mostre le immagini caricate prima dell'introduzione della colonna `mostra_id`.
+    """Collega alle mostre le immagini caricate
 
-    Il collegamento si ricava dai percorsi `/api/immagini/<nome>` salvati nella colonna `immagini` delle mostre.
+    Il collegamento viene recuperato dai path /api/immagini/<nome> salvati in immagini delle mostre.
     """
     tabelle = set(inspect(engine).get_table_names())
     if not {"mostre", "immagini"} <= tabelle:
@@ -65,10 +64,8 @@ def _collega_immagini_alle_mostre(engine):
                     )
 
 
-# Una prenotazione e un feedback per visitatore su ogni mostra: oltre al controllo nelle API,
-# la regola è garantita dal database con un indice unico (anche con due richieste contemporanee).
-# Se l'indice non si può creare l'avvio si interrompe (ErroreIntegrita): niente funzionamento "a metà".
-# I nomi coincidono con quelli dichiarati in models.py, quindi IF NOT EXISTS evita duplicati.
+# Una prenotazione e un feedback per visitatore su ogni mostra con check via nelle API
+# la regola è gestita sul database con un indice univoco
 INDICI_UNICI = {
     "uq_prenotazioni_utente_mostra": ("prenotazioni", "utente_id, mostra_id"),
     "uq_feedback_utente_mostra": ("feedback", "utente_id, mostra_id"),
@@ -76,7 +73,7 @@ INDICI_UNICI = {
 
 
 def _indici_applicabili(engine: Engine) -> dict[str, tuple[str, str]]:
-    """Indici unici le cui tabelle e colonne esistono (in un database molto vecchio possono mancare)."""
+    """Indici univoci """
     ispettore = inspect(engine)
     tabelle = set(ispettore.get_table_names())
     applicabili = {}
@@ -89,17 +86,17 @@ def _indici_applicabili(engine: Engine) -> dict[str, tuple[str, str]]:
 
 
 class ErroreIntegrita(RuntimeError):
-    """Il database non ha (o non può avere) un vincolo indispensabile: l'avvio del back-end viene interrotto."""
+    """Nel caso in cui il database manca di qualche vincolo indispensabile l'avvio del back-end viene interrotto."""
 
 
 def trova_duplicati(engine: Engine) -> dict[str, int]:
-    """Conta le righe in più che impedirebbero la creazione degli indici unici.
+    """Conta le rows in eccesso che impedirebbero la creazione degli indici univoci
 
     Args:
         engine: Motore SQLAlchemy del database.
 
     Returns:
-        Per ogni indice, il numero di righe duplicate sulla coppia (utente_id, mostra_id).
+        Per ogni indice il numero di righe duplicate su utente_id e mostra_id
     """
     risultato = {}
     with engine.connect() as conn:
@@ -115,16 +112,13 @@ def trova_duplicati(engine: Engine) -> dict[str, int]:
 
 
 def bonifica_duplicati(engine: Engine) -> dict[str, int]:
-    """Procedura esplicita di bonifica: per ogni coppia (utente, mostra) tiene la riga più vecchia ed elimina le altre.
-
-    Non viene mai eseguita in automatico: la lancia l'amministratore con lo script `bonifica_duplicati.py`
-    dopo aver letto il messaggio di errore dell'avvio (ed eventualmente fatto una copia del database).
+    """Per ogni coppia utente+mostra viene mantenuta la riga antecedente ed eliminate le successive
 
     Args:
         engine: Motore SQLAlchemy del database.
 
     Returns:
-        Numero di righe eliminate per ogni indice.
+        Numero di righe eliminate per ogni indice
     """
     eliminate = {}
     with engine.begin() as conn:
@@ -139,13 +133,13 @@ def bonifica_duplicati(engine: Engine) -> dict[str, int]:
 
 
 def _crea_indici_unici(engine):
-    """Crea sui database esistenti gli indici unici e verifica che esistano davvero.
+    """Crea su db esistente gli indici univoci e verifica che esistano
 
-    Questi indici sono la garanzia, anche con richieste simultanee, di "una prenotazione e un feedback per
-    visitatore su ogni mostra": se mancano, l'applicazione non deve partire.
+    Questi indici sono la garanzia in caso di richieste simultanee, di "una prenotazione e un feedback per
+    visitatore su ogni mostra
 
-    Raises:
-        ErroreIntegrita: se ci sono dati duplicati che impediscono l'indice (va eseguita la bonifica)
+    ERROR ErroreIntegrita:
+        - in caso di dati duplicati
             o se, dopo la creazione, l'indice non risulta presente.
     """
     duplicati = {nome: n for nome, n in trova_duplicati(engine).items() if n}
@@ -164,9 +158,9 @@ def _crea_indici_unici(engine):
 
 
 def _assegna_codici_mancanti(engine):
-    """Dà un codice di riferimento alle prenotazioni create prima dell'introduzione dei codici.
+    """Da un codice di riferimento alle prenotazioni create prima dell'introduzione dei codici
 
-    Crea anche l'indice unico sulla colonna `codice` (ALTER TABLE in SQLite non può aggiungere il vincolo UNIQUE).
+    Crea  l'indice unico sulla colonna codice
     """
     # import qui per evitare un ciclo di import con i modelli all'avvio
     from services.prenotazioni_service import ALFABETO, LUNGHEZZA, PREFISSO

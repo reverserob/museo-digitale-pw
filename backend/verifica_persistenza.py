@@ -1,14 +1,10 @@
-"""Prova di persistenza: i dati restano nel database dopo il riavvio del backend.
-
-Lo script avvia il backend (uvicorn) sul database indicato da DATABASE_URL, registra un visitatore,
+""" verifica persistenza: i dati restano nel database dopo il riavvio del backend.
+Lo script avvia il backend uvicorn sul database indicato da DATABASE_URL, registra un visitatore,
 crea una prenotazione e una mostra con un'immagine, ferma il server, lo riavvia e controlla che
-prenotazione, mostra e immagine siano ancora presenti. Alla fine elimina i dati di prova.
+prenotazione, mostra e immagine siano ancora presenti.
 
-Uso (dalla cartella backend, con il venv attivo):
-
+Uso salla cartella backend, con il venv attivo:
     DATABASE_URL="postgresql://utente:password@host/db" python verifica_persistenza.py
-
-La password del database non viene mai stampata.
 """
 
 import io
@@ -32,12 +28,12 @@ PNG = _buffer.getvalue()
 
 
 def mascherata(url: str) -> str:
-    """Stringa di connessione senza password, da stampare nel resoconto."""
+    """Stringa di connessione"""
     return re.sub(r"://([^:/@]+):[^@]+@", r"://\1:***@", url)
 
 
 def avvia_backend() -> subprocess.Popen:
-    """Avvia uvicorn e aspetta che risponda."""
+    """Avvia uvicorn"""
     processo = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "main:app", "--port", str(PORTA)],
         stdout=subprocess.DEVNULL,
@@ -55,7 +51,7 @@ def avvia_backend() -> subprocess.Popen:
 
 
 def ferma_backend(processo: subprocess.Popen) -> None:
-    """Ferma il processo del backend (come un riavvio o una sospensione su Render)."""
+    """Ferma il processo del backend"""
     processo.terminate()
     processo.wait(timeout=20)
 

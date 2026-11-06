@@ -1,4 +1,4 @@
-"""Login dell'amministratore (area riservata)."""
+""" Login dell'amministratore - Area Riservata """
 
 from fastapi import APIRouter, HTTPException, Request, status
 
@@ -7,20 +7,21 @@ import settings
 from auth import crea_token, verifica_credenziali
 from services.rate_limit_service import limiter
 
-# tutte le rotte di questo file iniziano con /api; il tag le raggruppa nella documentazione /docs
+# Tutte le rotte di questo service iniziano con /api; il tag le raggruppa nella documentazione /docs
 router = APIRouter(prefix="/api", tags=["Area riservata"])
 
 
 # POST /api/login
-# Il decoratore limiter.limit applica il limite ai tentativi (es. 5 al minuto per indirizzo IP):
-# oltre il limite slowapi risponde 429. Il parametro request serve a slowapi per leggere l'IP.
+# Il decoratore limiter.limit applica il limite ai tentativi di login (es. 5 al minuto per indirizzo IP):
+# Superato il limite di tentativi slowapi risponde 429.
+# Il parametro request serve a slowapi per leggere l'IP.
 @router.post("/login", response_model=schemas.TokenResponse)
 @limiter.limit(settings.LOGIN_RATE_LIMIT)
 def login(request: Request, dati: schemas.LoginRequest):
-    """`POST /api/login` · Verifica le credenziali dell'amministratore e restituisce un token firmato.
-
-    Raises:
-        HTTPException: 401 se le credenziali sono errate; 429 oltre il limite di tentativi.
+    """`POST /api/login` Verifica le credenziali dell'amministratore e restituisce un token firmato.
+    ERROR HTTPException:
+        - 401 se le credenziali sono errate
+        - 429 oltre il limite di tentativi
     """
     if not verifica_credenziali(dati.email, dati.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenziali errate.")

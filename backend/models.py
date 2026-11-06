@@ -1,4 +1,4 @@
-"""Modelli dei dati: ogni classe corrisponde a una tabella del database (ORM SQLAlchemy)."""
+"""Modelli dei dati: ad ogni classe corrisponde a una tabella del database"""
 
 from datetime import datetime, timezone
 
@@ -16,19 +16,17 @@ class Mostra(Base):
     id = Column(Integer, primary_key=True, index=True)
     titolo = Column(String, index=True, nullable=False)
     descrizione = Column(Text, nullable=False)
-    # Percorsi pubblici delle immagini, separati da virgola e nell'ordine di visualizzazione (la prima è la
-    # principale): "/api/immagini/<nome>" per quelle caricate (tabella immagini) oppure
-    # "/static/uploads/<file>" per le immagini delle mostre iniziali, che fanno parte del codice
+    # Percorsi pubblici delle immagini, separati da virgola e nell'ordine di visualizzazione
     immagini = Column(String, nullable=False, default="")
     data_inizio = Column(Date, nullable=False)
     data_fine = Column(Date, nullable=False)
 
-    # composizione: prenotazioni, feedback e immagini caricate non esistono senza la loro mostra,
-    # quindi eliminando la mostra vengono eliminati anche loro (cascade)
+    # feedback e immagini caricate sono legati alla  mostra,
+    # quindi eliminando la mostra vengono eliminati a cascata
     prenotazioni = relationship("Prenotazione", back_populates="mostra", cascade="all, delete-orphan")
     feedback = relationship("Feedback", back_populates="mostra", cascade="all, delete-orphan")
-    # file delle immagini caricate dall'area riservata (relazione 1-a-N con la tabella immagini);
-    # la colonna "immagini" qui sopra conserva l'ordine di visualizzazione e i percorsi pubblici
+    # file delle immagini caricate dall'area riservata relazione 1-a-N con la tabella immagini
+    # la colonna "immagini" conserva l'ordine di visualizzazione e i path pubblici
     file_immagini = relationship("Immagine", back_populates="mostra", cascade="all, delete-orphan")
 
 
@@ -37,14 +35,13 @@ class Prenotazione(Base):
 
     __tablename__ = "prenotazioni"
     # una sola prenotazione per visitatore su ogni mostra, garantita anche dal database
-    # (i valori NULL di utente_id, cioè gli account eliminati, non entrano in conflitto tra loro)
     __table_args__ = (Index("uq_prenotazioni_utente_mostra", "utente_id", "mostra_id", unique=True),)
 
     id = Column(Integer, primary_key=True, index=True)
     # chiave esterna verso la mostra; l'indice velocizza i filtri per mostra
     mostra_id = Column(Integer, ForeignKey("mostre.id", ondelete="CASCADE"), nullable=False, index=True)
-    # nome, cognome ed email vengono copiati dall'account al momento della prenotazione,
-    # così lo storico resta leggibile anche se l'account cambia o viene eliminato
+    # nome, cognome ed email vengono copiati dall'account al momento della prenotazione
+    # lo storico resta leggibile anche se l'account cambia o viene eliminato
     nome = Column(String, nullable=False)
     cognome = Column(String, nullable=False)
     email = Column(String, nullable=False)

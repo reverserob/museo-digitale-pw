@@ -36,14 +36,14 @@ logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/api/utenti", tags=["Visitatori"])
 
 
-# messaggio mostrato a chi prova a registrarsi con un'email già presente
+# Messaggio mostrato a chi prova a registrarsi con un'email già presente
 MESSAGGIO_GIA_REGISTRATO = (
     "Utente già registrato: esiste già un account con questa email. Accedi oppure reimposta la password."
 )
 
 
 def _sessione(utente: models.Utente) -> dict:
-    """Risposta di accesso: token con ruolo "utente" e dati del profilo (usata da registrazione e login)."""
+    """Risposta di accesso: token con ruolo "utente" e dati del profilo recuperato da registrazione e login"""
     return {
         "access_token": crea_token(
             utente.email, ruolo="utente", utente_id=utente.id, impronta=impronta_password(utente)
@@ -52,8 +52,8 @@ def _sessione(utente: models.Utente) -> dict:
     }
 
 
-# POST /api/utenti/registrazione (dopo la registrazione il visitatore è già collegato)
-# Limite ai tentativi come per il login, per scoraggiare registrazioni automatiche a raffica.
+# POST /api/utenti/registrazione Avviene dopo la registrazione  con il visitatore è già loggato
+# Posto un limite ai tentativi come per il login, per evitare registrazioni multiple.
 @router.post("/registrazione", response_model=schemas.SessioneUtenteResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(settings.LOGIN_RATE_LIMIT)
 def registrazione(
@@ -62,18 +62,20 @@ def registrazione(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """`POST /api/utenti/registrazione` · Crea l'account del visitatore (email unica) e invia l'email di benvenuto.
+    """`POST /api/utenti/registrazione` Crea l'account del visitatore (email unica) e invia l'email di benvenuto.
 
-    Raises:
-        HTTPException: 409 se l'email è già registrata (e il titolare riceve un avviso);
-            422 per dati non validi; 429 oltre il limite di tentativi.
+    ERROR HTTPException:
+        - 409 nel caso in cui l'email è già registrata ed invia un avviso
+        - 422 in caso di per dati non validi
+        - 429 se viene superato il limite di tentativi.
     """
     # l'email è già normalizzata (minuscolo, senza spazi) dal validatore dello schema
     esistente = db.query(models.Utente).filter(models.Utente.email == dati.email).first()
     if esistente:
-        # una sola registrazione per email: errore a video + email di avviso al titolare dell'account.
-        # Si usa JSONResponse (e non HTTPException) perché permette di allegare un'attività
-        # in background che parte dopo l'invio della risposta 409.
+        # Una sola registrazione per email
+        # Restituito errore a frontend con email di avviso al titolare dell'account.
+        # Utilizzato il JSONResponse perché permette di allegare un'attività
+        # in background che parte dopo l'invio dell' errore 409
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={"detail": MESSAGGIO_GIA_REGISTRATO},
@@ -96,7 +98,7 @@ def registrazione(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Impossibile completare la registrazione."
         ) from e
-    # email di avvenuta registrazione, inviata dopo la risposta per non rallentarla
+    # email di avvenuta registrazione, inviata dopo la risposta a frontend
     background_tasks.add_task(invia_email_registrazione, destinatario=utente.email, nome=utente.nome)
     return _sessione(utente)
 
@@ -107,8 +109,8 @@ def registrazione(
 def login_utente(request: Request, dati: schemas.LoginRequest, db: Session = Depends(get_db)):
     """`POST /api/utenti/login` · Accesso del visitatore con email e password.
 
-    Raises:
-        HTTPException: 401 se email o password sono errate (stesso messaggio in entrambi i casi).
+    ERROR HTTPException:
+        - 401 in caso di email o password errati
     """
     email = dati.email.strip().lower()
     utente = db.query(models.Utente).filter(models.Utente.email == email).first()
@@ -119,13 +121,13 @@ def login_utente(request: Request, dati: schemas.LoginRequest, db: Session = Dep
 
 
 def _indirizzo_frontend(request: Request) -> str:
-    """Indirizzo del sito da usare nel link di reimpostazione della password."""
-    # il link punta allo stesso sito da cui è partita la richiesta, se è tra quelli autorizzati
+    """Inviato indirizzo link per reimpostazione della password."""
+    # il link punta allo stesso sito da cui è partita la richiesta
     origine = (request.headers.get("origin") or "").rstrip("/")
     return origine if origine in settings.CORS_ORIGINS else settings.FRONTEND_URL
 
 
-# risposta identica in ogni caso, per non rivelare quali email sono registrate
+# per motivi di sicurezza la risposta è identica anche in caso di email non registrata
 MESSAGGIO_RESET = "Se l'email è registrata riceverai a breve un link per reimpostare la password."
 
 
@@ -138,7 +140,8 @@ def password_dimenticata(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """`POST /api/utenti/password-dimenticata` · Se l'email è registrata invia un link (valido pochi minuti, monouso) per scegliere una nuova password."""
+    """`POST /api/utenti/password-dimenticata`
+    Se l'email è registrata invia un link monouso per scegliere una nuova password."""
     utente = db.query(models.Utente).filter(models.Utente.email == dati.email).first()
     if utente is not None:
         # il token firmato viaggia come parametro dell'URL della pagina di reimpostazione
@@ -150,7 +153,7 @@ def password_dimenticata(
             link=link,
             minuti=settings.RESET_PASSWORD_MINUTI,
         )
-    # stessa risposta anche se l'email non esiste: non si rivela chi è registrato
+    # Rispostainviata anche nel caos in cui l'email non esiste
     return {"message": MESSAGGIO_RESET}
 
 
@@ -158,19 +161,20 @@ def password_dimenticata(
 @router.post("/reimposta-password")
 @limiter.limit(settings.LOGIN_RATE_LIMIT)
 def reimposta_password(request: Request, dati: schemas.ReimpostaPasswordRequest, db: Session = Depends(get_db)):
-    """`POST /api/utenti/reimposta-password` · Imposta la nuova password se il token è valido, non scaduto e non già usato.
+    """`POST /api/utenti/reimposta-password` Imposta la nuova password se il token è valido, non scaduto e non già usato.
 
-    Raises:
-        HTTPException: 400 se il link non è valido o è scaduto; 422 se la password non rispetta le regole.
+    ERROR HTTPException:
+        - 400 se il link non è valido o è scaduto
+        - 422 se la password non rispetta le regole
     """
-    # leggi_token_reset restituisce None se il token è falsificato, scaduto o già usato
+    # leggi_token_reset restituisce NONW se il token è falsificato, scaduto o già usato
     utente = leggi_token_reset(dati.token, db)
     if utente is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Il link non è valido o è scaduto. Richiedi un nuovo link.",
         )
-    # cambiando l'hash cambia anche l'impronta contenuta nel token: lo stesso link non funziona più
+    # cambiando l'hash cambia anche l'impronta contenuta nel token e lo stesso link non funziona più
     utente.password_hash = hash_password(dati.password)
     db.commit()
     return {"message": "Password aggiornata. Ora puoi accedere con la nuova password."}
@@ -179,7 +183,7 @@ def reimposta_password(request: Request, dati: schemas.ReimpostaPasswordRequest,
 # GET /api/utenti/me
 @router.get("/me", response_model=schemas.UtenteResponse)
 def profilo(utente: models.Utente = Depends(richiedi_utente)):
-    """`GET /api/utenti/me` · Dati del visitatore collegato (ricavato dal token)."""
+    """`GET /api/utenti/me` Dati del visitatore collegato recuperato tramite token"""
     return utente
 
 
@@ -190,10 +194,11 @@ def modifica_profilo(
     utente: models.Utente = Depends(richiedi_utente),
     db: Session = Depends(get_db),
 ):
-    """`PUT /api/utenti/me` · Il visitatore collegato modifica nome, cognome e telefono (l'email resta invariata).
+    """`PUT /api/utenti/me` Il visitatore collegato modifica nome, cognome e telefono (l'email resta invariata).
 
-    Raises:
-        HTTPException: 401 senza token valido; 422 se i dati non rispettano le regole della registrazione.
+    ERRO HTTPException:
+        - 401 senza token valido
+        - 422 se i dati non rispettano le regole della registrazione.
     """
     return aggiorna_profilo(db, utente, dati)
 

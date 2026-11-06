@@ -1,4 +1,4 @@
-"""Popolamento iniziale del database con le mostre di esempio."""
+"""Popolamento iniziale del database con le mostre di esempio"""
 
 import json
 import logging
@@ -21,23 +21,22 @@ def leggi_mostre_json():
 
 
 def inserisci_dati_iniziali():
-    """Inserisce le mostre iniziali solo se il catalogo è vuoto (chiamata all'avvio dell'applicazione)."""
-    # qui non c'è una richiesta HTTP, quindi apro e chiudo la sessione manualmente
+    """Inserisce le mostre iniziali solo se il catalogo è vuoto con chiamata allo startup dell'app"""
     db = SessionLocal()
     try:
-        # se ci sono già mostre non faccio nulla: i dati inseriti dall'admin non vengono toccati
+        # se ci sono già mostre i dati inseriti dall'admin non vengono modificati
         if db.query(models.Mostra).count() == 0:
             mostre = leggi_mostre_json()
             for m in mostre:
                 mostra = models.Mostra(
                     titolo=m["titolo"],
                     descrizione=m["descrizione"],
-                    # nel JSON le immagini sono una lista, nel DB una stringa separata da virgole
+                    # nel JSON le immagini sono una lista mentre nel DB una stringa separata da virgole
                     immagini=",".join(m["immagini"]),
                     data_inizio=date.fromisoformat(m["data_inizio"]),
                     data_fine=date.fromisoformat(m["data_fine"]),
                 )
-                # feedback iniziali (facoltativi): collegati alla mostra tramite la relazione
+                # feedback iniziali facoltativi sono collegati alla mostra tramite la relazione
                 for f in m.get("feedback", []):
                     mostra.feedback.append(
                         models.Feedback(nome=f["nome"], voto=f["voto"], commento=f.get("commento", ""))
@@ -45,7 +44,7 @@ def inserisci_dati_iniziali():
                 db.add(mostra)
             db.commit()
             logger.info(f"Seeding completato: {len(mostre)} mostre inserite da {SEED_FILE.name}")
-    # un problema nel file non blocca l'avvio del server: viene solo registrato nel log
+    # un problema nel file - viene solo registrato nei log
     except FileNotFoundError:
         logger.error(f"File {SEED_FILE} non trovato: nessuna mostra iniziale inserita")
     except (json.JSONDecodeError, KeyError) as e:
