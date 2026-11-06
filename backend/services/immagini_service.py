@@ -1,8 +1,8 @@
 """Gestione delle immagini delle mostre:
- - controllo
- - salvataggio nel database
- - selezione di img per formato
- """
+- controllo
+- salvataggio nel database
+- selezione di img per formato
+"""
 
 import io
 import json
@@ -73,7 +73,7 @@ def controlla_contenuto(nome_file: str, estensione: str, contenuto: bytes) -> No
 
 
 def file_presenti(immagini: Optional[list[UploadFile]]) -> list[UploadFile]:
-    """ Scarta i campi file vuoti
+    """Scarta i campi file vuoti
 
     Args:
         immagini: File ricevuti dal form oppure None.

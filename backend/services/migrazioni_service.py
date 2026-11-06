@@ -73,7 +73,7 @@ INDICI_UNICI = {
 
 
 def _indici_applicabili(engine: Engine) -> dict[str, tuple[str, str]]:
-    """Indici univoci """
+    """Indici univoci"""
     ispettore = inspect(engine)
     tabelle = set(ispettore.get_table_names())
     applicabili = {}

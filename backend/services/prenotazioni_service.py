@@ -27,7 +27,7 @@ LUNGHEZZA = 8
 
 
 def _codice_casuale() -> str:
-    """Genera un codice nel formato MCD-XXXX-XXXX con caratteri casuali """
+    """Genera un codice nel formato MCD-XXXX-XXXX con caratteri casuali"""
     caratteri = "".join(secrets.choice(ALFABETO) for _ in range(LUNGHEZZA))
     return f"{PREFISSO}-{caratteri[:4]}-{caratteri[4:]}"
 
@@ -113,15 +113,15 @@ def genera_qr_png(codice: str, scala: int = 8) -> bytes:
 
 
 def stato_ingresso(prenotazione: models.Prenotazione, oggi: date) -> str:
-    """ conferma che il visitatore può entrare con la prenotazione mostrata
+    """conferma che il visitatore può entrare con la prenotazione mostrata
 
     Args:
         prenotazione: Prenotazione
         oggi: Data del check
 
     Returns:
-        valida se la mostra è aperta con ingresso non ancora registrato
-         oppure gia_entrato opure non_iniziata` oppure `"conclusa"
+        `"valida"` se la mostra è aperta e l'ingresso non è ancora registrato,
+        altrimenti `"gia_entrato"`, `"non_iniziata"` oppure `"conclusa"`.
     """
     mostra = prenotazione.mostra
     if prenotazione.ingresso_il is not None:

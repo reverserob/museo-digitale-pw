@@ -1,4 +1,4 @@
-""" Login dell'amministratore - Area Riservata """
+"""Login dell'amministratore - Area Riservata"""
 
 from fastapi import APIRouter, HTTPException, Request, status
 
